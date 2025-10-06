@@ -8,7 +8,10 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "diff": "^8.0.2",
     "dotenv": "^17.2.3",
-    "openai": "^6.1.0"
+    "express": "^5.1.0",
+    "openai": "^6.2.0"
   }
 }

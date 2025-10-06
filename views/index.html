@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wellcoaches Perspectives MVP</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Wellcoaches Perspectives</h1>
+      <p class="subtitle">Explore deeper insights through nine perspectives — or discover your blind spots in seconds.</p>
+    </header>
+
+    <main class="card">
+      <form action="/ask" method="post">
+        <label for="prompt" class="label">Describe your situation or reasoning:</label>
+        <textarea
+          id="prompt"
+          name="prompt"
+          rows="6"
+          placeholder="Example: Our team is struggling to maintain motivation working remotely..."
+          required
+        ></textarea>
+
+        <div class="options">
+          <label class="checkbox">
+            <input type="checkbox" name="mode" value="blindspot" />
+            Run a Quick Blindspot Check
+          </label>
+          <p class="hint">Uncheck to get the full nine perspectives analysis.</p>
+        </div>
+
+        <button type="submit" class="button">Generate Insights</button>
+      </form>
+    </main>
+
+    <footer class="footer">
+      <p>© 2025 Wellcoaches AI Lab | Built for Coaching Excellence</p>
+    </footer>
+  </div>
+</body>
+</html>

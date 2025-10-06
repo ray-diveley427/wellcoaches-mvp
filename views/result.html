@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wellcoaches Results</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Wellcoaches Perspectives Results</h1>
+      <p class="subtitle">Reflect on the insights generated from your situation.</p>
+    </header>
+
+    <main class="card results">
+      <section class="user-input">
+        <h2>Your Situation</h2>
+        <p class="input-text">{{userPrompt}}</p>
+      </section>
+
+      <section class="ai-output">
+        <h2>Insights</h2>
+        <div class="output" id="claudeOutput">{{claudeOutput}}</div>
+      </section>
+
+      <section class="reflection">
+        <h3>Next Step</h3>
+        <p>
+          Consider which perspectives resonate most and where you may want to
+          explore further. You can run a new query or perform a quick blindspot
+          check below.
+        </p>
+        <a href="/" class="button secondary">Start a New Session</a>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>© 2025 Wellcoaches AI Lab | Fostering Human Flourishing through Coaching Intelligence</p>
+    </footer>
+  </div>
+</body>
+</html>
