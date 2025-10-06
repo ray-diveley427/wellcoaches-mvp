@@ -6,13 +6,19 @@ const openai = new OpenAI({
 });
 
 async function main() {
-  const response = await openai.responses.create({
-    model: 'gpt-5-nano',
-    input: 'write a haiku about ai',
-    store: true,
-  });
+  console.log('Testing OpenAI connection...');
 
-  console.log(response.output_text);
+  try {
+    const response = await openai.responses.create({
+      model: 'gpt-5-mini', // or "gpt-4.1-mini" if 5-mini isn't available
+      input: "Say 'Connected to OpenAI successfully!'",
+    });
+
+    console.log('✅ Connection successful!');
+    console.log('Response:', response.output_text);
+  } catch (error) {
+    console.error('❌ Connection failed:', error);
+  }
 }
 
-main().catch(console.error);
+main();

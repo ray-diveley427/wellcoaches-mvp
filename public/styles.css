@@ -1,0 +1,141 @@
+:root {
+  --primary: #2a7c6f;
+  --primary-light: #4ea58f;
+  --accent: #f3b562;
+  --bg: #f9faf9;
+  --text: #333;
+  --muted: #777;
+  --card-bg: #ffffff;
+  --border-radius: 16px;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --font: "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+}
+
+.container {
+  width: 90%;
+  max-width: 900px;
+  margin: 40px auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 1.1em;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 30px 40px;
+  margin-bottom: 30px;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+textarea {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: var(--border-radius);
+  padding: 12px;
+  font-size: 1em;
+  resize: vertical;
+  margin-bottom: 20px;
+  font-family: inherit;
+}
+
+.options {
+  margin-bottom: 20px;
+}
+
+.checkbox {
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.hint {
+  font-size: 0.9em;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.button {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.button:hover {
+  background: var(--primary-light);
+}
+
+.button.secondary {
+  background: var(--accent);
+  color: #333;
+}
+
+.results h2 {
+  color: var(--primary);
+  margin-top: 0;
+}
+
+.input-text {
+  font-style: italic;
+  background: #f1f5f4;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.output {
+  line-height: 1.6;
+  margin-top: 10px;
+}
+
+.reflection {
+  margin-top: 40px;
+  text-align: center;
+}
+
+.footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9em;
+  margin-top: 40px;
+}
