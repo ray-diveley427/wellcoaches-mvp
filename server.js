@@ -6,6 +6,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Utility imports
+import { buildPrompt } from './utils/buildPrompt.js';
+import { synthesisPrompt } from './utils/synthesisPrompt.js';
+import { parseResponse } from './utils/parseResponse.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -44,10 +49,11 @@ app.post('/ask', async (req, res) => {
   console.log('Vector store in use:', process.env.VECTOR_STORE_ID || '(none)');
   console.log('====================================');
 
-  // -------------------------------
-  // Step 1: Construct GPT Prompt
-  // -------------------------------
   let gptPrompt;
+
+  // -----------------------------------------------------------------------
+  // Step 1: Build GPT Prompt
+  // -----------------------------------------------------------------------
   if (requestedVoices) {
     // “Explore missing voices” path
     gptPrompt = `
@@ -81,35 +87,14 @@ Respond strictly in JSON with this structure:
 Reasoning: "${userPrompt}"
 `;
   } else {
-    // Full mode
-    gptPrompt = `
-You are part of the Wellcoaches "Nine Perspectives" model.
-Given the situation below, provide a JSON object describing all perspectives.
-Respond strictly in this structure:
-{
-  "perspectives": [
-    {"name": "Achiever", "insight": "", "blindspot": ""},
-    {"name": "Relational", "insight": "", "blindspot": ""},
-    {"name": "Creative", "insight": "", "blindspot": ""},
-    {"name": "Analytical", "insight": "", "blindspot": ""},
-    {"name": "Compassionate", "insight": "", "blindspot": ""},
-    {"name": "Practical", "insight": "", "blindspot": ""},
-    {"name": "Strategic", "insight": "", "blindspot": ""},
-    {"name": "Reflective", "insight": "", "blindspot": ""},
-    {"name": "Visionary", "insight": "", "blindspot": ""}
-  ],
-  "missing_perspectives": [],
-  "dignity_reminder": "",
-  "summary": ""
-}
-Situation: "${userPrompt}"
-`;
+    // Full cognitive generation mode using refined architecture
+    gptPrompt = buildPrompt(userPrompt);
   }
 
   try {
-    // -------------------------------
+    // ---------------------------------------------------------------------
     // Step 2: GPT Structured Output
-    // -------------------------------
+    // ---------------------------------------------------------------------
     console.log('💬 Calling OpenAI (GPT-5-mini) for structured analysis...');
     const gptResponse = await openai.responses.create({
       model: 'gpt-5-mini',
@@ -118,37 +103,17 @@ Situation: "${userPrompt}"
     const rawGPT = gptResponse.output_text;
     console.log('✅ GPT response received. Length:', rawGPT.length, 'chars');
 
-    let gptJSON;
-    try {
-      gptJSON = JSON.parse(rawGPT);
-    } catch (err) {
-      console.warn('⚠️ GPT output was not valid JSON. Wrapping it safely.');
-      gptJSON = { summary: rawGPT };
-    }
+    const gptJSON = parseResponse(rawGPT);
 
-    // -------------------------------
+    // ---------------------------------------------------------------------
     // Step 3: Claude Synthesis
-    // -------------------------------
+    // ---------------------------------------------------------------------
     console.log('💬 Calling Claude (3.5 Haiku) for synthesis...');
-    const claudePrompt = `
-You are the Wellcoaches synthesizer.
-Use the structured JSON below to create a readable, reflective summary.
-Follow these rules:
-- Maintain accuracy; do NOT add new facts.
-- Preserve each perspective’s insight.
-- Mention missing perspectives gently (if provided).
-- End with a brief synthesis paragraph.
-- Use a professional, warm Wellcoaches tone.
-
-JSON data:
-${JSON.stringify(gptJSON, null, 2)}
-`;
-
     const claudeResponse = await anthropic.messages.create({
       model: 'claude-3-5-haiku-20241022',
       max_tokens: 2500,
       temperature: 0.2,
-      messages: [{ role: 'user', content: claudePrompt }],
+      messages: [{ role: 'user', content: synthesisPrompt(gptJSON) }],
     });
 
     const finalOutput = claudeResponse.content[0].text;
@@ -158,9 +123,9 @@ ${JSON.stringify(gptJSON, null, 2)}
       'chars'
     );
 
-    // -------------------------------
+    // ---------------------------------------------------------------------
     // Step 4: Developer Log
-    // -------------------------------
+    // ---------------------------------------------------------------------
     if (!fs.existsSync('logs')) fs.mkdirSync('logs');
     const logEntry = {
       timestamp: new Date().toISOString(),
@@ -180,9 +145,9 @@ ${JSON.stringify(gptJSON, null, 2)}
     );
     console.log('🗂️ Log entry added to logs/history.json');
 
-    // -------------------------------
+    // ---------------------------------------------------------------------
     // Step 5: Render for User
-    // -------------------------------
+    // ---------------------------------------------------------------------
     const template = fs.readFileSync(
       path.join(__dirname, 'views', 'result.html'),
       'utf8'
@@ -209,15 +174,46 @@ ${JSON.stringify(gptJSON, null, 2)}
       `;
     }
 
+    const perspectivesJSON = JSON.stringify(gptJSON.perspectives || []);
     const filled = template
       .replace('{{userPrompt}}', userPrompt)
       .replace('{{claudeOutput}}', finalOutput)
-      .replace('{{exploreSection}}', missingListHTML || '');
+      .replace('{{exploreSection}}', missingListHTML || '')
+      .replace('{{perspectivesJSON}}', perspectivesJSON);
+
 
     res.send(filled);
   } catch (error) {
     console.error('❌ Error during generation:', error);
     res.status(500).send(`<pre>${error}</pre>`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Perspective Expansion Route
+// ---------------------------------------------------------------------------
+app.post('/expand', async (req, res) => {
+  const { prompt, perspective } = req.body;
+  if (!prompt || !perspective)
+    return res.status(400).json({ error: 'Missing data.' });
+
+  try {
+    const expandPrompt = `
+Expand upon the "${perspective}" perspective from the Wellcoaches Nine Perspectives model.
+Provide a deeper, more reflective analysis (5–6 sentences) consistent with its cognitive style.
+Do not restate other perspectives.
+Situation: "${prompt}"
+`;
+
+    const response = await openai.responses.create({
+      model: 'gpt-5-mini',
+      input: expandPrompt,
+    });
+
+    res.json({ expanded: response.output_text });
+  } catch (err) {
+    console.error('❌ Error expanding perspective:', err);
+    res.status(500).json({ error: 'Expansion failed.' });
   }
 });
 
