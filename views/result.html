@@ -3,41 +3,115 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wellcoaches Results</title>
+  <title>Nine Perspectives Result</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <div class="container">
-    <header class="header">
-      <h1>Wellcoaches Perspectives Results</h1>
-      <p class="subtitle">Reflect on the insights generated from your situation.</p>
-    </header>
+    <div class="header">
+      <h1>Wellcoaches – Nine Perspectives</h1>
+      <p class="subtitle">Comprehensive cognitive perspectives with synthesis</p>
+    </div>
 
-    <main class="card results">
-      <section class="user-input">
-        <h2>Your Situation</h2>
-        <p class="input-text">{{userPrompt}}</p>
-      </section>
+    <div class="card">
+      <h2>Your Prompt</h2>
+      <p class="input-text">{{userPrompt}}</p>
 
-      <section class="ai-output">
-        <h2>Insights</h2>
-        <div class="output" id="claudeOutput">{{claudeOutput}}</div>
-      </section>
+      <h2>Synthesis</h2>
+      <div class="synthesis">{{claudeOutput}}</div>
 
-      <section class="reflection">
-        <h3>Next Step</h3>
-        <p>
-          Consider which perspectives resonate most and where you may want to
-          explore further. You can run a new query or perform a quick blindspot
-          check below.
-        </p>
-        <a href="/" class="button secondary">Start a New Session</a>
-      </section>
-    </main>
+      {{exploreSection}}
+    </div>
+
+    <!-- Section where all perspectives are listed -->
+    <div id="perspectives-container" class="results"></div>
+
+    <div class="reflection">
+      <a href="/" class="button secondary">← Back</a>
+    </div>
 
     <footer class="footer">
-      <p>© 2025 Wellcoaches AI Lab | Fostering Human Flourishing through Coaching Intelligence</p>
+      Powered by GPT-5 + Claude 3.5 | © 2025 Wellcoaches.ai
     </footer>
   </div>
+
+  <script>
+    // -----------------------------------------------
+    // Dynamically load and render perspectives
+    // -----------------------------------------------
+    async function loadPerspectives() {
+      try {
+        const response = await fetch('/logs/history.json');
+        const text = await response.text();
+        const entries = text.trim().split(',\n').filter(Boolean);
+        if (entries.length === 0) return;
+
+        // Last entry = latest request
+        const lastEntry = JSON.parse(entries[entries.length - 1]);
+        const gptResponsePath = lastEntry?.json_keys?.includes("perspectives") ? lastEntry : null;
+
+        if (!gptResponsePath) return;
+
+        // Optional: if you store full JSON responses, load from that file instead.
+        // This example only shows static placeholder until you serve JSON directly.
+      } catch (err) {
+        console.warn("Could not load perspectives:", err);
+      }
+    }
+
+    // -----------------------------------------------
+    // Handle "Deepen this Perspective" interactions
+    // -----------------------------------------------
+    document.addEventListener('click', async (e) => {
+      if (e.target.classList.contains('expand-btn')) {
+        const button = e.target;
+        const perspective = button.dataset.name;
+        const prompt = "{{userPrompt}}";
+        const outputDiv = button.nextElementSibling;
+
+        if (outputDiv.style.display === 'block') {
+          outputDiv.style.display = 'none';
+          return;
+        }
+
+        button.textContent = 'Loading...';
+        try {
+          const res = await fetch('/expand', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, perspective })
+          });
+          const data = await res.json();
+          outputDiv.textContent = data.expanded || '(No response)';
+          outputDiv.style.display = 'block';
+        } catch {
+          outputDiv.textContent = 'Error expanding perspective.';
+          outputDiv.style.display = 'block';
+        }
+        button.textContent = 'Deepen this Perspective';
+      }
+    });
+
+    // -----------------------------------------------
+    // Inject server-passed perspectives (if available)
+    // -----------------------------------------------
+    const perspectivesData = {{perspectivesJSON}};
+    const container = document.getElementById('perspectives-container');
+
+    if (perspectivesData && perspectivesData.length > 0) {
+      perspectivesData.forEach(p => {
+        const div = document.createElement('div');
+        div.classList.add('perspective');
+        div.innerHTML = `
+          <h3>${p.name}</h3>
+          <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"} </p>
+          <p><strong>Blind Spot:</strong> ${p.blindspot || "(No blind spot provided)"} </p>
+          <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
+          <div class="expand-output"></div>
+        `;
+        container.appendChild(div);
+      });
+    }
+  </script>
 </body>
 </html>
