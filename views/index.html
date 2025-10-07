@@ -15,6 +15,15 @@
 
     <main class="card">
       <form action="/ask" method="post">
+        <div class="form-row">
+          <label class="toggle-label" for="useBooks">Include Library (Books)</label>
+          <label class="switch">
+            <input type="checkbox" id="useBooks" name="useBooks" value="on" />
+            <span class="slider"></span>
+          </label>
+          <div class="toggle-hint">Turn on to enrich answers with licensed book snippets.</div>
+        </div>
+
         <label for="prompt" class="label">Describe your situation or reasoning:</label>
         <textarea
           id="prompt"
@@ -26,11 +35,12 @@
 
         <div class="options">
           <label class="checkbox">
-            <input type="checkbox" name="mode" value="blindspot" />
+            <input type="checkbox" name="blindspot" value="true" />
             Run a Quick Blindspot Check
           </label>
           <p class="hint">Uncheck to get the full nine perspectives analysis.</p>
         </div>
+
 
         <button type="submit" class="button">Generate Insights</button>
       </form>
