@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { getContext } from './utils/getContext.js';
 import express from 'express';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
@@ -36,8 +37,10 @@ app.get('/', (req, res) => {
 // ---------------------------------------------------------------------------
 app.post('/ask', async (req, res) => {
   const userPrompt = req.body.prompt?.trim();
-  const mode = req.body.mode === 'blindspot' ? 'blindspot' : 'full';
+  const mode = req.body.blindspot ? 'blindspot' : 'full';
+  const showBlindspots = mode === 'blindspot';
   const requestedVoices = req.body.voices?.trim() || null;
+  const useBooks = req.body.useBooks === 'on' || req.body.useBooks === true;
 
   if (!userPrompt) return res.redirect('/');
 
@@ -88,7 +91,15 @@ Reasoning: "${userPrompt}"
 `;
   } else {
     // Full cognitive generation mode using refined architecture
-    gptPrompt = buildPrompt(userPrompt);
+    // Optionally enrich with library context
+    const { text: libraryContext, snippets } = await getContext(
+      userPrompt,
+      useBooks
+    );
+    gptPrompt = buildPrompt({
+      question: userPrompt,
+      options: { useBooks, libraryContext },
+    });
   }
 
   try {
@@ -179,7 +190,8 @@ Reasoning: "${userPrompt}"
       .replace('{{userPrompt}}', userPrompt)
       .replace('{{claudeOutput}}', finalOutput)
       .replace('{{exploreSection}}', missingListHTML || '')
-      .replace('{{perspectivesJSON}}', perspectivesJSON);
+      .replace('{{perspectivesJSON}}', perspectivesJSON)
+      .replace('{{showBlindspots}}', showBlindspots ? 'block' : 'none');
 
 
     res.send(filled);
@@ -189,6 +201,9 @@ Reasoning: "${userPrompt}"
   }
 });
 
+// ---------------------------------------------------------------------------
+// Perspective Expansion Route
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // Perspective Expansion Route
 // ---------------------------------------------------------------------------
@@ -205,17 +220,26 @@ Do not restate other perspectives.
 Situation: "${prompt}"
 `;
 
-    const response = await openai.responses.create({
-      model: 'gpt-5-mini',
-      input: expandPrompt,
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: 'You are an expert Wellcoaches AI assistant.' },
+        { role: 'user', content: expandPrompt },
+      ],
     });
 
-    res.json({ expanded: response.output_text });
+    // ✅ Replace placeholder text {{userPrompt}} in the returned message
+    const expanded =
+      response.choices?.[0]?.message?.content?.replace('{{userPrompt}}', prompt) ||
+      '(no content returned)';
+
+    res.json({ expanded });
   } catch (err) {
     console.error('❌ Error expanding perspective:', err);
     res.status(500).json({ error: 'Expansion failed.' });
   }
 });
+
 
 // ---------------------------------------------------------------------------
 // START SERVER
