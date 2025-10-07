@@ -105,7 +105,9 @@
         div.innerHTML = `
           <h3>${p.name}</h3>
           <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"} </p>
-          <p><strong>Blind Spot:</strong> ${p.blindspot || "(No blind spot provided)"} </p>
+          <p style="display: {{showBlindspots}};">
+            <strong>Blind Spot:</strong> {{blindspot}}
+          </p>
           <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
           <div class="expand-output"></div>
         `;
