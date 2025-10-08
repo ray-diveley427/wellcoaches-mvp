@@ -11,6 +11,8 @@ import { fileURLToPath } from 'url';
 import { buildPrompt } from './utils/buildPrompt.js';
 import { synthesisPrompt } from './utils/synthesisPrompt.js';
 import { parseResponse } from './utils/parseResponse.js';
+import { analyzePerspectives } from './utils/coreObserver.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,6 +120,19 @@ Reasoning: "${userPrompt}"
     // ---------------------------------------------------------------------
     // Step 3: Claude Synthesis
     // ---------------------------------------------------------------------
+    
+    try {
+      console.log('👁️ Running Core Observer analysis...');
+      const perspectivesArray = gptJSON.perspectives || [];
+      observerSummary = await analyzePerspectives(perspectivesArray);
+      console.log('✅ Core Observer summary generated.');
+    } catch (err) {
+      console.warn(
+        '⚠️ Core Observer failed — continuing without it:',
+        err.message
+      );
+    }
+
     console.log('💬 Calling Claude (3.5 Haiku) for synthesis...');
     const claudeResponse = await anthropic.messages.create({
       model: 'claude-3-5-haiku-20241022',
