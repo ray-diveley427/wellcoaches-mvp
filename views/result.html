@@ -37,26 +37,37 @@
 
   <script>
     // -----------------------------------------------
-    // Dynamically load and render perspectives
+    // Inject server-passed perspectives (if available)
     // -----------------------------------------------
-    async function loadPerspectives() {
-      try {
-        const response = await fetch('/logs/history.json');
-        const text = await response.text();
-        const entries = text.trim().split(',\n').filter(Boolean);
-        if (entries.length === 0) return;
+    const perspectivesData = {{perspectivesJSON}};
+    const showBlindspots = '{{showBlindspots}}';
+    const container = document.getElementById('perspectives-container');
 
-        // Last entry = latest request
-        const lastEntry = JSON.parse(entries[entries.length - 1]);
-        const gptResponsePath = lastEntry?.json_keys?.includes("perspectives") ? lastEntry : null;
-
-        if (!gptResponsePath) return;
-
-        // Optional: if you store full JSON responses, load from that file instead.
-        // This example only shows static placeholder until you serve JSON directly.
-      } catch (err) {
-        console.warn("Could not load perspectives:", err);
-      }
+    if (Array.isArray(perspectivesData) && perspectivesData.length > 0) {
+      perspectivesData.forEach(p => {
+        const div = document.createElement('div');
+        div.classList.add('perspective');
+        div.innerHTML = `
+          <h3>${p.name}</h3>
+          <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"} </p>
+          <p class="blindspot" style="display: ${showBlindspots};">
+            <strong>Blind Spot:</strong> ${p.blindspot || "(Not applicable in this mode)"}
+          </p>
+          <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
+          <div class="expand-output"></div>
+        `;
+        container.appendChild(div);
+      });
+    } else {
+      // 👇 Show a friendly message when Quick Blindspot mode is active
+      const summaryBlock = document.createElement('div');
+      summaryBlock.classList.add('summary-card');
+      summaryBlock.innerHTML = `
+        <h3>Blindspot Summary</h3>
+        <p>In Quick Blindspot Check mode, you’ll only see dominant and missing perspectives above.</p>
+        <p>Full nine-perspective insights are available when you uncheck “Run a Quick Blindspot Check.”</p>
+      `;
+      container.appendChild(summaryBlock);
     }
 
     // -----------------------------------------------
@@ -91,29 +102,6 @@
         button.textContent = 'Deepen this Perspective';
       }
     });
-
-    // -----------------------------------------------
-    // Inject server-passed perspectives (if available)
-    // -----------------------------------------------
-    const perspectivesData = {{perspectivesJSON}};
-    const container = document.getElementById('perspectives-container');
-
-    if (perspectivesData && perspectivesData.length > 0) {
-      perspectivesData.forEach(p => {
-        const div = document.createElement('div');
-        div.classList.add('perspective');
-        div.innerHTML = `
-          <h3>${p.name}</h3>
-          <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"} </p>
-          <p style="display: {{showBlindspots}};">
-            <strong>Blind Spot:</strong> {{blindspot}}
-          </p>
-          <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
-          <div class="expand-output"></div>
-        `;
-        container.appendChild(div);
-      });
-    }
   </script>
 </body>
 </html>

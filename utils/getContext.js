@@ -35,7 +35,14 @@ export async function getContext(query, useBooks) {
 
   for (const assistantId of assistantsToQuery) {
     try {
-      console.log(`🧠 Querying Assistant (v2): ${assistantId}`);
+      console.log(
+        `🧠 Querying Assistant (v2): ${assistantId} — ${
+          assistantId === process.env.OPENAI_ASSISTANT_CORE_ID
+            ? 'Core Knowledge Base'
+            : 'Unlicensed Books'
+        }`
+      );
+
 
       // ✅ Single-step: Create thread and run together
       const run = await openai.beta.threads.createAndRun({
