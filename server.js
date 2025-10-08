@@ -37,8 +37,7 @@ app.get('/', (req, res) => {
 // ---------------------------------------------------------------------------
 app.post('/ask', async (req, res) => {
   const userPrompt = req.body.prompt?.trim();
-  const mode = req.body.blindspot ? 'blindspot' : 'full';
-  const showBlindspots = mode === 'blindspot';
+  const mode = req.body.mode === 'blindspot' ? 'blindspot' : 'full';
   const requestedVoices = req.body.voices?.trim() || null;
   const useBooks = req.body.useBooks === 'on' || req.body.useBooks === true;
 
@@ -177,22 +176,24 @@ Reasoning: "${userPrompt}"
             <input type="hidden" name="voices" value="${gptJSON.missing_perspectives.join(
               ', '
             )}" />
-            <button type="submit" class="button secondary">Generate Insights for ${gptJSON.missing_perspectives.join(
-              ', '
-            )}</button>
+            <button type="submit" class="button secondary">
+              Generate Insights for ${gptJSON.missing_perspectives.join(', ')}
+            </button>
           </form>
         </div>
       `;
     }
 
-    const perspectivesJSON = JSON.stringify(gptJSON.perspectives || []);
+    // 🧠 Ensure blindspot mode doesn't render perspectives
+    const perspectivesJSON =
+      mode === 'blindspot' ? '[]' : JSON.stringify(gptJSON.perspectives || []);
+
     const filled = template
       .replace('{{userPrompt}}', userPrompt)
       .replace('{{claudeOutput}}', finalOutput)
       .replace('{{exploreSection}}', missingListHTML || '')
       .replace('{{perspectivesJSON}}', perspectivesJSON)
-      .replace('{{showBlindspots}}', showBlindspots ? 'block' : 'none');
-
+      .replace('{{showBlindspots}}', mode === 'full' ? 'block' : 'none');
 
     res.send(filled);
   } catch (error) {
@@ -201,9 +202,6 @@ Reasoning: "${userPrompt}"
   }
 });
 
-// ---------------------------------------------------------------------------
-// Perspective Expansion Route
-// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // Perspective Expansion Route
 // ---------------------------------------------------------------------------
@@ -223,15 +221,20 @@ Situation: "${prompt}"
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'You are an expert Wellcoaches AI assistant.' },
+        {
+          role: 'system',
+          content: 'You are an expert Wellcoaches AI assistant.',
+        },
         { role: 'user', content: expandPrompt },
       ],
     });
 
     // ✅ Replace placeholder text {{userPrompt}} in the returned message
     const expanded =
-      response.choices?.[0]?.message?.content?.replace('{{userPrompt}}', prompt) ||
-      '(no content returned)';
+      response.choices?.[0]?.message?.content?.replace(
+        '{{userPrompt}}',
+        prompt
+      ) || '(no content returned)';
 
     res.json({ expanded });
   } catch (err) {
@@ -239,7 +242,6 @@ Situation: "${prompt}"
     res.status(500).json({ error: 'Expansion failed.' });
   }
 });
-
 
 // ---------------------------------------------------------------------------
 // START SERVER
