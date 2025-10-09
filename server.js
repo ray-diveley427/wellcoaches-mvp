@@ -202,8 +202,15 @@ Reasoning: "${userPrompt}"
 
     const perspectivesJSON =
       mode === 'blindspot' ? '[]' : JSON.stringify(gptJSON.perspectives || []);
+    // ✅ Escape the userPrompt for safe injection into JavaScript
+    const escapedPrompt = userPrompt
+      .replace(/\\/g, '\\\\') // Escape backslashes
+      .replace(/"/g, '\\"') // Escape double quotes
+      .replace(/\n/g, '\\n') // Escape newlines
+      .replace(/\r/g, '\\r'); // Escape carriage returns
+
     const filled = template
-      .replace('{{userPrompt}}', userPrompt)
+      .replace(/\{\{userPrompt\}\}/g, escapedPrompt) // ✅ Global replace with /g flag
       .replace('{{claudeOutput}}', finalOutput)
       .replace('{{exploreSection}}', missingListHTML || '')
       .replace('{{perspectivesJSON}}', perspectivesJSON)
@@ -213,6 +220,60 @@ Reasoning: "${userPrompt}"
   } catch (error) {
     console.error('❌ Error during generation:', error);
     res.status(500).send(`<pre>${error}</pre>`);
+  }
+});
+
+// -------------------------------------------------------------
+// PERSPECTIVE EXPANSION ROUTE — /expand
+// -------------------------------------------------------------
+app.post('/expand', async (req, res) => {
+  console.log('\n🔍 ===== EXPAND ENDPOINT HIT =====');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  
+  const { prompt, perspective } = req.body;
+  
+  console.log('Prompt received:', prompt);
+  console.log('Prompt length:', prompt?.length);
+  console.log('Perspective:', perspective);
+  
+  if (!prompt || !perspective) {
+    console.log('❌ Missing prompt or perspective');
+    return res.status(400).json({ error: 'Missing data.' });
+  }
+
+  try {
+    const expandPrompt = `
+You are providing a deeper analysis from the "${perspective}" perspective within the Wellcoaches Nine Perspectives model.
+
+The user's situation is:
+"${prompt}"
+
+Provide a deeper, more reflective analysis (5–6 sentences) from the ${perspective} perspective that is consistent with its cognitive style and values. Focus specifically on this situation and provide actionable insights. Do not mention other perspectives. The situation has been provided above - analyze it directly without asking for clarification.
+`;
+
+    console.log('Calling OpenAI...');
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert Wellcoaches AI assistant specializing in the ${perspective} perspective. The user's situation has already been provided. Analyze it directly without asking for more information.`,
+        },
+        { role: 'user', content: expandPrompt },
+      ],
+      temperature: 0.7,
+    });
+
+    const expanded = response.choices?.[0]?.message?.content || '(no content returned)';
+    
+    console.log('✅ Expansion complete. Length:', expanded.length);
+    console.log('=================================\n');
+
+    res.json({ expanded });
+  } catch (err) {
+    console.error('❌ Error expanding perspective:', err);
+    res.status(500).json({ error: 'Expansion failed.' });
   }
 });
 
