@@ -1,14 +1,29 @@
 // utils/synthesisPrompt.js
-export function synthesisPrompt(gptJSON) {
-  return `
-You are the Wellcoaches synthesizer integrating nine cognitive perspectives.
-Use the JSON data below to create a reflective synthesis that:
-- Highlights the interplay between perspectives (human → practical → system).
-- Mentions missing perspectives gently.
-- Ends with one clear synthesis paragraph integrating all nine.
-- Keep tone professional, warm, and aligned with Wellcoaches style.
+export function synthesisPrompt(gptJSON, observerSummary = null) {
+  const perspectivesText = JSON.stringify(gptJSON.perspectives || [], null, 2);
+  const observerText = observerSummary
+    ? JSON.stringify(observerSummary, null, 2)
+    : 'No Core Observer data available.';
 
-JSON data:
-${JSON.stringify(gptJSON, null, 2)}
+  return `
+You are the Synthesis Mind of the Wellcoaches AI system.
+
+### User Prompt
+${gptJSON.summary || 'No direct summary provided.'}
+
+### Perspectives
+${perspectivesText}
+
+### Core Observer Summary
+${observerText}
+
+### Task
+Integrate all insights into one cohesive synthesis.
+- Weave together overlapping ideas.
+- Balance any tensions or contradictions.
+- Address any missing or underrepresented viewpoints.
+- Keep tone compassionate, grounded, and insightful.
+
+Respond with a clear, conversational synthesis.
 `;
 }
