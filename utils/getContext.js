@@ -9,42 +9,38 @@ const openai = new OpenAI({
 });
 
 export async function getContext(query, useBooks) {
-  if (!useBooks) {
-    console.log('📘 Skipping assistant retrieval (useBooks = false)');
+  console.log('\n====================================================');
+  console.log('📘 Context Retrieval Initiated');
+  console.log('Query:', query);
+  console.log('Include Library (Books):', useBooks);
+  console.log('====================================================\n');
+
+  const coreAssistant = process.env.OPENAI_ASSISTANT_CORE_ID;
+  const booksAssistant = process.env.OPENAI_ASSISTANT_BOOKS_ID;
+
+  // --- Sanity Check ---
+  if (!coreAssistant) {
+    console.warn('⚠️ No CORE assistant configured — returning empty context.');
     return { text: '', snippets: [] };
   }
 
-  const coreAssistant = process.env.OPENAI_ASSISTANT_CORE_ID;
-  const bookAssistant = process.env.OPENAI_ASSISTANT_BOOKS_ID;
-
-  if (!coreAssistant && !bookAssistant) {
-    console.warn('⚠️ No assistants configured. Using mock fallback data.');
-    const snippets = [
-      { source: 'Mock Book A', content: 'Self-reflection enhances empathy.' },
-      { source: 'Mock Book B', content: 'Cognitive balance improves clarity.' },
-    ];
-    const text = snippets.map((s) => `[${s.source}] ${s.content}`).join('\n\n');
-    return { text, snippets };
-  }
-
+  // Always query Core; optionally query Books
   const assistantsToQuery = [coreAssistant];
-  if (useBooks && bookAssistant) assistantsToQuery.push(bookAssistant);
+  if (useBooks && booksAssistant) assistantsToQuery.push(booksAssistant);
 
   let combinedText = '';
   let snippets = [];
 
   for (const assistantId of assistantsToQuery) {
+    const isCore = assistantId === coreAssistant;
+    const label = isCore ? 'Core Knowledge Base' : 'Unlicensed Books';
+
+    console.log('----------------------------------------------------');
+    console.log(`🧠 Querying Assistant (v2): ${assistantId} — ${label}`);
+    console.log('----------------------------------------------------');
+
     try {
-      console.log(
-        `🧠 Querying Assistant (v2): ${assistantId} — ${
-          assistantId === process.env.OPENAI_ASSISTANT_CORE_ID
-            ? 'Core Knowledge Base'
-            : 'Unlicensed Books'
-        }`
-      );
-
-
-      // ✅ Single-step: Create thread and run together
+      // ✅ Simplified new API call
       const run = await openai.beta.threads.createAndRun({
         assistant_id: assistantId,
         thread: {
@@ -57,16 +53,31 @@ export async function getContext(query, useBooks) {
         },
       });
 
-      // ✅ Extract text output safely
-      const runOutput = run.output_text || '(no output)';
-      combinedText += `\n\n[Assistant ${assistantId}]\n${runOutput}`;
-      snippets.push({ source: assistantId, content: runOutput });
+      // --- Debug log of raw API response (shortened) ---
+      const preview = run.output_text
+        ? run.output_text.slice(0, 300)
+        : '(no output returned)';
+      console.log(`📥 Raw run output (first 300 chars):\n${preview}`);
 
-      console.log(`✅ Retrieved ${runOutput.length} chars from ${assistantId}`);
+      // --- Extract and format ---
+      const runOutput = run.output_text?.trim() || '(no output retrieved)';
+      combinedText += `\n\n[${label}]\n${runOutput}`;
+      snippets.push({ source: label, content: runOutput });
+
+      console.log(`✅ Retrieved ${runOutput.length} characters from ${label}`);
     } catch (err) {
-      console.error(`❌ Error fetching from assistant ${assistantId}:`, err);
+      console.error(`❌ Error fetching from ${label}:`, err.message);
+      snippets.push({
+        source: label,
+        content: `(Error fetching data: ${err.message})`,
+      });
     }
   }
+
+  console.log('====================================================');
+  console.log('📘 Library Context Retrieval Complete');
+  console.log('Character count:', combinedText.length);
+  console.log('====================================================\n');
 
   return { text: combinedText.trim(), snippets };
 }
