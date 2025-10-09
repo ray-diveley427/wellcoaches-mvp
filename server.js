@@ -12,7 +12,7 @@ import { buildPrompt } from './utils/buildPrompt.js';
 import { synthesisPrompt } from './utils/synthesisPrompt.js';
 import { parseResponse } from './utils/parseResponse.js';
 import { analyzePerspectives } from './utils/coreObserver.js';
-import { saveSession } from './utils/db.js'; // ✅ keep only this one
+import { saveSession } from './utils/db.js';
 
 // -------------------------------------------------------------
 // Setup
@@ -40,7 +40,7 @@ app.get('/', (req, res) => {
 // -------------------------------------------------------------
 app.post('/ask', async (req, res) => {
   const userPrompt = req.body.prompt?.trim();
-  const mode = req.body.mode === 'blindspot' ? 'blindspot' : 'full';
+  const mode = req.body.blindspot === 'true' ? 'blindspot' : 'full';
   const requestedVoices = req.body.voices?.trim() || null;
   const useBooks = req.body.useBooks === 'on' || req.body.useBooks === true;
 
@@ -101,13 +101,26 @@ Reasoning: "${userPrompt}"
     // -------------------------------------------------------------
     // Step 2: GPT Structured Output
     // -------------------------------------------------------------
-    console.log('💬 Calling OpenAI (GPT-5-mini) for structured analysis...');
-    const gptResponse = await openai.responses.create({
-      model: 'gpt-5-mini',
-      input: gptPrompt,
+    console.log('💬 Calling OpenAI (GPT-4o-mini) for structured analysis...');
+
+    // ✅ FIXED: Use correct OpenAI API
+    const gptResponse = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are part of the Wellcoaches Nine Perspectives cognitive framework. Always respond with valid JSON only, no other text.',
+        },
+        {
+          role: 'user',
+          content: gptPrompt,
+        },
+      ],
+      temperature: 0.7,
     });
 
-    const rawGPT = gptResponse.output_text;
+    const rawGPT = gptResponse.choices[0].message.content;
     console.log('✅ GPT response received. Length:', rawGPT.length, 'chars');
     const gptJSON = parseResponse(rawGPT);
 
@@ -167,7 +180,7 @@ Reasoning: "${userPrompt}"
         timestamp: new Date().toISOString(),
         mode,
         prompt: userPrompt,
-        gpt_model: 'gpt-5-mini',
+        gpt_model: 'gpt-4o-mini',
         claude_model: 'claude-3-5-haiku-20241022',
         gpt_chars: rawGPT.length,
         claude_chars: finalOutput.length,
@@ -189,7 +202,10 @@ Reasoning: "${userPrompt}"
         <div class="missing-voices">
           <h3>Explore Missing Voices</h3>
           <form action="/ask" method="post">
-            <input type="hidden" name="prompt" value="${userPrompt}" />
+            <input type="hidden" name="prompt" value="${userPrompt.replace(
+              /"/g,
+              '&quot;'
+            )}" />
             <input type="hidden" name="voices" value="${gptJSON.missing_perspectives.join(
               ', '
             )}" />
@@ -202,15 +218,16 @@ Reasoning: "${userPrompt}"
 
     const perspectivesJSON =
       mode === 'blindspot' ? '[]' : JSON.stringify(gptJSON.perspectives || []);
+
     // ✅ Escape the userPrompt for safe injection into JavaScript
     const escapedPrompt = userPrompt
-      .replace(/\\/g, '\\\\') // Escape backslashes
-      .replace(/"/g, '\\"') // Escape double quotes
-      .replace(/\n/g, '\\n') // Escape newlines
-      .replace(/\r/g, '\\r'); // Escape carriage returns
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r');
 
     const filled = template
-      .replace(/\{\{userPrompt\}\}/g, escapedPrompt) // ✅ Global replace with /g flag
+      .replace(/\{\{userPrompt\}\}/g, escapedPrompt)
       .replace('{{claudeOutput}}', finalOutput)
       .replace('{{exploreSection}}', missingListHTML || '')
       .replace('{{perspectivesJSON}}', perspectivesJSON)
@@ -229,13 +246,13 @@ Reasoning: "${userPrompt}"
 app.post('/expand', async (req, res) => {
   console.log('\n🔍 ===== EXPAND ENDPOINT HIT =====');
   console.log('Request body:', JSON.stringify(req.body, null, 2));
-  
+
   const { prompt, perspective } = req.body;
-  
+
   console.log('Prompt received:', prompt);
   console.log('Prompt length:', prompt?.length);
   console.log('Perspective:', perspective);
-  
+
   if (!prompt || !perspective) {
     console.log('❌ Missing prompt or perspective');
     return res.status(400).json({ error: 'Missing data.' });
@@ -252,7 +269,7 @@ Provide a deeper, more reflective analysis (5–6 sentences) from the ${perspect
 `;
 
     console.log('Calling OpenAI...');
-    
+
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -265,8 +282,9 @@ Provide a deeper, more reflective analysis (5–6 sentences) from the ${perspect
       temperature: 0.7,
     });
 
-    const expanded = response.choices?.[0]?.message?.content || '(no content returned)';
-    
+    const expanded =
+      response.choices?.[0]?.message?.content || '(no content returned)';
+
     console.log('✅ Expansion complete. Length:', expanded.length);
     console.log('=================================\n');
 
