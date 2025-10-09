@@ -36,19 +36,22 @@ app.get('/', (req, res) => {
 });
 
 // -------------------------------------------------------------
-// MAIN ROUTE — /ask
+// MAIN ROUTE – /ask
 // -------------------------------------------------------------
 app.post('/ask', async (req, res) => {
   const userPrompt = req.body.prompt?.trim();
-  const mode = req.body.blindspot === 'true' ? 'blindspot' : 'full';
+  const showBlindspots = req.body.blindspot === 'true';
   const requestedVoices = req.body.voices?.trim() || null;
   const useBooks = req.body.useBooks === 'on' || req.body.useBooks === true;
+
+  console.log('🔍 Debug - req.body.blindspot:', req.body.blindspot);
+  console.log('🔍 Debug - showBlindspots:', showBlindspots);
 
   if (!userPrompt) return res.redirect('/');
 
   console.log('\n====================================');
   console.log('🟢 New Request Received');
-  console.log('Mode:', mode);
+  console.log('Show Blindspots:', showBlindspots ? 'Yes' : 'No');
   if (requestedVoices) console.log('Exploring voices:', requestedVoices);
   console.log('Prompt:', userPrompt);
   console.log('Vector store in use:', process.env.VECTOR_STORE_ID || '(none)');
@@ -73,23 +76,8 @@ Respond strictly in JSON with this structure:
 }
 Situation: "${userPrompt}"
 `;
-  } else if (mode === 'blindspot') {
-    gptPrompt = `
-You are part of the Wellcoaches "Nine Perspectives" model.
-Analyze the reasoning below and identify:
-1. Dominant perspectives
-2. Missing perspectives
-3. A short dignity reminder if intrinsic perspectives are missing
-Respond strictly in JSON:
-{
-  "dominant_perspectives": [],
-  "missing_perspectives": [],
-  "dignity_reminder": "",
-  "summary": ""
-}
-Reasoning: "${userPrompt}"
-`;
   } else {
+    // Always get full 9 perspectives - the difference is whether we show blindspots
     const { text: libraryContext } = await getContext(userPrompt, useBooks);
     gptPrompt = buildPrompt({
       question: userPrompt,
@@ -103,7 +91,6 @@ Reasoning: "${userPrompt}"
     // -------------------------------------------------------------
     console.log('💬 Calling OpenAI (GPT-4o-mini) for structured analysis...');
 
-    // ✅ FIXED: Use correct OpenAI API
     const gptResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -178,7 +165,7 @@ Reasoning: "${userPrompt}"
       'logs/history.json',
       JSON.stringify({
         timestamp: new Date().toISOString(),
-        mode,
+        show_blindspots: showBlindspots,
         prompt: userPrompt,
         gpt_model: 'gpt-4o-mini',
         claude_model: 'claude-3-5-haiku-20241022',
@@ -216,8 +203,7 @@ Reasoning: "${userPrompt}"
         </div>`;
     }
 
-    const perspectivesJSON =
-      mode === 'blindspot' ? '[]' : JSON.stringify(gptJSON.perspectives || []);
+    const perspectivesJSON = JSON.stringify(gptJSON.perspectives || []);
 
     // ✅ Escape the userPrompt for safe injection into JavaScript
     const escapedPrompt = userPrompt
@@ -231,7 +217,8 @@ Reasoning: "${userPrompt}"
       .replace('{{claudeOutput}}', finalOutput)
       .replace('{{exploreSection}}', missingListHTML || '')
       .replace('{{perspectivesJSON}}', perspectivesJSON)
-      .replace('{{showBlindspots}}', mode === 'full' ? 'block' : 'none');
+      .replace('{{blindspotData}}', 'null')
+      .replace('{{showBlindspots}}', showBlindspots ? 'block' : 'none');
 
     res.send(filled);
   } catch (error) {
@@ -241,7 +228,7 @@ Reasoning: "${userPrompt}"
 });
 
 // -------------------------------------------------------------
-// PERSPECTIVE EXPANSION ROUTE — /expand
+// PERSPECTIVE EXPANSION ROUTE – /expand
 // -------------------------------------------------------------
 app.post('/expand', async (req, res) => {
   console.log('\n🔍 ===== EXPAND ENDPOINT HIT =====');
