@@ -1,6 +1,6 @@
 // utils/buildPrompt.js
-import { perspectivePrompts } from '../perspectivePrompts.js';
-import { orderedPerspectives, valueDimensions } from '../valueDimensions.js';
+import { perspectivePrompts } from './perspectivePrompts.js';
+import { orderedPerspectives, valueDimensions } from './valueDimensions.js';
 
 /**
  * Build the Wellcoaches prompt for GPT with optional book context.
