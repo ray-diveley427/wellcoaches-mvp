@@ -17,8 +17,13 @@
       <h2>Your Prompt</h2>
       <p class="input-text">{{userPrompt}}</p>
 
-      <h2>Synthesis</h2>
-      <div class="synthesis">{{claudeOutput}}</div>
+      <h2>
+        Synthesis
+        <button id="downloadWordBtn" class="button secondary" style="margin-left: 10px;">
+          ⬇️ Export to Word
+        </button>
+      </h2>
+      <div id="synthesisContent" class="synthesis synthesis-text">{{claudeOutput}}</div>
 
       {{exploreSection}}
     </div>
@@ -35,119 +40,149 @@
     </footer>
   </div>
 
-  <script>
-  // -----------------------------------------------
-  // Inject server-passed perspectives (if available)
-  // -----------------------------------------------
-  const perspectivesData = {{perspectivesJSON}};
-  const blindspotData = {{blindspotData}};
-  const showBlindspots = '{{showBlindspots}}';
-  const container = document.getElementById('perspectives-container');
+ <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
 
-  console.log('✅ Blindspot Data (raw):', blindspotData);
-  console.log('🔍 Client - perspectivesData:', perspectivesData);
-  console.log('🔍 Client - blindspotData:', blindspotData);
-  console.log('🔍 Client - showBlindspots:', showBlindspots);
+<script>
+// -----------------------------------------------
+// Inject server-passed perspectives (if available)
+// -----------------------------------------------
+const perspectivesData = {{perspectivesJSON}};
+const blindspotData = {{blindspotData}};
+const showBlindspots = '{{showBlindspots}}';
+const container = document.getElementById('perspectives-container');
 
-  // -----------------------------------------------
-  // Render Quick Blindspot Check results
-  // -----------------------------------------------
-  if (blindspotData && blindspotData.dominant) {
-    const blindspotCard = document.createElement('div');
-    blindspotCard.classList.add('card', 'synthesis'); // styled same as synthesis box
+// -----------------------------------------------
+// Render Quick Blindspot Check results
+// -----------------------------------------------
+if (blindspotData && blindspotData.dominant) {
+  const blindspotCard = document.createElement('div');
+  blindspotCard.classList.add('card', 'synthesis');
+  blindspotCard.innerHTML = `
+    <h2>Blindspot Insights</h2>
+    <h3>Dominant Perspectives</h3>
+    <p>${blindspotData.dominant.join(', ') || 'None identified'}</p>
+    <h3>Missing Perspectives</h3>
+    <p>${blindspotData.missing.join(', ') || 'None identified'}</p>
+    ${blindspotData.dignity ? `<h3>Dignity Reminder</h3><p>${blindspotData.dignity}</p>` : ''}
+  `;
+  container.appendChild(blindspotCard);
 
-    blindspotCard.innerHTML = `
-      <h2>Blindspot Insights</h2>
-
-      <h3>Dominant Perspectives</h3>
-      <p>${blindspotData.dominant.join(', ') || 'None identified'}</p>
-      
-      <h3>Missing Perspectives</h3>
-      <p>${blindspotData.missing.join(', ') || 'None identified'}</p>
-      
-      ${
-        blindspotData.dignity
-          ? `<h3>Dignity Reminder</h3><p>${blindspotData.dignity}</p>`
-          : ''
-      }
+  if (blindspotData.summary) {
+    const summaryDiv = document.createElement('div');
+    summaryDiv.classList.add('card');
+    summaryDiv.innerHTML = `<h3>Summary</h3><p>${blindspotData.summary}</p>`;
+    container.appendChild(summaryDiv);
+  }
+} else if (Array.isArray(perspectivesData) && perspectivesData.length > 0) {
+  perspectivesData.forEach((p) => {
+    const div = document.createElement('div');
+    div.classList.add('perspective');
+    div.innerHTML = `
+      <h3>${p.name}</h3>
+      <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"}</p>
+      <p class="blindspot" style="display: ${showBlindspots};">
+        <strong>Blind Spot:</strong> ${p.blindspot || "(Not applicable in this mode)"}
+      </p>
+      <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
+      <div class="expand-output"></div>
     `;
-    container.appendChild(blindspotCard);
-
-    // ✅ Add summary if available
-    if (blindspotData.summary) {
-      const summaryDiv = document.createElement('div');
-      summaryDiv.classList.add('card');
-      summaryDiv.innerHTML = `
-        <h3>Summary</h3>
-        <p>${blindspotData.summary}</p>
-      `;
-      container.appendChild(summaryDiv);
-    }
-  }
-  // -----------------------------------------------
-  // Render full 9-perspective view
-  // -----------------------------------------------
-  else if (Array.isArray(perspectivesData) && perspectivesData.length > 0) {
-    perspectivesData.forEach((p) => {
-      const div = document.createElement('div');
-      div.classList.add('perspective');
-      div.innerHTML = `
-        <h3>${p.name}</h3>
-        <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"} </p>
-        <p class="blindspot" style="display: ${showBlindspots};">
-          <strong>Blind Spot:</strong> ${p.blindspot || "(Not applicable in this mode)"}
-        </p>
-        <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
-        <div class="expand-output"></div>
-      `;
-      container.appendChild(div);
-    });
-  }
-  // -----------------------------------------------
-  // Render friendly message for edge cases
-  // -----------------------------------------------
-  else {
-    const summaryBlock = document.createElement('div');
-    summaryBlock.classList.add('summary-card');
-    summaryBlock.innerHTML = `
-      <h3>No Perspective Data</h3>
-      <p>There was an issue loading the perspective data. Please try again.</p>
-    `;
-    container.appendChild(summaryBlock);
-  }
-
-  // -----------------------------------------------
-  // Handle "Deepen this Perspective" interactions
-  // -----------------------------------------------
-  document.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('expand-btn')) {
-      const button = e.target;
-      const perspective = button.dataset.name;
-      const prompt = "{{userPrompt}}";
-      const outputDiv = button.nextElementSibling;
-
-      if (outputDiv.style.display === 'block') {
-        outputDiv.style.display = 'none';
-        return;
-      }
-
-      button.textContent = 'Loading...';
-      try {
-        const res = await fetch('/expand', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, perspective })
-        });
-        const data = await res.json();
-        outputDiv.textContent = data.expanded || '(No response)';
-        outputDiv.style.display = 'block';
-      } catch {
-        outputDiv.textContent = 'Error expanding perspective.';
-        outputDiv.style.display = 'block';
-      }
-      button.textContent = 'Deepen this Perspective';
-    }
+    container.appendChild(div);
   });
+} else {
+  const summaryBlock = document.createElement('div');
+  summaryBlock.classList.add('summary-card');
+  summaryBlock.innerHTML = `
+    <h3>No Perspective Data</h3>
+    <p>There was an issue loading the perspective data. Please try again.</p>
+  `;
+  container.appendChild(summaryBlock);
+}
+
+// -----------------------------------------------
+// Handle "Deepen this Perspective" interactions
+// -----------------------------------------------
+document.addEventListener('click', async (e) => {
+  if (e.target.classList.contains('expand-btn')) {
+    const button = e.target;
+    const perspective = button.dataset.name;
+    const prompt = "{{userPrompt}}";
+    const outputDiv = button.nextElementSibling;
+
+    if (outputDiv.style.display === 'block') {
+      outputDiv.style.display = 'none';
+      return;
+    }
+
+    button.textContent = 'Loading...';
+    try {
+      const res = await fetch('/expand', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, perspective }),
+      });
+      const data = await res.json();
+      outputDiv.textContent = data.expanded || '(No response)';
+      outputDiv.style.display = 'block';
+    } catch {
+      outputDiv.textContent = 'Error expanding perspective.';
+      outputDiv.style.display = 'block';
+    }
+    button.textContent = 'Deepen this Perspective';
+  }
+});
+
+// -----------------------------------------------
+// Export Synthesis to Word (Preserve full HTML formatting)
+// -----------------------------------------------
+const downloadBtn = document.getElementById('downloadWordBtn');
+if (downloadBtn) {
+  downloadBtn.addEventListener('click', () => {
+    const synthesisDiv = document.getElementById('synthesisContent');
+
+    // Clone the synthesis content including styles
+    const content = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office'
+            xmlns:w='urn:schemas-microsoft-com:office:word'
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Wellcoaches – Synthesis</title>
+        <style>
+          body { font-family: Calibri, sans-serif; line-height: 1.6; color: #333; }
+          h2, h3 { color: #003366; }
+          ul { margin-left: 20px; }
+          li { margin-bottom: 6px; }
+          p { margin-bottom: 10px; }
+          strong { font-weight: bold; }
+          em { font-style: italic; }
+          .synthesis-text { background: #ffffff; padding: 10px; border-radius: 6px; }
+        </style>
+      </head>
+      <body>
+        <h1>Wellcoaches – Synthesis Summary</h1>
+        ${synthesisDiv.innerHTML}
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', content], {
+      type: 'application/msword;charset=utf-8',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Wellcoaches_Synthesis.doc';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert('✅ Word file created — formatting preserved!');
+  });
+}
+
+
 </script>
 
 </body>

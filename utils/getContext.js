@@ -8,11 +8,11 @@ const openai = new OpenAI({
   defaultHeaders: { 'OpenAI-Beta': 'assistants=v2' },
 });
 
-export async function getContext(query, useBooks) {
+export async function getContext(query) {
   console.log('\n====================================================');
   console.log('📘 Context Retrieval Initiated');
   console.log('Query:', query);
-  console.log('Include Library (Books):', useBooks);
+  console.log('Including all Library Books');
   console.log('====================================================\n');
 
   const coreAssistant = process.env.OPENAI_ASSISTANT_CORE_ID;
@@ -24,16 +24,16 @@ export async function getContext(query, useBooks) {
     return { text: '', snippets: [] };
   }
 
-  // Always query Core; optionally query Books
+  // Always query both Core and Books (if configured)
   const assistantsToQuery = [coreAssistant];
-  if (useBooks && booksAssistant) assistantsToQuery.push(booksAssistant);
+  if (booksAssistant) assistantsToQuery.push(booksAssistant);
 
   let combinedText = '';
   let snippets = [];
 
   for (const assistantId of assistantsToQuery) {
     const isCore = assistantId === coreAssistant;
-    const label = isCore ? 'Core Knowledge Base' : 'Unlicensed Books';
+    const label = isCore ? 'Core Knowledge Base' : 'Library Books';
 
     console.log('----------------------------------------------------');
     console.log(`🧠 Querying Assistant (v2): ${assistantId} — ${label}`);
@@ -53,13 +53,11 @@ export async function getContext(query, useBooks) {
         },
       });
 
-      // --- Debug log of raw API response (shortened) ---
       const preview = run.output_text
         ? run.output_text.slice(0, 300)
         : '(no output returned)';
       console.log(`📥 Raw run output (first 300 chars):\n${preview}`);
 
-      // --- Extract and format ---
       const runOutput = run.output_text?.trim() || '(no output retrieved)';
       combinedText += `\n\n[${label}]\n${runOutput}`;
       snippets.push({ source: label, content: runOutput });

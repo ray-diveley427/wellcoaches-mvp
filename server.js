@@ -35,6 +35,34 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
+function formatSynthesis(text) {
+  if (!text) return '';
+
+  // Add double line breaks between paragraphs
+  let formatted = text.replace(/\n{2,}/g, '\n').replace(/\n/g, '<br><br>');
+
+  // Convert lines starting with “- ” or “• ” into HTML list items
+  if (formatted.match(/[-•]\s+/)) {
+    formatted = formatted.replace(
+      /(?:^|<br><br>)([-•]\s+.+?)(?=<br><br>|$)/gs,
+      (match) => {
+        const items = match
+          .split(/<br><br>/)
+          .map((line) => line.replace(/^[-•]\s*/, '').trim())
+          .filter(Boolean)
+          .map((line) => `<li>${line}</li>`)
+          .join('');
+        return `<ul>${items}</ul>`;
+      }
+    );
+  }
+
+  // Make key phrases bold if they look like headers (e.g., “**Summary:**”)
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  return `<div class="synthesis-text">${formatted}</div>`;
+}
+
 // -------------------------------------------------------------
 // MAIN ROUTE – /ask
 // -------------------------------------------------------------
@@ -42,7 +70,6 @@ app.post('/ask', async (req, res) => {
   const userPrompt = req.body.prompt?.trim();
   const showBlindspots = req.body.blindspot === 'true';
   const requestedVoices = req.body.voices?.trim() || null;
-  const useBooks = req.body.useBooks === 'on' || req.body.useBooks === true;
 
   console.log('🔍 Debug - req.body.blindspot:', req.body.blindspot);
   console.log('🔍 Debug - showBlindspots:', showBlindspots);
@@ -77,11 +104,11 @@ Respond strictly in JSON with this structure:
 Situation: "${userPrompt}"
 `;
   } else {
-    // Always get full 9 perspectives - the difference is whether we show blindspots
-    const { text: libraryContext } = await getContext(userPrompt, useBooks);
+    // Always get full 9 perspectives — now always includes all books
+    const { text: libraryContext } = await getContext(userPrompt);
     gptPrompt = buildPrompt({
       question: userPrompt,
-      options: { useBooks, libraryContext },
+      options: { libraryContext },
     });
   }
 
@@ -214,7 +241,7 @@ Situation: "${userPrompt}"
 
     const filled = template
       .replace(/\{\{userPrompt\}\}/g, escapedPrompt)
-      .replace('{{claudeOutput}}', finalOutput)
+      .replace('{{claudeOutput}}', formatSynthesis(finalOutput))
       .replace('{{exploreSection}}', missingListHTML || '')
       .replace('{{perspectivesJSON}}', perspectivesJSON)
       .replace('{{blindspotData}}', 'null')
