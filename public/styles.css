@@ -267,3 +267,29 @@ footer {
 .switch input:checked + .slider::before {
   transform: translateX(20px);
 }
+
+.synthesis-text {
+  line-height: 1.6;
+  margin-top: 1rem;
+}
+.synthesis-text ul {
+  margin-left: 1.2rem;
+  list-style-type: disc;
+}
+.synthesis-text li {
+  margin-bottom: 0.4rem;
+}
+#downloadWordBtn {
+  background-color: #f3f3f3;
+  border: 1px solid #ccc;
+  color: #333;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+#downloadWordBtn:hover {
+  background-color: #e4e4e4;
+}
+
