@@ -7,7 +7,6 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 
 // Utility imports
-import { getContext } from './utils/getContext.js';
 import { buildPrompt } from './utils/buildPrompt.js';
 import { synthesisPrompt } from './utils/synthesisPrompt.js';
 import { parseResponse } from './utils/parseResponse.js';
@@ -31,7 +30,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 // -------------------------------------------------------------
 // ROUTES
 // -------------------------------------------------------------
-
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
@@ -41,9 +39,7 @@ app.get('/', (req, res) => {
 // -------------------------------------------------------------
 function formatSynthesis(text) {
   if (!text) return '';
-
   let formatted = text.replace(/\n{2,}/g, '\n').replace(/\n/g, '<br><br>');
-
   if (formatted.match(/[-•]\s+/)) {
     formatted = formatted.replace(
       /(?:^|<br><br>)([-•]\s+.+?)(?=<br><br>|$)/gs,
@@ -58,7 +54,6 @@ function formatSynthesis(text) {
       }
     );
   }
-
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   return `<div class="synthesis-text">${formatted}</div>`;
 }
@@ -73,8 +68,9 @@ app.post('/ask', async (req, res) => {
   let userPrompt = req.body.prompt?.trim();
   const previousPrompt = req.body.previous?.trim();
 
+  // ✅ Clean continuation logic (no nested labels)
   if (previousPrompt) {
-    userPrompt = `Previous reflection:\n${previousPrompt}\n\nNew follow-up:\n${userPrompt}`;
+    userPrompt = `${previousPrompt}\n${userPrompt}`;
     console.log('🧩 Collaborative continuation detected');
   }
 
@@ -87,12 +83,11 @@ app.post('/ask', async (req, res) => {
   console.log('Prompt:', userPrompt);
   console.log('====================================');
 
-  let gptPrompt;
-
   try {
     // -------------------------------------------------------------
     // Step 1: Build GPT Prompt
     // -------------------------------------------------------------
+    let gptPrompt;
     if (requestedVoices) {
       gptPrompt = `
 You are part of the Wellcoaches "Nine Perspectives" model.
@@ -108,11 +103,7 @@ Respond strictly in JSON with this structure:
 Situation: "${userPrompt}"
 `;
     } else {
-      const { text: libraryContext = '' } = await getContext(userPrompt);
-      gptPrompt = buildPrompt({
-        question: userPrompt,
-        options: { libraryContext },
-      });
+      gptPrompt = buildPrompt({ question: userPrompt });
     }
 
     // -------------------------------------------------------------
@@ -182,52 +173,44 @@ Situation: "${userPrompt}"
       'utf8'
     );
 
-    let missingListHTML = '';
-    if (gptJSON.missing_perspectives?.length > 0) {
-      missingListHTML = `
-        <div class="missing-voices">
-          <h3>Explore Missing Voices</h3>
-          <form action="/ask" method="post">
-            <input type="hidden" name="prompt" value="${userPrompt.replace(
-              /"/g,
-              '&quot;'
-            )}" />
-            <input type="hidden" name="voices" value="${gptJSON.missing_perspectives.join(
-              ', '
-            )}" />
-            <button type="submit" class="button secondary">
-              Generate Insights for ${gptJSON.missing_perspectives.join(', ')}
-            </button>
-          </form>
-        </div>`;
+    // ✅ Clean continuation logic (no nested “previous reflection”)
+    if (previousPrompt) {
+      userPrompt = `${previousPrompt}\n${req.body.prompt?.trim()}`;
+      console.log('🧩 Collaborative continuation detected');
     }
 
-    // Escape prompt safely for rendering
-    const formattedPrompt = userPrompt
-      .replace(/&/g, '&amp;')
+    // ✅ Convert line breaks for HTML view
+    const escapedUserPromptForHTML = userPrompt
+      .replace(/&/g, '&amp;') // basic HTML escape only
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>');
+      .replace(/\n/g, '<br>'); // add <br> tags for line breaks
 
+    // ✅ For JS-safe embedding (no HTML escaping)
+    const escapedUserPromptForJS = userPrompt
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n');
+
+    // ✅ Format previous prompt only once
     const formattedPreviousPrompt = (previousPrompt || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/\n/g, '<br>');
 
-    const perspectivesJSON = JSON.stringify(gptJSON.perspectives || []);
-
     const filled = template
-      .replace('{{previousPrompt}}', formattedPreviousPrompt)
-      .replace('{{escapedUserPrompt}}', formattedPrompt)
+      .replaceAll('{{previousPrompt}}', formattedPreviousPrompt)
+      .replaceAll('{{escapedUserPrompt}}', escapedUserPromptForHTML)
+      .replaceAll('{{userPromptJS}}', escapedUserPromptForJS)
       .replace('{{isContinuation}}', previousPrompt ? 'block' : 'none')
       .replace('{{claudeOutput}}', formatSynthesis(finalOutput))
-      .replace('{{exploreSection}}', missingListHTML || '')
+      .replace('{{exploreSection}}', '')
       .replace(
         '{{perspectivesJSON}}',
-        JSON.stringify(JSON.stringify(gptJSON.perspectives || []))
+        JSON.stringify(gptJSON.perspectives || [])
       )
-
       .replace('{{blindspotData}}', 'null')
       .replace('{{showBlindspots}}', showBlindspots ? 'block' : 'none');
 
@@ -273,41 +256,6 @@ Provide a deeper, reflective analysis (5–6 sentences) from the ${perspective} 
   } catch (err) {
     console.error('❌ Error expanding perspective:', err);
     res.status(500).json({ error: 'Expansion failed.' });
-  }
-});
-
-// -------------------------------------------------------------
-// AI Affirmation Route
-// -------------------------------------------------------------
-app.post('/affirmation', async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    if (!prompt)
-      return res.json({
-        affirmation: 'Take a mindful breath — reflection is progress.',
-      });
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.8,
-      max_tokens: 50,
-      messages: [
-        {
-          role: 'system',
-          content:
-            "You are a mindful Wellcoaches reflection guide. Write a single short supportive affirmation (one sentence) based on the user's reflection. It should sound natural, gentle, and empowering.",
-        },
-        { role: 'user', content: prompt },
-      ],
-    });
-
-    const affirmation =
-      response.choices[0]?.message?.content?.trim() ||
-      'Keep going — insight comes from curiosity.';
-    res.json({ affirmation });
-  } catch (err) {
-    console.error('⚠️ Error generating affirmation:', err);
-    res.json({ affirmation: 'Reflection itself is a sign of growth.' });
   }
 });
 

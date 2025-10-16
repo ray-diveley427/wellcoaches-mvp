@@ -13,22 +13,11 @@
       <p class="subtitle">Comprehensive cognitive perspectives with synthesis</p>
     </div>
 
-    <!-- ✅ Show previous reflection if available -->
-    <div class="previous-reflection" style="display: {{isContinuation}};">
-      <strong>Previous Reflection:</strong>
-      <div class="card light-card">
-        <p>{{previousPrompt}}</p>
-      </div>
-    </div>
 
-    <div class="card synthesis-card">
+    <!-- ✅ Your Prompt -->
+    <div class="card">
       <h2>Your Prompt</h2>
-      <p class="input-text">
-        <em>Previous reflection:</em><br>
-        {{previousPrompt}}<br><br>
-        <em>New follow-up:</em><br>
-        {{escapedUserPrompt}}
-      </p>
+      <p class="input-text">{{escapedUserPrompt}}</p>
 
       <h2>
         Synthesis
@@ -36,16 +25,15 @@
           ⬇️ Export to Word
         </button>
       </h2>
-      <div id="synthesisContent" class="synthesis synthesis-text">
-        {{claudeOutput}}
-      </div>
+      <div class="synthesis">{{claudeOutput}}</div>
 
       {{exploreSection}}
     </div>
 
-    <!-- Section where all perspectives are listed -->
+    <!-- ✅ Perspectives -->
     <div id="perspectives-container" class="results"></div>
 
+    <!-- ✅ Continue Reflection -->
     <div class="collaboration">
       <h2>Continue Your Reflection</h2>
       <form action="/ask" method="post">
@@ -69,201 +57,94 @@
     </footer>
   </div>
 
-  <!-- Modal Loader -->
-  <div id="loadingModal" class="modal hidden">
-    <div class="modal-content">
-      <div class="pulse-bg"></div>
-      <div class="modal-inner">
-        <h2 class="modal-title breathe">🌿 Reflecting with Wellcoaches AI</h2>
-        <p id="statusMessages" class="status-messages">Gathering your perspectives…</p>
-        <p id="affirmation" class="affirmation hidden">You’re taking a thoughtful step forward.</p>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
-
+  <!-- ================================ -->
+  <!-- Scripts -->
+  <!-- ================================ -->
   <script>
-    // -----------------------------------------------
-    // Inject server-passed perspectives (if available)
-    // -----------------------------------------------
-    const perspectivesData = JSON.parse(JSON.parse('{{perspectivesJSON}}'));
-    const blindspotData = {{blindspotData}};
-    const showBlindspots = '{{showBlindspots}}';
-    const container = document.getElementById('perspectives-container');
+  const perspectivesData = {{perspectivesJSON}};
+  const blindspotData = {{blindspotData}};
+  const showBlindspots = '{{showBlindspots}}';
+  const container = document.getElementById('perspectives-container');
 
-    // -----------------------------------------------
-    // Render Quick Blindspot Check results
-    // -----------------------------------------------
-    if (blindspotData && blindspotData.dominant) {
-      const blindspotCard = document.createElement('div');
-      blindspotCard.classList.add('card', 'synthesis');
-      blindspotCard.innerHTML = `
-        <h2>Blindspot Insights</h2>
-        <h3>Dominant Perspectives</h3>
-        <p>${blindspotData.dominant.join(', ') || 'None identified'}</p>
-        <h3>Missing Perspectives</h3>
-        <p>${blindspotData.missing.join(', ') || 'None identified'}</p>
-        ${blindspotData.dignity ? `<h3>Dignity Reminder</h3><p>${blindspotData.dignity}</p>` : ''}
+  // ✅ Render Perspectives
+  if (Array.isArray(perspectivesData) && perspectivesData.length > 0) {
+    perspectivesData.forEach((p) => {
+      const div = document.createElement('div');
+      div.classList.add('perspective');
+      div.innerHTML = `
+        <h3>${p.name}</h3>
+        <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"}</p>
+        <p class="blindspot" style="display: ${showBlindspots};">
+          <strong>Blind Spot:</strong> ${p.blindspot || "(Not applicable in this mode)"}
+        </p>
+        <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
+        <div class="expand-output"></div>
       `;
-      container.appendChild(blindspotCard);
-    } else if (Array.isArray(perspectivesData) && perspectivesData.length > 0) {
-      perspectivesData.forEach((p) => {
-        const div = document.createElement('div');
-        div.classList.add('perspective');
-        div.innerHTML = `
-          <h3>${p.name}</h3>
-          <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"}</p>
-          <p class="blindspot" style="display: ${showBlindspots};">
-            <strong>Blind Spot:</strong> ${p.blindspot || "(Not applicable in this mode)"}
-          </p>
-          <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
-          <div class="expand-output"></div>
-        `;
-        container.appendChild(div);
-      });
-    }
+      container.appendChild(div);
+    });
+  } else {
+    const summaryBlock = document.createElement('div');
+    summaryBlock.classList.add('summary-card');
+    summaryBlock.innerHTML = `
+      <h3>No Perspective Data</h3>
+      <p>There was an issue loading the perspective data. Please try again.</p>
+    `;
+    container.appendChild(summaryBlock);
+  }
 
-    // -----------------------------------------------
-    // Handle "Deepen this Perspective" interactions
-    // -----------------------------------------------
-    document.addEventListener('click', async (e) => {
-      if (e.target.classList.contains('expand-btn')) {
-        const button = e.target;
-        const perspective = button.dataset.name;
-        const prompt = "{{escapedUserPrompt}}";
-        const outputDiv = button.nextElementSibling;
+  // ✅ Deepen Perspective Handler
+  document.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('expand-btn')) {
+      const button = e.target;
+      const perspective = button.dataset.name;
+      const prompt = "{{userPromptJS}}";
+      const outputDiv = button.nextElementSibling;
 
-        if (outputDiv.style.display === 'block') {
-          outputDiv.style.display = 'none';
-          return;
-        }
-
-        button.textContent = 'Loading...';
-        try {
-          const res = await fetch('/expand', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, perspective }),
-          });
-          const data = await res.json();
-          outputDiv.innerHTML = `<p>${data.expanded || '(No response)'}</p>`;
-          outputDiv.style.display = 'block';
-        } catch {
-          outputDiv.textContent = 'Error expanding perspective.';
-          outputDiv.style.display = 'block';
-        }
-        button.textContent = 'Deepen this Perspective';
+      if (outputDiv.style.display === 'block') {
+        outputDiv.style.display = 'none';
+        return;
       }
-    });
 
-    // -----------------------------------------------
-    // Export Synthesis to Word
-    // -----------------------------------------------
-    const downloadBtn = document.getElementById('downloadWordBtn');
-    if (downloadBtn) {
-      downloadBtn.addEventListener('click', () => {
-        const synthesisDiv = document.getElementById('synthesisContent');
-        const content = `
-          <html xmlns:o='urn:schemas-microsoft-com:office:office'
-                xmlns:w='urn:schemas-microsoft-com:office:word'
-                xmlns='http://www.w3.org/TR/REC-html40'>
-          <head>
-            <meta charset='utf-8'>
-            <title>Wellcoaches – Synthesis</title>
-            <style>
-              body { font-family: Calibri, sans-serif; line-height: 1.6; color: #333; }
-              h2, h3 { color: #003366; }
-              ul { margin-left: 20px; }
-              li { margin-bottom: 6px; }
-              p { margin-bottom: 10px; }
-              strong { font-weight: bold; }
-              em { font-style: italic; }
-              .synthesis-text { background: #ffffff; padding: 10px; border-radius: 6px; }
-            </style>
-          </head>
-          <body>
-            <h1>Wellcoaches – Synthesis Summary</h1>
-            ${synthesisDiv.innerHTML}
-          </body>
-          </html>
-        `;
-        const blob = new Blob(['\ufeff', content], {
-          type: 'application/msword;charset=utf-8',
+      button.textContent = 'Loading...';
+      try {
+        const res = await fetch('/expand', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, perspective })
         });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'Wellcoaches_Synthesis.doc';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      });
+        const data = await res.json();
+        outputDiv.textContent = data.expanded || '(No response)';
+        outputDiv.style.display = 'block';
+      } catch {
+        outputDiv.textContent = 'Error expanding perspective.';
+        outputDiv.style.display = 'block';
+      }
+      button.textContent = 'Deepen this Perspective';
     }
+  });
 
-    // -----------------------------------------------
-    // Reflective Loading Modal + AI Affirmation
-    // -----------------------------------------------
-    const modal = document.getElementById('loadingModal');
-    const statusBox = document.getElementById('statusMessages');
-    const affirmation = document.getElementById('affirmation');
-
-    const messages = [
-      "🧭 Gathering your perspectives…",
-      "🔍 Listening for hidden blind spots…",
-      "💡 Synthesizing insights with Claude…",
-      "🧘 Weaving it all together…",
-      "✨ Finalizing your reflection…"
-    ];
-
-    let messageIndex = 0;
-    let messageInterval;
-    let affirmationTimeout;
-
-    function showLoadingModal() {
-      modal.classList.remove('hidden');
-      statusBox.textContent = messages[0];
-      messageIndex = 1;
-
-      messageInterval = setInterval(() => {
-        statusBox.style.opacity = 0;
-        setTimeout(() => {
-          statusBox.textContent = messages[messageIndex];
-          statusBox.style.opacity = 1;
-          messageIndex = (messageIndex + 1) % messages.length;
-        }, 400);
-      }, 2500);
-
-      // Fetch AI affirmation
-      const promptText = document.querySelector('textarea')?.value || '';
-      fetch('/affirmation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptText }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setTimeout(() => {
-            affirmation.classList.remove('hidden');
-            affirmation.textContent = data.affirmation;
-          }, 6000);
-        })
-        .catch(() => {});
-    }
-
-    function hideLoadingModal() {
-      modal.classList.add('hidden');
-      clearInterval(messageInterval);
-      clearTimeout(affirmationTimeout);
-      affirmation.classList.add('hidden');
-    }
-
-    document.querySelectorAll('form[action="/ask"]').forEach((form) => {
-      form.addEventListener('submit', showLoadingModal);
+  // ✅ Export Synthesis to Word
+  const downloadBtn = document.getElementById('downloadWordBtn');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      const synthesisDiv = document.querySelector('.synthesis');
+      const content = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office'
+              xmlns:w='urn:schemas-microsoft-com:office:word'
+              xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>Wellcoaches – Synthesis</title></head>
+        <body><h1>Wellcoaches – Synthesis Summary</h1>${synthesisDiv.innerHTML}</body></html>`;
+      const blob = new Blob(['\ufeff', content], { type: 'application/msword;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Wellcoaches_Synthesis.doc';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     });
-
-    window.addEventListener('pageshow', hideLoadingModal);
+  }
   </script>
 </body>
 </html>
