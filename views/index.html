@@ -3,43 +3,154 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wellcoaches Perspectives MVP</title>
+  <title>Wellcoaches – Nine Perspectives</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
+
 <body>
   <div class="container">
-    <header class="header">
-      <h1>Wellcoaches Perspectives</h1>
-      <p class="subtitle">Explore deeper insights through nine perspectives — or discover your blind spots in seconds.</p>
-    </header>
+    <div class="header">
+      <h1>Wellcoaches – Nine Perspectives</h1>
+      <p class="subtitle">Explore your reflection through multiple cognitive lenses</p>
+    </div>
 
-    <main class="card">
-      <form action="/ask" method="post">
-        <label for="prompt" class="label">Describe your situation or reasoning:</label>
+    <div class="card">
+      <h2>Begin Your Reflection</h2>
+      <form action="/ask" method="post" id="promptForm">
+        <label for="prompt" class="form-label">What would you like to explore?</label>
         <textarea
           id="prompt"
           name="prompt"
-          rows="6"
-          placeholder="Example: Our team is struggling to maintain motivation working remotely..."
+          rows="5"
+          placeholder="e.g., How can I stay motivated when my team is facing challenges?"
           required
         ></textarea>
 
         <div class="options">
-          <label class="checkbox">
+          <label>
             <input type="checkbox" name="blindspot" value="true" />
-            Run a Quick Blindspot Check
+            Include blindspot analysis
           </label>
-          <p class="hint">Uncheck to get the full nine perspectives analysis.</p>
         </div>
 
-
-        <button type="submit" class="button">Generate Insights</button>
+        <button type="submit" class="button primary">Generate Insights →</button>
       </form>
-    </main>
+    </div>
 
-    <footer class="footer">
-      <p>© 2025 Wellcoaches AI Lab | Built for Coaching Excellence</p>
-    </footer>
+    <div class="how-it-works card">
+      <h2>How It Works</h2>
+      <ul>
+        <li>Analyze your reflection through the Wellcoaches “Nine Perspectives.”</li>
+        <li>Receive key insights, blind spots, and a synthesis summary.</li>
+        <li>Click “Deepen this Perspective” to explore further.</li>
+        <li>Use “Continue Your Reflection” to build on your inquiry collaboratively.</li>
+      </ul>
+    </div>
+
   </div>
+
+  <!-- 🌿 Reflective Loading Modal -->
+<div id="loadingModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="pulse-bg"></div>
+    <div class="modal-inner">
+      <h2 class="modal-title breathe">🌿 Reflecting with Wellcoaches AI</h2>
+      <p id="statusMessages" class="status-messages">Gathering your perspectives…</p>
+      <p id="affirmation" class="affirmation hidden">You’re taking a thoughtful step forward.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('loadingModal');
+  const statusBox = document.getElementById('statusMessages');
+  const affirmation = document.getElementById('affirmation');
+
+  const messages = [
+    "🧭 Gathering your perspectives…",
+    "🔍 Listening for hidden blind spots…",
+    "💡 Synthesizing insights with Claude…",
+    "🧘 Weaving it all together…",
+    "✨ Finalizing your reflection…"
+  ];
+
+  const affirmations = [
+    "You’re taking a thoughtful step forward.",
+    "Deep reflection brings deeper clarity.",
+    "Insight grows when we pause and listen.",
+    "Your curiosity is leading the way.",
+    "Sometimes slowing down is how we move forward."
+  ];
+
+  let messageIndex = 0;
+  let messageInterval;
+  let affirmationTimeout;
+
+  function showLoadingModal() {
+    modal.classList.remove('hidden');
+    statusBox.textContent = messages[0];
+    messageIndex = 1;
+
+    // Cycle progress messages
+    messageInterval = setInterval(() => {
+      statusBox.style.opacity = 0;
+      setTimeout(() => {
+        statusBox.textContent = messages[messageIndex];
+        statusBox.style.opacity = 1;
+        messageIndex = (messageIndex + 1) % messages.length;
+      }, 400);
+    }, 2500);
+
+    // Show default affirmation after ~6 seconds
+    affirmationTimeout = setTimeout(() => {
+      affirmation.classList.remove('hidden');
+      affirmation.textContent =
+        affirmations[Math.floor(Math.random() * affirmations.length)];
+    }, 6000);
+
+    // 🌿 AI-enhanced affirmation (nested properly)
+    const promptText = document.getElementById('prompt')?.value || '';
+    fetch('/affirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: promptText }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setTimeout(() => {
+          affirmation.classList.remove('hidden');
+          affirmation.textContent = data.affirmation;
+        }, 6000);
+      })
+      .catch(() => {});
+  }
+
+  function hideLoadingModal() {
+    modal.classList.add('hidden');
+    clearInterval(messageInterval);
+    clearTimeout(affirmationTimeout);
+    affirmation.classList.add('hidden');
+  }
+
+  // ✅ Show modal for any form submission (first prompt, reflection, etc.)
+  document.querySelectorAll('form').forEach((form) => {
+    form.addEventListener('submit', () => {
+      showLoadingModal();
+    });
+  });
+
+  // ✅ Hook into "Deepen this Perspective" buttons (the /expand fetch calls)
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('expand-btn')) {
+      showLoadingModal();
+    }
+  });
+
+  // ✅ Hide modal automatically when new page loads
+  window.addEventListener('pageshow', () => {
+    hideLoadingModal();
+  });
+</script>
+
 </body>
 </html>

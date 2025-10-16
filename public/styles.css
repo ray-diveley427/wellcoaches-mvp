@@ -293,3 +293,257 @@ footer {
   background-color: #e4e4e4;
 }
 
+/* ----------------------------------------
+   CHAT PAGE STYLES
+   ---------------------------------------- */
+.chat-layout {
+  display: flex;
+  height: 100vh;
+  background: var(--background, #f5f6f8);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  background: #003366;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+}
+.sidebar h2 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+.sidebar li,
+.sidebar button {
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: inherit;
+  width: 100%;
+}
+.sidebar li:hover,
+.sidebar button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Chat panel */
+.chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+
+.chat-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #ddd;
+  font-weight: 600;
+  color: #003366;
+}
+
+.chat-thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #fafafa;
+}
+
+.message {
+  display: flex;
+  margin-bottom: 15px;
+}
+
+.message .avatar {
+  margin-right: 10px;
+  font-size: 22px;
+}
+
+.message.user .bubble {
+  background: #e2e8f0;
+  margin-left: auto;
+}
+
+.message.assistant .bubble {
+  background: #f0f8ff;
+}
+
+.bubble {
+  padding: 12px 16px;
+  border-radius: 12px;
+  max-width: 70%;
+  white-space: pre-wrap;
+}
+
+#chatForm {
+  display: flex;
+  padding: 15px;
+  border-top: 1px solid #ddd;
+  background: white;
+}
+
+#chatInput {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  resize: none;
+  font-size: 15px;
+}
+
+.send-btn {
+  background: #003366;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin-left: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.send-btn:hover {
+  opacity: 0.9;
+}
+textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.options {
+  margin: 10px 0 20px;
+}
+
+.form-label {
+  font-weight: bold;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.how-it-works ul {
+  list-style-type: disc;
+  margin-left: 20px;
+  line-height: 1.6;
+}
+
+.how-it-works li {
+  margin-bottom: 6px;
+}
+/* 🌿 Reflective Loading Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+
+.modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-content {
+  position: relative;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 50px 60px;
+  text-align: center;
+  box-shadow: 0 10px 35px rgba(80, 120, 80, 0.15);
+  max-width: 460px;
+  width: 90%;
+  overflow: hidden;
+  font-family: 'Lato', 'Segoe UI', sans-serif;
+}
+
+.modal-title {
+  color: #40523d; /* Sage tone */
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.status-messages {
+  color: #4b4b4b;
+  font-size: 1.1rem;
+  font-weight: 400;
+  line-height: 1.6;
+  min-height: 30px;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.affirmation {
+  color: #6b7a68;
+  font-size: 1rem;
+  margin-top: 20px;
+  font-style: italic;
+  opacity: 0.85;
+  transition: opacity 0.6s ease;
+}
+
+.affirmation.hidden {
+  display: none;
+}
+
+.pulse-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, #d7e9d3 0%, #ffffff 80%);
+  opacity: 0.5;
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+.breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
+}
+
+@keyframes breathe {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+.previous-context {
+  background: #f9fbf9;
+  border-left: 4px solid #b6d3b1;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.previous-text, .input-text {
+  font-family: "Lato", sans-serif;
+  color: #3a3a3a;
+  background: #f4f8f4;
+  padding: 10px 14px;
+  border-radius: 8px;
+  line-height: 1.6;
+  white-space: normal;
+}
+.expand-output {
+  transition: all 0.3s ease;
+}

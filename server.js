@@ -1,13 +1,13 @@
 import 'dotenv/config';
-import { getContext } from './utils/getContext.js';
 import express from 'express';
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
 // Utility imports
+import { getContext } from './utils/getContext.js';
 import { buildPrompt } from './utils/buildPrompt.js';
 import { synthesisPrompt } from './utils/synthesisPrompt.js';
 import { parseResponse } from './utils/parseResponse.js';
@@ -31,17 +31,19 @@ app.use(express.static(path.join(__dirname, 'public')));
 // -------------------------------------------------------------
 // ROUTES
 // -------------------------------------------------------------
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
+// -------------------------------------------------------------
+// Helper – Format synthesis
+// -------------------------------------------------------------
 function formatSynthesis(text) {
   if (!text) return '';
 
-  // Add double line breaks between paragraphs
   let formatted = text.replace(/\n{2,}/g, '\n').replace(/\n/g, '<br><br>');
 
-  // Convert lines starting with “- ” or “• ” into HTML list items
   if (formatted.match(/[-•]\s+/)) {
     formatted = formatted.replace(
       /(?:^|<br><br>)([-•]\s+.+?)(?=<br><br>|$)/gs,
@@ -57,9 +59,7 @@ function formatSynthesis(text) {
     );
   }
 
-  // Make key phrases bold if they look like headers (e.g., “**Summary:**”)
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
   return `<div class="synthesis-text">${formatted}</div>`;
 }
 
@@ -67,30 +67,34 @@ function formatSynthesis(text) {
 // MAIN ROUTE – /ask
 // -------------------------------------------------------------
 app.post('/ask', async (req, res) => {
-  const userPrompt = req.body.prompt?.trim();
   const showBlindspots = req.body.blindspot === 'true';
   const requestedVoices = req.body.voices?.trim() || null;
 
-  console.log('🔍 Debug - req.body.blindspot:', req.body.blindspot);
-  console.log('🔍 Debug - showBlindspots:', showBlindspots);
+  let userPrompt = req.body.prompt?.trim();
+  const previousPrompt = req.body.previous?.trim();
+
+  if (previousPrompt) {
+    userPrompt = `Previous reflection:\n${previousPrompt}\n\nNew follow-up:\n${userPrompt}`;
+    console.log('🧩 Collaborative continuation detected');
+  }
 
   if (!userPrompt) return res.redirect('/');
 
   console.log('\n====================================');
-  console.log('🟢 New Request Received');
+  console.log('🟢 New Perspectives Request');
   console.log('Show Blindspots:', showBlindspots ? 'Yes' : 'No');
   if (requestedVoices) console.log('Exploring voices:', requestedVoices);
   console.log('Prompt:', userPrompt);
-  console.log('Vector store in use:', process.env.VECTOR_STORE_ID || '(none)');
   console.log('====================================');
 
   let gptPrompt;
 
-  // -------------------------------------------------------------
-  // Step 1: Build GPT Prompt
-  // -------------------------------------------------------------
-  if (requestedVoices) {
-    gptPrompt = `
+  try {
+    // -------------------------------------------------------------
+    // Step 1: Build GPT Prompt
+    // -------------------------------------------------------------
+    if (requestedVoices) {
+      gptPrompt = `
 You are part of the Wellcoaches "Nine Perspectives" model.
 Generate insights ONLY for the following perspectives: ${requestedVoices}.
 For each perspective, provide:
@@ -103,39 +107,33 @@ Respond strictly in JSON with this structure:
 }
 Situation: "${userPrompt}"
 `;
-  } else {
-    // Always get full 9 perspectives — now always includes all books
-    const { text: libraryContext } = await getContext(userPrompt);
-    gptPrompt = buildPrompt({
-      question: userPrompt,
-      options: { libraryContext },
-    });
-  }
+    } else {
+      const { text: libraryContext = '' } = await getContext(userPrompt);
+      gptPrompt = buildPrompt({
+        question: userPrompt,
+        options: { libraryContext },
+      });
+    }
 
-  try {
     // -------------------------------------------------------------
     // Step 2: GPT Structured Output
     // -------------------------------------------------------------
-    console.log('💬 Calling OpenAI (GPT-4o-mini) for structured analysis...');
-
+    console.log('💬 Calling OpenAI (GPT-4o-mini)...');
     const gptResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
           content:
-            'You are part of the Wellcoaches Nine Perspectives cognitive framework. Always respond with valid JSON only, no other text.',
+            'You are part of the Wellcoaches Nine Perspectives cognitive framework. Always respond with valid JSON only.',
         },
-        {
-          role: 'user',
-          content: gptPrompt,
-        },
+        { role: 'user', content: gptPrompt },
       ],
       temperature: 0.7,
     });
 
     const rawGPT = gptResponse.choices[0].message.content;
-    console.log('✅ GPT response received. Length:', rawGPT.length, 'chars');
+    console.log('✅ GPT response received.');
     const gptJSON = parseResponse(rawGPT);
 
     // -------------------------------------------------------------
@@ -143,10 +141,9 @@ Situation: "${userPrompt}"
     // -------------------------------------------------------------
     let observerSummary = null;
     try {
-      console.log('👁️ Running Core Observer analysis...');
+      console.log('👁️ Running Core Observer...');
       const perspectivesArray = gptJSON.perspectives || [];
       observerSummary = await analyzePerspectives(perspectivesArray);
-      console.log('✅ Core Observer summary generated.');
     } catch (err) {
       console.warn('⚠️ Core Observer failed:', err.message);
     }
@@ -154,28 +151,21 @@ Situation: "${userPrompt}"
     // -------------------------------------------------------------
     // Step 4: Claude Synthesis
     // -------------------------------------------------------------
-    console.log('💬 Calling Claude (3.5 Haiku) for synthesis...');
+    console.log('💬 Calling Claude (3.5 Haiku)...');
     const claudeResponse = await anthropic.messages.create({
       model: 'claude-3-5-haiku-20241022',
       max_tokens: 2500,
       temperature: 0.2,
       messages: [
-        {
-          role: 'user',
-          content: synthesisPrompt(gptJSON, observerSummary),
-        },
+        { role: 'user', content: synthesisPrompt(gptJSON, observerSummary) },
       ],
     });
 
     const finalOutput = claudeResponse.content[0].text;
-    console.log(
-      '✅ Claude synthesis complete. Length:',
-      finalOutput.length,
-      'chars'
-    );
+    console.log('✅ Claude synthesis complete.');
 
     // -------------------------------------------------------------
-    // Step 5: Save Session to Database
+    // Step 5: Save Session
     // -------------------------------------------------------------
     await saveSession(
       userPrompt,
@@ -185,32 +175,14 @@ Situation: "${userPrompt}"
     );
 
     // -------------------------------------------------------------
-    // Step 6: Developer Log
-    // -------------------------------------------------------------
-    if (!fs.existsSync('logs')) fs.mkdirSync('logs');
-    fs.appendFileSync(
-      'logs/history.json',
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        show_blindspots: showBlindspots,
-        prompt: userPrompt,
-        gpt_model: 'gpt-4o-mini',
-        claude_model: 'claude-3-5-haiku-20241022',
-        gpt_chars: rawGPT.length,
-        claude_chars: finalOutput.length,
-      }) + ',\n',
-      'utf8'
-    );
-
-    // -------------------------------------------------------------
-    // Step 7: Render for User
+    // Step 6: Render result.html
     // -------------------------------------------------------------
     const template = fs.readFileSync(
       path.join(__dirname, 'views', 'result.html'),
       'utf8'
     );
-    let missingListHTML = '';
 
+    let missingListHTML = '';
     if (gptJSON.missing_perspectives?.length > 0) {
       missingListHTML = `
         <div class="missing-voices">
@@ -230,26 +202,38 @@ Situation: "${userPrompt}"
         </div>`;
     }
 
+    // Escape prompt safely for rendering
+    const formattedPrompt = userPrompt
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+
+    const formattedPreviousPrompt = (previousPrompt || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+
     const perspectivesJSON = JSON.stringify(gptJSON.perspectives || []);
 
-    // ✅ Escape the userPrompt for safe injection into JavaScript
-    const escapedPrompt = userPrompt
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r');
-
     const filled = template
-      .replace(/\{\{userPrompt\}\}/g, escapedPrompt)
+      .replace('{{previousPrompt}}', formattedPreviousPrompt)
+      .replace('{{escapedUserPrompt}}', formattedPrompt)
+      .replace('{{isContinuation}}', previousPrompt ? 'block' : 'none')
       .replace('{{claudeOutput}}', formatSynthesis(finalOutput))
       .replace('{{exploreSection}}', missingListHTML || '')
-      .replace('{{perspectivesJSON}}', perspectivesJSON)
+      .replace(
+        '{{perspectivesJSON}}',
+        JSON.stringify(JSON.stringify(gptJSON.perspectives || []))
+      )
+
       .replace('{{blindspotData}}', 'null')
       .replace('{{showBlindspots}}', showBlindspots ? 'block' : 'none');
 
     res.send(filled);
   } catch (error) {
-    console.error('❌ Error during generation:', error);
+    console.error('❌ Error in /ask route:', error);
     res.status(500).send(`<pre>${error}</pre>`);
   }
 });
@@ -258,19 +242,9 @@ Situation: "${userPrompt}"
 // PERSPECTIVE EXPANSION ROUTE – /expand
 // -------------------------------------------------------------
 app.post('/expand', async (req, res) => {
-  console.log('\n🔍 ===== EXPAND ENDPOINT HIT =====');
-  console.log('Request body:', JSON.stringify(req.body, null, 2));
-
   const { prompt, perspective } = req.body;
-
-  console.log('Prompt received:', prompt);
-  console.log('Prompt length:', prompt?.length);
-  console.log('Perspective:', perspective);
-
-  if (!prompt || !perspective) {
-    console.log('❌ Missing prompt or perspective');
-    return res.status(400).json({ error: 'Missing data.' });
-  }
+  if (!prompt || !perspective)
+    return res.status(400).json({ error: 'Missing prompt or perspective.' });
 
   try {
     const expandPrompt = `
@@ -279,17 +253,14 @@ You are providing a deeper analysis from the "${perspective}" perspective within
 The user's situation is:
 "${prompt}"
 
-Provide a deeper, more reflective analysis (5–6 sentences) from the ${perspective} perspective that is consistent with its cognitive style and values. Focus specifically on this situation and provide actionable insights. Do not mention other perspectives. The situation has been provided above - analyze it directly without asking for clarification.
-`;
-
-    console.log('Calling OpenAI...');
+Provide a deeper, reflective analysis (5–6 sentences) from the ${perspective} perspective. Focus only on this perspective.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: `You are an expert Wellcoaches AI assistant specializing in the ${perspective} perspective. The user's situation has already been provided. Analyze it directly without asking for more information.`,
+          content: `You are an expert Wellcoaches AI assistant specializing in the ${perspective} perspective.`,
         },
         { role: 'user', content: expandPrompt },
       ],
@@ -298,14 +269,45 @@ Provide a deeper, more reflective analysis (5–6 sentences) from the ${perspect
 
     const expanded =
       response.choices?.[0]?.message?.content || '(no content returned)';
-
-    console.log('✅ Expansion complete. Length:', expanded.length);
-    console.log('=================================\n');
-
     res.json({ expanded });
   } catch (err) {
     console.error('❌ Error expanding perspective:', err);
     res.status(500).json({ error: 'Expansion failed.' });
+  }
+});
+
+// -------------------------------------------------------------
+// AI Affirmation Route
+// -------------------------------------------------------------
+app.post('/affirmation', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt)
+      return res.json({
+        affirmation: 'Take a mindful breath — reflection is progress.',
+      });
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.8,
+      max_tokens: 50,
+      messages: [
+        {
+          role: 'system',
+          content:
+            "You are a mindful Wellcoaches reflection guide. Write a single short supportive affirmation (one sentence) based on the user's reflection. It should sound natural, gentle, and empowering.",
+        },
+        { role: 'user', content: prompt },
+      ],
+    });
+
+    const affirmation =
+      response.choices[0]?.message?.content?.trim() ||
+      'Keep going — insight comes from curiosity.';
+    res.json({ affirmation });
+  } catch (err) {
+    console.error('⚠️ Error generating affirmation:', err);
+    res.json({ affirmation: 'Reflection itself is a sign of growth.' });
   }
 });
 
