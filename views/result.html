@@ -6,145 +6,223 @@
   <title>Nine Perspectives Result</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
+
 <body>
-  <div class="container">
-    <div class="header">
+  <div class="app-layout">
+    <!-- ============================= -->
+    <!-- 🧭 Sidebar - Reflections -->
+    <!-- ============================= -->
+    <aside class="sidebar">
+      <h2>Your Reflections</h2>
+      <div id="reflection-list"><p>Loading reflections...</p></div>
+    </aside>
+
+    <!-- ============================= -->
+    <!-- 🌿 Main Content -->
+    <!-- ============================= -->
+    <main class="main-content">
       <h1>Wellcoaches – Nine Perspectives</h1>
       <p class="subtitle">Comprehensive cognitive perspectives with synthesis</p>
-    </div>
 
+      <!-- 🧠 Reflection Summary -->
+      <div class="card">
+        <h2>Your Prompt</h2>
+        <p class="input-text">{{escapedUserPrompt}}</p>
 
-    <!-- ✅ Your Prompt -->
-    <div class="card">
-      <h2>Your Prompt</h2>
-      <p class="input-text">{{escapedUserPrompt}}</p>
+        <h2>
+          Synthesis
+          <button id="downloadWordBtn" class="button secondary" style="margin-left:10px;">⬇️ Export to Word</button>
+        </h2>
+        <div class="synthesis">{{claudeOutput}}</div>
+      </div>
 
-      <h2>
-        Synthesis
-        <button id="downloadWordBtn" class="button secondary" style="margin-left: 10px;">
-          ⬇️ Export to Word
-        </button>
-      </h2>
-      <div class="synthesis">{{claudeOutput}}</div>
+      <!-- 🧩 Perspectives -->
+      <div id="perspectives-container"></div>
 
-      {{exploreSection}}
-    </div>
+      <!-- 🔄 Continue Reflection -->
+      <div class="collaboration card">
+        <h2>Continue Your Reflection</h2>
+        <form action="/ask" method="post">
+          <input type="hidden" name="previous" value="{{rawUserPrompt}}" />
+          <input type="hidden" name="session_id" value="{{sessionId}}" />
 
-    <!-- ✅ Perspectives -->
-    <div id="perspectives-container" class="results"></div>
+          <textarea
+            name="prompt"
+            rows="3"
+            placeholder="Ask a follow-up question or go deeper..."
+            required
+          ></textarea>
 
-    <!-- ✅ Continue Reflection -->
-    <div class="collaboration">
-      <h2>Continue Your Reflection</h2>
-      <form action="/ask" method="post">
-        <input type="hidden" name="previous" value="{{escapedUserPrompt}}">
-        <textarea name="prompt" rows="3" placeholder="Ask a follow-up question or go deeper..."></textarea>
-        <div style="margin-top: 10px;">
-          <label>
-            <input type="checkbox" name="blindspot" value="true" /> Include blindspot analysis
-          </label>
-        </div>
-        <button type="submit" class="button primary">Reflect Further →</button>
-      </form>
-    </div>
+          <div class="options">
+            <label>
+              <input type="checkbox" name="blindspot" value="true" /> Include blindspot analysis
+            </label>
+          </div>
 
-    <div class="reflection">
-      <a href="/" class="button secondary">← Back</a>
-    </div>
+          <div class="buttons">
+            <button type="submit" class="button primary">Reflect Further →</button>
+            <button type="submit" class="button secondary" name="reset" value="true">
+              🧭 Start New Reflection
+            </button>
+          </div>
+        </form>
+      </div>
 
-    <footer class="footer">
-      Powered by GPT-5 + Claude 3.5 | © 2025 Wellcoaches.ai
-    </footer>
+      <footer class="footer">
+        Powered by GPT-5 + Claude 3.5 | © 2025 Wellcoaches.ai
+      </footer>
+    </main>
   </div>
 
-  <!-- ================================ -->
-  <!-- Scripts -->
-  <!-- ================================ -->
+  <!-- ============================= -->
+  <!-- 💬 Reflection Detail Modal -->
+  <!-- ============================= -->
+  <div id="reflectionModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2 id="modal-timestamp"></h2>
+      <h3>Prompt</h3>
+      <p id="modal-prompt"></p>
+      <h3>Synthesis</h3>
+      <div id="modal-synthesis" class="synthesis-card"></div>
+    </div>
+  </div>
+
+  <!-- ============================= -->
+  <!-- 🌿 JS Logic -->
+  <!-- ============================= -->
   <script>
-  const perspectivesData = {{perspectivesJSON}};
-  const blindspotData = {{blindspotData}};
-  const showBlindspots = '{{showBlindspots}}';
-  const container = document.getElementById('perspectives-container');
+    // ============================================================
+    // 1️⃣ Render Perspectives
+    // ============================================================
+    const perspectivesData = JSON.parse(`{{perspectivesJSON}}`);
+    const showBlindspots = "{{showBlindspots}}";
+    const container = document.getElementById("perspectives-container");
 
-  // ✅ Render Perspectives
-  if (Array.isArray(perspectivesData) && perspectivesData.length > 0) {
-    perspectivesData.forEach((p) => {
-      const div = document.createElement('div');
-      div.classList.add('perspective');
-      div.innerHTML = `
-        <h3>${p.name}</h3>
-        <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"}</p>
-        <p class="blindspot" style="display: ${showBlindspots};">
-          <strong>Blind Spot:</strong> ${p.blindspot || "(Not applicable in this mode)"}
-        </p>
-        <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
-        <div class="expand-output"></div>
-      `;
-      container.appendChild(div);
-    });
-  } else {
-    const summaryBlock = document.createElement('div');
-    summaryBlock.classList.add('summary-card');
-    summaryBlock.innerHTML = `
-      <h3>No Perspective Data</h3>
-      <p>There was an issue loading the perspective data. Please try again.</p>
-    `;
-    container.appendChild(summaryBlock);
-  }
-
-  // ✅ Deepen Perspective Handler
-  document.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('expand-btn')) {
-      const button = e.target;
-      const perspective = button.dataset.name;
-      const prompt = "{{userPromptJS}}";
-      const outputDiv = button.nextElementSibling;
-
-      if (outputDiv.style.display === 'block') {
-        outputDiv.style.display = 'none';
-        return;
-      }
-
-      button.textContent = 'Loading...';
-      try {
-        const res = await fetch('/expand', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, perspective })
-        });
-        const data = await res.json();
-        outputDiv.textContent = data.expanded || '(No response)';
-        outputDiv.style.display = 'block';
-      } catch {
-        outputDiv.textContent = 'Error expanding perspective.';
-        outputDiv.style.display = 'block';
-      }
-      button.textContent = 'Deepen this Perspective';
+    if (Array.isArray(perspectivesData) && perspectivesData.length > 0) {
+      perspectivesData.forEach((p) => {
+        const div = document.createElement("div");
+        div.classList.add("perspective");
+        div.innerHTML = `
+          <h3>${p.name}</h3>
+          <p><strong>Insight:</strong> ${p.insight || "(No insight provided)"}</p>
+          <p class="blindspot" style="display:${showBlindspots};"><strong>Blind Spot:</strong> ${p.blindspot || "(Not applicable)"}</p>
+          <button class="expand-btn" data-name="${p.name}">Deepen this Perspective</button>
+          <div class="expand-output"></div>`;
+        container.appendChild(div);
+      });
     }
-  });
 
-  // ✅ Export Synthesis to Word
-  const downloadBtn = document.getElementById('downloadWordBtn');
-  if (downloadBtn) {
-    downloadBtn.addEventListener('click', () => {
-      const synthesisDiv = document.querySelector('.synthesis');
-      const content = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office'
-              xmlns:w='urn:schemas-microsoft-com:office:word'
-              xmlns='http://www.w3.org/TR/REC-html40'>
-        <head><meta charset='utf-8'><title>Wellcoaches – Synthesis</title></head>
-        <body><h1>Wellcoaches – Synthesis Summary</h1>${synthesisDiv.innerHTML}</body></html>`;
-      const blob = new Blob(['\ufeff', content], { type: 'application/msword;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'Wellcoaches_Synthesis.doc';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+    // ============================================================
+    // 2️⃣ Deepen Perspective Expansion
+    // ============================================================
+    document.addEventListener("click", async (e) => {
+      if (e.target.classList.contains("expand-btn")) {
+        const button = e.target;
+        const perspective = button.dataset.name;
+        const prompt = "{{userPromptJS}}";
+        const outputDiv = button.nextElementSibling;
+
+        button.textContent = "Loading...";
+        try {
+          const res = await fetch("/expand", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, perspective }),
+          });
+          const data = await res.json();
+          outputDiv.textContent = data.expanded || "(No response)";
+          outputDiv.style.display = "block";
+        } catch {
+          outputDiv.textContent = "Error expanding perspective.";
+          outputDiv.style.display = "block";
+        }
+        button.textContent = "Deepen this Perspective";
+      }
     });
-  }
+
+    // ============================================================
+    // 3️⃣ Load Reflection History (Sidebar)
+    // ============================================================
+    async function loadReflections() {
+      const list = document.getElementById("reflection-list");
+      const sessionId = localStorage.getItem("sessionId") || "{{sessionId}}";
+
+      try {
+        const res = await fetch(`/api/history?session_id=${sessionId}`);
+        const data = await res.json();
+        list.innerHTML = "";
+
+        if (!data.success || !data.reflections.length) {
+          list.innerHTML = "<p>No reflections yet.</p>";
+          return;
+        }
+
+        // Sort newest → oldest
+        const reflections = data.reflections.sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        );
+
+        reflections.forEach((r) => {
+          const item = document.createElement("div");
+          item.classList.add("reflection-item");
+          item.innerHTML = `
+            <p class="reflection-date">${r.timestamp}</p>
+            <p class="reflection-preview">${r.prompt.slice(0, 60)}...</p>`;
+          item.addEventListener("click", () => openReflectionModal(r));
+          list.appendChild(item);
+        });
+      } catch (err) {
+        console.error("Error loading reflections:", err);
+        list.innerHTML = "<p>Failed to load reflections.</p>";
+      }
+    }
+
+    // ============================================================
+    // 4️⃣ Modal for Full Reflection View
+    // ============================================================
+    function openReflectionModal(reflection) {
+      const modal = document.getElementById("reflectionModal");
+      document.getElementById("modal-timestamp").textContent = reflection.timestamp;
+      document.getElementById("modal-prompt").textContent = reflection.prompt;
+
+      const formatted = reflection.synthesis
+        .split(/\n{2,}/)
+        .map((p) => `<p>${p.trim()}</p>`)
+        .join("");
+      document.getElementById("modal-synthesis").innerHTML = formatted;
+
+      modal.style.display = "block";
+    }
+
+    document.querySelector(".close-btn").addEventListener("click", () => {
+      document.getElementById("reflectionModal").style.display = "none";
+    });
+    window.addEventListener("click", (e) => {
+      const modal = document.getElementById("reflectionModal");
+      if (e.target === modal) modal.style.display = "none";
+    });
+
+    // ============================================================
+    // 5️⃣ Inject New Reflection Immediately
+    // ============================================================
+    const newReflection = {{newReflection}};
+    if (newReflection) {
+      const list = document.getElementById("reflection-list");
+      const item = document.createElement("div");
+      item.classList.add("reflection-item");
+      item.innerHTML = `
+        <p class="reflection-date">${newReflection.timestamp}</p>
+        <p class="reflection-preview">${newReflection.prompt.slice(0, 60)}...</p>`;
+      item.addEventListener("click", () => openReflectionModal(newReflection));
+      if (list.firstChild) list.insertBefore(item, list.firstChild);
+      else list.appendChild(item);
+    }
+
+    // ============================================================
+    // 6️⃣ Initialize Sidebar
+    // ============================================================
+    window.addEventListener("DOMContentLoaded", loadReflections);
   </script>
 </body>
 </html>
