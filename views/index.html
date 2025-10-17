@@ -8,149 +8,242 @@
 </head>
 
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>Wellcoaches – Nine Perspectives</h1>
-      <p class="subtitle">Explore your reflection through multiple cognitive lenses</p>
-    </div>
+  <div class="app-layout">
+    <!-- ============================= -->
+    <!-- 🧭 Left Sidebar - Reflection History -->
+    <!-- ============================= -->
+    <aside class="sidebar">
+      <h2>Your Reflections</h2>
+      <div id="reflection-list" class="reflection-list">
+        <p>Loading reflections...</p>
+      </div>
+    </aside>
 
-    <div class="card">
-      <h2>Begin Your Reflection</h2>
-      <form action="/ask" method="post" id="promptForm">
-        <label for="prompt" class="form-label">What would you like to explore?</label>
-        <textarea
-          id="prompt"
-          name="prompt"
-          rows="5"
-          placeholder="e.g., How can I stay motivated when my team is facing challenges?"
-          required
-        ></textarea>
+    <!-- ============================= -->
+    <!-- 🌿 Main Content Area -->
+    <!-- ============================= -->
+    <main class="main-content">
+      <div class="header">
+        <h1>Wellcoaches – Nine Perspectives</h1>
+        <p class="subtitle">Explore your reflection through multiple cognitive lenses</p>
+      </div>
 
-        <div class="options">
-          <label>
-            <input type="checkbox" name="blindspot" value="true" />
-            Include blindspot analysis
-          </label>
-        </div>
+      <!-- 🌿 Reflection Form -->
+      <div class="card">
+        <h2>Begin Your Reflection</h2>
+        <form action="/ask" method="post" id="promptForm">
+          <!-- 🔁 Store or reuse the same session -->
+          <input type="hidden" name="session_id" id="session_id" value="" />
 
-        <button type="submit" class="button primary">Generate Insights →</button>
-      </form>
-    </div>
+          <label for="prompt" class="form-label">What would you like to explore?</label>
+          <textarea
+            id="prompt"
+            name="prompt"
+            rows="5"
+            placeholder="e.g., How can I stay motivated when my team is facing challenges?"
+            required
+          ></textarea>
 
-    <div class="how-it-works card">
-      <h2>How It Works</h2>
-      <ul>
-        <li>Analyze your reflection through the Wellcoaches “Nine Perspectives.”</li>
-        <li>Receive key insights, blind spots, and a synthesis summary.</li>
-        <li>Click “Deepen this Perspective” to explore further.</li>
-        <li>Use “Continue Your Reflection” to build on your inquiry collaboratively.</li>
-      </ul>
-    </div>
+          <div class="options">
+            <label>
+              <input type="checkbox" name="blindspot" value="true" />
+              Include blindspot analysis
+            </label>
+          </div>
 
+          <button type="submit" class="button primary">Generate Insights →</button>
+        </form>
+      </div>
+
+      <!-- 🌿 How It Works -->
+      <div class="how-it-works card">
+        <h2>How It Works</h2>
+        <ul>
+          <li>Analyze your reflection through the Wellcoaches “Nine Perspectives.”</li>
+          <li>Receive key insights, blind spots, and a synthesis summary.</li>
+          <li>Click “Deepen this Perspective” to explore further.</li>
+          <li>Use “Continue Your Reflection” to build on your inquiry collaboratively.</li>
+        </ul>
+      </div>
+
+      <footer class="footer">
+        Powered by GPT-5 + Claude 3.5 | © 2025 Wellcoaches.ai
+      </footer>
+    </main>
   </div>
 
+  <!-- ============================= -->
+  <!-- 💬 Reflection Detail Modal -->
+  <!-- ============================= -->
+  <div id="reflectionModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2 id="modal-timestamp"></h2>
+      <h3>Prompt</h3>
+      <p id="modal-prompt"></p>
+      <h3>Synthesis</h3>
+      <div id="modal-synthesis" class="synthesis-card"></div>
+    </div>
+  </div>
+
+  <!-- ============================= -->
   <!-- 🌿 Reflective Loading Modal -->
-<div id="loadingModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="pulse-bg"></div>
-    <div class="modal-inner">
-      <h2 class="modal-title breathe">🌿 Reflecting with Wellcoaches AI</h2>
-      <p id="statusMessages" class="status-messages">Gathering your perspectives…</p>
-      <p id="affirmation" class="affirmation hidden">You’re taking a thoughtful step forward.</p>
+  <!-- ============================= -->
+  <div id="loadingModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="pulse-bg"></div>
+      <div class="modal-inner">
+        <h2 class="modal-title breathe">🌿 Reflecting with Wellcoaches AI</h2>
+        <p id="statusMessages" class="status-messages">Gathering your perspectives…</p>
+        <p id="affirmation" class="affirmation hidden">You’re taking a thoughtful step forward.</p>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-  const modal = document.getElementById('loadingModal');
-  const statusBox = document.getElementById('statusMessages');
-  const affirmation = document.getElementById('affirmation');
+  <!-- ============================= -->
+  <!-- JS Logic -->
+  <!-- ============================= -->
+  <script>
+    // ============================================================
+    // 1️⃣ Session management
+    // ============================================================
+    const storedSessionId = localStorage.getItem("sessionId");
+    const sessionInput = document.getElementById("session_id");
 
-  const messages = [
-    "🧭 Gathering your perspectives…",
-    "🔍 Listening for hidden blind spots…",
-    "💡 Synthesizing insights with Claude…",
-    "🧘 Weaving it all together…",
-    "✨ Finalizing your reflection…"
-  ];
-
-  const affirmations = [
-    "You’re taking a thoughtful step forward.",
-    "Deep reflection brings deeper clarity.",
-    "Insight grows when we pause and listen.",
-    "Your curiosity is leading the way.",
-    "Sometimes slowing down is how we move forward."
-  ];
-
-  let messageIndex = 0;
-  let messageInterval;
-  let affirmationTimeout;
-
-  function showLoadingModal() {
-    modal.classList.remove('hidden');
-    statusBox.textContent = messages[0];
-    messageIndex = 1;
-
-    // Cycle progress messages
-    messageInterval = setInterval(() => {
-      statusBox.style.opacity = 0;
-      setTimeout(() => {
-        statusBox.textContent = messages[messageIndex];
-        statusBox.style.opacity = 1;
-        messageIndex = (messageIndex + 1) % messages.length;
-      }, 400);
-    }, 2500);
-
-    // Show default affirmation after ~6 seconds
-    affirmationTimeout = setTimeout(() => {
-      affirmation.classList.remove('hidden');
-      affirmation.textContent =
-        affirmations[Math.floor(Math.random() * affirmations.length)];
-    }, 6000);
-
-    // 🌿 AI-enhanced affirmation (nested properly)
-    const promptText = document.getElementById('prompt')?.value || '';
-    fetch('/affirmation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptText }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setTimeout(() => {
-          affirmation.classList.remove('hidden');
-          affirmation.textContent = data.affirmation;
-        }, 6000);
-      })
-      .catch(() => {});
-  }
-
-  function hideLoadingModal() {
-    modal.classList.add('hidden');
-    clearInterval(messageInterval);
-    clearTimeout(affirmationTimeout);
-    affirmation.classList.add('hidden');
-  }
-
-  // ✅ Show modal for any form submission (first prompt, reflection, etc.)
-  document.querySelectorAll('form').forEach((form) => {
-    form.addEventListener('submit', () => {
-      showLoadingModal();
-    });
-  });
-
-  // ✅ Hook into "Deepen this Perspective" buttons (the /expand fetch calls)
-  document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('expand-btn')) {
-      showLoadingModal();
+    if (storedSessionId) {
+      sessionInput.value = storedSessionId;
+      console.log("✅ Continuing session:", storedSessionId);
+    } else {
+      console.log("🆕 Starting new reflection session upon first submit");
     }
-  });
 
-  // ✅ Hide modal automatically when new page loads
-  window.addEventListener('pageshow', () => {
-    hideLoadingModal();
-  });
-</script>
+    // ============================================================
+    // 2️⃣ Sidebar Reflection History
+    // ============================================================
+    async function loadReflections() {
+      const list = document.getElementById("reflection-list");
 
+      try {
+        const res = await fetch(`/api/history`);
+        const data = await res.json();
+        list.innerHTML = "";
+
+        if (!data.success || !data.reflections.length) {
+          list.innerHTML = "<p>No reflections found yet.</p>";
+          return;
+        }
+
+        // Sort newest → oldest
+        const reflections = data.reflections.sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        );
+
+        reflections.forEach((r) => {
+          const item = document.createElement("div");
+          item.classList.add("reflection-item");
+          item.innerHTML = `
+            <p class="reflection-date">${r.timestamp}</p>
+            <p class="reflection-preview">${r.prompt.slice(0, 60)}...</p>`;
+          item.addEventListener("click", () => openModal(r));
+          list.appendChild(item);
+        });
+      } catch (err) {
+        console.error("Error loading reflections:", err);
+        list.innerHTML = "<p>Failed to load reflections.</p>";
+      }
+    }
+
+    // ============================================================
+    // 3️⃣ Reflection Modal
+    // ============================================================
+    function openModal(reflection) {
+      const modal = document.getElementById("reflectionModal");
+      document.getElementById("modal-timestamp").textContent = reflection.timestamp;
+      document.getElementById("modal-prompt").textContent = reflection.prompt;
+
+      // Format synthesis into readable paragraphs
+      const formatted = reflection.synthesis
+        .split(/\n{2,}/)
+        .map((p) => `<p>${p.trim()}</p>`)
+        .join("");
+      document.getElementById("modal-synthesis").innerHTML = formatted;
+
+      modal.style.display = "block";
+    }
+
+    document.querySelector(".close-btn").addEventListener("click", () => {
+      document.getElementById("reflectionModal").style.display = "none";
+    });
+    window.addEventListener("click", (e) => {
+      const modal = document.getElementById("reflectionModal");
+      if (e.target === modal) modal.style.display = "none";
+    });
+
+    // ============================================================
+    // 4️⃣ Loading Modal for Smooth UX
+    // ============================================================
+    const loadingModal = document.getElementById("loadingModal");
+    const statusBox = document.getElementById("statusMessages");
+    const affirmation = document.getElementById("affirmation");
+    const messages = [
+      "🧭 Gathering your perspectives…",
+      "🔍 Listening for hidden blind spots…",
+      "💡 Synthesizing insights with Claude…",
+      "🧘 Weaving it all together…",
+      "✨ Finalizing your reflection…"
+    ];
+    const affirmations = [
+      "You’re taking a thoughtful step forward.",
+      "Deep reflection brings deeper clarity.",
+      "Insight grows when we pause and listen.",
+      "Your curiosity is leading the way.",
+      "Sometimes slowing down is how we move forward."
+    ];
+    let messageIndex = 0, messageInterval, affirmationTimeout;
+
+    function showLoadingModal() {
+      loadingModal.classList.remove("hidden");
+      statusBox.textContent = messages[0];
+      messageIndex = 1;
+
+      messageInterval = setInterval(() => {
+        statusBox.style.opacity = 0;
+        setTimeout(() => {
+          statusBox.textContent = messages[messageIndex];
+          statusBox.style.opacity = 1;
+          messageIndex = (messageIndex + 1) % messages.length;
+        }, 400);
+      }, 2500);
+
+      affirmationTimeout = setTimeout(() => {
+        affirmation.classList.remove("hidden");
+        affirmation.textContent = affirmations[Math.floor(Math.random() * affirmations.length)];
+      }, 6000);
+    }
+
+    function hideLoadingModal() {
+      loadingModal.classList.add("hidden");
+      clearInterval(messageInterval);
+      clearTimeout(affirmationTimeout);
+      affirmation.classList.add("hidden");
+    }
+
+    // ============================================================
+    // 5️⃣ Form Submission (show loading + persist session)
+    // ============================================================
+    document.getElementById("promptForm").addEventListener("submit", (e) => {
+      showLoadingModal();
+      if (sessionInput.value) {
+        localStorage.setItem("sessionId", sessionInput.value);
+      }
+    });
+
+    window.addEventListener("pageshow", hideLoadingModal);
+
+    // ============================================================
+    // 6️⃣ Initialize
+    // ============================================================
+    window.addEventListener("DOMContentLoaded", loadReflections);
+  </script>
 </body>
 </html>
