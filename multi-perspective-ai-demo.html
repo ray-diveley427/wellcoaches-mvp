@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Perspective AI - Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #1a202c;
+            --text-secondary: #718096;
+            --border: #e2e8f0;
+            --teal: #14b8a6;
+            --teal-dark: #0d9488;
+            --purple: #8b5cf6;
+            --purple-dark: #7c3aed;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--teal) 0%, var(--purple) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--teal) 0%, var(--purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-button {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .nav-button:hover {
+            background: var(--teal);
+            color: white;
+        }
+
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .dropdown-toggle:hover {
+            border-color: var(--teal);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            left: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            min-width: 500px;
+            display: none;
+            z-index: 1001;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .dropdown.open .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-section {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dropdown-section:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-header {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+        }
+
+        .method-item {
+            padding: 0.875rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 0.5rem;
+        }
+
+        .method-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .method-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .method-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .method-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .method-length {
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            padding: 0.25rem 0.625rem;
+            border-radius: 4px;
+        }
+
+        .method-description {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .main {
+            height: calc(100vh - 73px);
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 900px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .chat-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--teal) 0%, var(--purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .welcome-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .welcome-icon {
+            font-size: 48px;
+        }
+
+        .welcome-message h3 {
+            font-size: 20px;
+            color: var(--text-primary);
+        }
+
+        .welcome-message p {
+            color: var(--text-secondary);
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        .suggestion-chips {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .suggestion-chip {
+            padding: 0.625rem 1.25rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .suggestion-chip:hover {
+            border-color: var(--teal);
+            background: white;
+        }
+
+        .message {
+            display: flex;
+            gap: 1rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.user .message-avatar {
+            order: 2;
+        }
+
+        .message.user .message-content {
+            order: 1;
+            background: var(--teal);
+            color: white;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-secondary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .message.assistant .message-avatar {
+            background: linear-gradient(135deg, var(--teal) 0%, var(--purple) 100%);
+            color: white;
+        }
+
+        .message-content {
+            max-width: 60%;
+            background: var(--bg-secondary);
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            line-height: 1.6;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .message-content p {
+            margin: 0;
+        }
+
+        .message-content p:not(:last-child) {
+            margin-bottom: 0.75rem;
+        }
+
+        .chat-input-area {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .input-wrapper {
+            flex: 1;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            max-height: 120px;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--teal);
+        }
+
+        .send-button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--teal) 0%, var(--purple) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: opacity 0.2s;
+            font-size: 14px;
+        }
+
+        .send-button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .send-button svg {
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">M</div>
+            <div class="logo-text">Multi-Perspective AI</div>
+        </div>
+        <div class="header-nav">
+            <div class="dropdown" id="methodsDropdown">
+                <button class="dropdown-toggle" id="methodsToggle">
+                    <span>Analysis Methods</span>
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+                <div class="dropdown-menu">
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Quick & Focused</div>
+                        <div class="method-item" data-method="QUICK">
+                            <div class="method-item-header">
+                                <div class="method-name">QUICK</div>
+                                <div class="method-length">200-400 words</div>
+                            </div>
+                            <div class="method-description">Fast insights for daily decisions. 1-2 core tensions, immediate clarity.</div>
+                        </div>
+                        <div class="method-item" data-method="FULL">
+                            <div class="method-item-header">
+                                <div class="method-name">FULL</div>
+                                <div class="method-length">600-800 words</div>
+                            </div>
+                            <div class="method-description">Comprehensive analysis with 3-4 perspectives and strategic options.</div>
+                        </div>
+                    </div>
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Specialized Analysis</div>
+                        <div class="method-item" data-method="CONFLICT">
+                            <div class="method-item-header">
+                                <div class="method-name">CONFLICT RESOLUTION</div>
+                                <div class="method-length">600-800 words</div>
+                            </div>
+                            <div class="method-description">For incompatible perspectives creating gridlock. Shows how both sides hold truth.</div>
+                        </div>
+                        <div class="method-item" data-method="STAKEHOLDER">
+                            <div class="method-item-header">
+                                <div class="method-name">STAKEHOLDER ANALYSIS</div>
+                                <div class="method-length">600-800 words</div>
+                            </div>
+                            <div class="method-description">Maps multiple people/groups with different agendas and priorities.</div>
+                        </div>
+                        <div class="method-item" data-method="PATTERN">
+                            <div class="method-item-header">
+                                <div class="method-name">PATTERN RECOGNITION</div>
+                                <div class="method-length">600-800 words</div>
+                            </div>
+                            <div class="method-description">Identifies repeating dynamics and root causes of recurring problems.</div>
+                        </div>
+                    </div>
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Advanced Methods</div>
+                        <div class="method-item" data-method="SYNTHESIS">
+                            <div class="method-item-header">
+                                <div class="method-name">SYNTHESIS</div>
+                                <div class="method-length">800-1500 words</div>
+                            </div>
+                            <div class="method-description">Deep integration across individual, relational, and systemic levels.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="nav-button">Help</button>
+            <button class="nav-button">Account</button>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2>More Angles. New Vision. Better Strategy.</h2>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <div class="welcome-icon">✨</div>
+                    <h3>Welcome to Multi-Perspective AI</h3>
+                    <p>I help you see situations through multiple perspectives using the Moore Multiplicity Model. Ask me to analyze a decision, explore a challenge, or understand different viewpoints.</p>
+                    <div class="suggestion-chips">
+                        <div class="suggestion-chip" onclick="useSuggestion('I\'m struggling to balance work demands with personal time')">⚖️ Work-life balance</div>
+                        <div class="suggestion-chip" onclick="useSuggestion('My team is divided on which direction to take')">🤝 Team conflict</div>
+                        <div class="suggestion-chip" onclick="useSuggestion('Should I take this new opportunity or stay where I am?')">🎯 Career decision</div>
+                        <div class="suggestion-chip" onclick="useSuggestion('I keep procrastinating on important projects')">🔄 Recurring pattern</div>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            class="chat-input" 
+                            id="chatInput" 
+                            placeholder="Describe your situation or ask a question..."
+                            rows="1"></textarea>
+                    </div>
+                    <button class="send-button" id="sendButton">
+                        <span>Send</span>
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const methodsDropdown = document.getElementById('methodsDropdown');
+        const methodsToggle = document.getElementById('methodsToggle');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatMessages = document.getElementById('chatMessages');
+
+        // Dropdown toggle
+        methodsToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            methodsDropdown.classList.toggle('open');
+        });
+
+        document.addEventListener('click', () => {
+            methodsDropdown.classList.remove('open');
+        });
+
+        // Method selection
+        document.querySelectorAll('.method-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const method = item.dataset.method;
+                chatInput.value = `Analyze using ${method}: `;
+                chatInput.focus();
+                methodsDropdown.classList.remove('open');
+            });
+        });
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Use suggestion
+        function useSuggestion(text) {
+            chatInput.value = text;
+            chatInput.focus();
+        }
+
+        // Send message
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.innerHTML = `
+                <div class="message-avatar">U</div>
+                <div class="message-content">${escapeHtml(message)}</div>
+            `;
+            chatMessages.appendChild(userMessage);
+
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            sendButton.disabled = true;
+            
+            setTimeout(() => {
+                const aiMessage = document.createElement('div');
+                aiMessage.className = 'message assistant';
+                aiMessage.innerHTML = `
+                    <div class="message-avatar">M</div>
+                    <div class="message-content">
+                        <p><strong>This is an interactive demo interface.</strong></p>
+                        <p style="margin-top: 0.75rem;">In production, Multi-Perspective AI would analyze your situation through the 9 perspectives of the Moore Multiplicity Model (THINKER, RELATIONAL, ACHIEVER, CREATIVE, REGULATOR, ADVENTURER, AUTONOMY, CONFIDENCE, MEANING-MAKER) and provide tailored insights.</p>
+                        <p style="margin-top: 0.75rem;">The actual response would be based on the method you selected and would reveal tensions, patterns, and integration strategies specific to your situation.</p>
+                    </div>
+                `;
+                chatMessages.appendChild(aiMessage);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                sendButton.disabled = false;
+            }, 1200);
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

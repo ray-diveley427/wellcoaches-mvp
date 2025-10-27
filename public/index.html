@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Perspective AI - Interactive Demo</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">M</div>
+            <div class="logo-text">Multi-Perspective AI</div>
+        </div>
+        <div class="header-nav">
+            <div class="dropdown" id="methodsDropdown">
+                <button class="dropdown-toggle" id="methodsToggle">
+                    <span>Analysis Methods</span>
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+                <div class="dropdown-menu">
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Quick & Focused</div>
+                        <div class="method-item" data-method="QUICK">
+                            <div class="method-item-header">
+                                <div class="method-name">QUICK</div>
+                                <div class="method-length">200-400 words</div>
+                            </div>
+                            <div class="method-description">Fast insights for daily decisions. 1-2 core tensions, immediate clarity.</div>
+                        </div>
+                        <div class="method-item" data-method="FULL">
+                            <div class="method-item-header">
+                                <div class="method-name">FULL</div>
+                                <div class="method-length">600-800 words</div>
+                            </div>
+                            <div class="method-description">Comprehensive analysis with 3-4 perspectives and strategic options.</div>
+                        </div>
+                    </div>
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Specialized Analysis</div>
+                        <div class="method-item" data-method="CONFLICT">
+                            <div class="method-item-header">
+                                <div class="method-name">CONFLICT</div>
+                                <div class="method-length">300-500 words</div>
+                            </div>
+                            <div class="method-description">For incompatible perspectives creating gridlock. Shows how both sides hold truth.</div>
+                        </div>
+                        <div class="method-item" data-method="STAKEHOLDER">
+                            <div class="method-item-header">
+                                <div class="method-name">STAKEHOLDER</div>
+                                <div class="method-length">400-600 words</div>
+                            </div>
+                            <div class="method-description">Maps multiple people/groups with different agendas and priorities.</div>
+                        </div>
+                        <div class="method-item" data-method="PATTERN">
+                            <div class="method-item-header">
+                                <div class="method-name">PATTERN</div>
+                                <div class="method-length">600-800 words</div>
+                            </div>
+                            <div class="method-description">Identifies repeating dynamics and root causes of recurring problems.</div>
+                        </div>
+                        <div class="method-item" data-method="SCENARIO_TEST">
+                            <div class="method-item-header">
+                                <div class="method-name">SCENARIO TEST</div>
+                                <div class="method-length">600-800 words</div>
+                            </div>
+                            <div class="method-description">Compares specific options, clarifies tradeoffs, shows differentiation.</div>
+                        </div>
+                    </div>
+                    <div class="dropdown-section">
+                        <div class="dropdown-header">Advanced Methods</div>
+                        <div class="method-item" data-method="SYNTHESIS">
+                            <div class="method-item-header">
+                                <div class="method-name">SYNTHESIS</div>
+                                <div class="method-length">800-1500 words</div>
+                            </div>
+                            <div class="method-description">Deep integration across individual, relational, and systemic levels.</div>
+                        </div>
+                        <div class="method-item" data-method="STANDARD">
+                            <div class="method-item-header">
+                                <div class="method-name">STANDARD</div>
+                                <div class="method-length">800-1200 words</div>
+                            </div>
+                            <div class="method-description">Comprehensive analysis with 5-6 key perspectives and interconnections.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="nav-button" onclick="togglePerspectiveVisibility()">Toggle Visibility</button>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2>More Angles. New Vision. Better Strategy.</h2>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <div class="welcome-icon">✨</div>
+                    <h3>Welcome to Multi-Perspective AI</h3>
+                    <p>I help you see situations through multiple perspectives using the Moore Multiplicity Model. Ask me to analyze a decision, explore a challenge, or understand different viewpoints.</p>
+                    <div class="suggestion-chips">
+                        <div class="suggestion-chip" onclick="useSuggestion('I\'m struggling to balance work demands with personal time')">⚖️ Work-life balance</div>
+                        <div class="suggestion-chip" onclick="useSuggestion('My team is divided on which direction to take')">🤝 Team conflict</div>
+                        <div class="suggestion-chip" onclick="useSuggestion('Should I take this new opportunity or stay where I am?')">🎯 Career decision</div>
+                        <div class="suggestion-chip" onclick="useSuggestion('I keep procrastinating on important projects')">🔄 Recurring pattern</div>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            class="chat-input" 
+                            id="chatInput" 
+                            placeholder="Describe your situation or ask a question..."
+                            rows="1"></textarea>
+                    </div>
+                    <button class="send-button" id="sendButton">
+                        <span>Send</span>
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

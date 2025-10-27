@@ -1,362 +1,444 @@
-// -------------------------------------------------------------
-// Wellcoaches MVP Server – Nine Perspectives (DynamoDB version)
-// -------------------------------------------------------------
+// server.js - Multi-Perspective AI Server
 import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
 import { v4 as uuidv4 } from 'uuid';
+
+// Utils
 import {
-  DynamoDBClient,
-  PutItemCommand,
-  QueryCommand,
-  ScanCommand,
-} from '@aws-sdk/client-dynamodb';
-import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
+  callMPAI,
+  detectBandwidth,
+  detectOutputStyle,
+  detectRoleContext,
+  suggestMethod,
+  shouldSuggestSynthesisAll,
+  getMethodDescription,
+} from './utils/claudeHandler.js';
+import {
+  saveAnalysis,
+  getSessionAnalyses,
+  getUserSessions,
+  createSession,
+  updateSessionPreference,
+} from './utils/db.js';
 
-// Utility imports
-import { synthesisPrompt } from './utils/synthesisPrompt.js';
-import { parseResponse } from './utils/parseResponse.js';
-import { analyzePerspectives } from './utils/coreObserver.js';
-import { saveSession } from './utils/db.js';
-
-// -------------------------------------------------------------
-// Setup
-// -------------------------------------------------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
-const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
+const PORT = process.env.PORT || 3000;
 
+// Configuration
+const MAX_HISTORY_MESSAGES = 15; // Keep last 15 exchanges (30 messages total)
+const WARN_THRESHOLD = 20; // Warn user after 20 messages
+
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// -------------------------------------------------------------
-// Helper – HTML formatting
-// -------------------------------------------------------------
-function formatSynthesis(text) {
-  if (!text) return '';
-  let formatted = text.replace(/\n{2,}/g, '\n').replace(/\n/g, '<br><br>');
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  return `<div class="synthesis-text">${formatted}</div>`;
-}
+// For development, allow CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
-// -------------------------------------------------------------
-// DynamoDB Helpers
-// -------------------------------------------------------------
-async function saveReflectionToDynamo(
-  userId,
-  sessionId,
-  prompt,
-  perspectives,
-  observerSummary,
-  synthesis
-) {
+const userId = 'user-1'; // TODO: Replace with actual user auth
+
+// =====================================================================
+// ROUTES
+// =====================================================================
+
+/**
+ * GET / - Serve main UI
+ */
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+/**
+ * POST /api/analyze - Main analysis endpoint
+ * Accepts: userQuery, method (optional), outputStyle (optional), roleContext (optional), sessionId (optional)
+ * Returns: analysisId, sessionId, response, method, outputStyle, roleContext
+ */
+app.post('/api/analyze', async (req, res) => {
   try {
-    const item = {
-      id: uuidv4(),
-      user_id: userId,
-      session_id: sessionId,
-      timestamp: new Date().toISOString(), // ✅ Use consistent ISO timestamp
-      prompt_text: prompt,
-      perspectives_output: JSON.stringify(perspectives || []),
-      core_observer_output: JSON.stringify(observerSummary || {}),
-      synthesis_output: synthesis?.trim() || '',
+    const {
+      userQuery,
+      method: providedMethod,
+      outputStyle: providedOutputStyle,
+      roleContext: providedRoleContext,
+      sessionId: providedSessionId,
+    } = req.body;
+
+    if (!userQuery || !userQuery.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'User query is required',
+      });
+    }
+
+    // Create or use existing session
+    const sessionId = providedSessionId || (await createSession(userId));
+
+    // Get session analysis history
+    const sessionAnalyses = await getSessionAnalyses(userId, sessionId);
+    const analysisCount = sessionAnalyses.length;
+
+    console.log(`\n${'='.repeat(60)}`);
+    console.log('📊 MPAI Analysis Request');
+    console.log(`Session: ${sessionId}`);
+    console.log(`Analysis #${analysisCount + 1} (${sessionAnalyses.length} prior messages)`);
+
+    // Build conversation history with sliding window
+    // Keep only the most recent N exchanges to prevent token overflow
+    const recentAnalyses = sessionAnalyses
+      .reverse() // Oldest first
+      .slice(-MAX_HISTORY_MESSAGES); // Take last N
+
+    const conversationHistory = recentAnalyses.flatMap(analysis => [
+      { role: 'user', content: analysis.user_query },
+      { role: 'assistant', content: analysis.response }
+    ]);
+
+    console.log(`💬 Including ${conversationHistory.length} messages in context (last ${recentAnalyses.length} exchanges)`);
+
+    // Warn if conversation is getting very long
+    if (analysisCount > WARN_THRESHOLD) {
+      console.warn(`⚠️  Long conversation detected: ${analysisCount} messages. Consider suggesting new session.`);
+    }
+
+    // Detect defaults if not provided
+    const outputStyle = providedOutputStyle || detectOutputStyle(userQuery);
+    const roleContext = providedRoleContext || detectRoleContext(userQuery);
+    const bandwidth = detectBandwidth(userQuery);
+
+    // Suggest or use provided method
+    let method = providedMethod || suggestMethod(userQuery);
+
+    // Override with SYNTHESIS_ALL if appropriate
+    if (method === 'QUICK' && shouldSuggestSynthesisAll(analysisCount)) {
+      console.log(`💡 Suggesting SYNTHESIS_ALL (${analysisCount} prior analyses)`);
+    }
+
+    console.log(`Method: ${method}`);
+    console.log(`Style: ${outputStyle} | Context: ${roleContext}`);
+    console.log(`Bandwidth: ${bandwidth}`);
+    console.log(`Query: ${userQuery.substring(0, 80)}...`);
+    console.log(`${'='.repeat(60)}`);
+
+    // Call Claude with MPAI and conversation history
+    const result = await callMPAI(
+      userQuery, 
+      method, 
+      outputStyle, 
+      roleContext,
+      conversationHistory
+    );
+
+    if (!result.success) {
+      // Check if token limit was exceeded
+      if (result.tokenLimitExceeded) {
+        return res.status(400).json({
+          success: false,
+          error: result.error,
+          tokenLimitExceeded: true,
+          suggestion: 'Please start a new session to continue.',
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: result.error,
+      });
+    }
+
+    // Save to DynamoDB
+    const analysisId = await saveAnalysis(userId, sessionId, {
+      userQuery,
+      method,
+      outputStyle,
+      roleContext,
+      claudeResponse: result.response,
+      bandwidth,
+    });
+
+    // Save user preferences if not defaults
+    const preferences = {};
+    if (providedOutputStyle && providedOutputStyle !== 'natural') {
+      preferences.outputStyle = outputStyle;
+    }
+    if (providedRoleContext && providedRoleContext !== 'personal') {
+      preferences.roleContext = roleContext;
+    }
+
+    if (Object.keys(preferences).length > 0) {
+      await updateSessionPreference(userId, sessionId, 'preferences', JSON.stringify(preferences));
+    }
+
+    // Determine if SYNTHESIS_ALL should be suggested
+    const shouldSuggestSynthesis = shouldSuggestSynthesisAll(analysisCount);
+
+    // Build response with warnings if needed
+    const responseData = {
+      success: true,
+      analysisId,
+      sessionId,
+      method,
+      outputStyle,
+      roleContext,
+      bandwidth,
+      analysisNumber: analysisCount + 1,
+      response: result.response,
+      usage: result.usage,
+      suggestions: {
+        shouldSuggestSynthesis,
+        synthesisSuggestion: shouldSuggestSynthesis 
+          ? `You've done ${analysisCount + 1} analyses. Would you like to do a SYNTHESIS to integrate all insights?`
+          : null,
+      },
     };
 
-    console.log('🪣 Writing to DynamoDB Table:', process.env.DYNAMO_TABLE);
-    await dynamo.send(
-      new PutItemCommand({
-        TableName: process.env.DYNAMO_TABLE,
-        Item: marshall(item),
-      })
-    );
-    console.log(`✅ Saved reflection for ${userId}, session ${sessionId}`);
-  } catch (err) {
-    console.error('❌ DynamoDB save failed:', err);
-  }
-}
+    // Add warning if conversation is getting long
+    if (analysisCount > WARN_THRESHOLD) {
+      responseData.warnings = {
+        longConversation: true,
+        message: `This conversation has ${analysisCount + 1} messages. For best performance, consider starting a new session soon.`,
+      };
+    }
 
-// ✅ Query reflections for a given session
-async function getReflectionsBySession(userId, sessionId) {
-  try {
-    const command = new QueryCommand({
-      TableName: process.env.DYNAMO_TABLE,
-      KeyConditionExpression: 'user_id = :uid AND session_id = :sid',
-      ExpressionAttributeValues: marshall({
-        ':uid': userId,
-        ':sid': sessionId,
-      }),
+    res.json(responseData);
+  } catch (err) {
+    console.error('❌ Error in /api/analyze:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
     });
-
-    const { Items } = await dynamo.send(command);
-    if (!Items?.length) return [];
-    return Items.map(unmarshall).sort(
-      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-    );
-  } catch (err) {
-    console.error('⚠️ Failed to query DynamoDB:', err);
-    return [];
   }
-}
-
-// -------------------------------------------------------------
-// ROUTE – Home
-// -------------------------------------------------------------
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
-// -------------------------------------------------------------
-// ROUTE – Ask (Core Reflection Logic)
-// -------------------------------------------------------------
-app.post('/ask', async (req, res) => {
-  const userId = 'test-user';
-  const showBlindspots = req.body.blindspot === 'true';
-  const userPrompt = req.body.prompt?.trim();
-  let sessionId = req.body.session_id || null;
-
-  if (!userPrompt) return res.redirect('/');
-
-  if (req.body.reset === 'true' || !sessionId) {
-    sessionId = uuidv4();
-    console.log('🆕 New session created:', sessionId);
-  }
-
-  console.log('\n====================================');
-  console.log('🟢 Reflection Request');
-  console.log('Prompt:', userPrompt);
-  console.log('Session:', sessionId);
-  console.log('====================================');
-
+/**
+ * GET /api/session/:sessionId - Get all analyses in a session
+ */
+app.get('/api/session/:sessionId', async (req, res) => {
   try {
-    // -------------------------------------------------------------
-    // Step 1: Build GPT Prompt
-    // -------------------------------------------------------------
-    const gptPrompt = `
-You are a structured AI coach using the "Nine Perspectives" model.
+    const { sessionId } = req.params;
+    const analyses = await getSessionAnalyses(userId, sessionId);
 
-Analyze the user's reflections to provide insights and blind spots for all nine perspectives:
-Meaning-maker, Confidence, Autonomy, Relational, Achiever, Creative, Thinker, Adventurer, Regulator.
-
-Each reflection builds on previous insights. Always generate nine complete perspectives, each with:
-- Insight (2–3 sentences)
-- Blind Spot (1–2 sentences)
-
-Return strictly valid JSON:
-{
-  "perspectives": [
-    {"name": "Perspective Name", "insight": "...", "blindspot": "..."},
-    ...
-  ],
-  "summary": "Concise synthesis (2–3 sentences)."
-}
-
-User prompt: "${userPrompt}"
-`;
-
-    // -------------------------------------------------------------
-    // Step 2: GPT – Generate Nine Perspectives
-    // -------------------------------------------------------------
-    console.log('💬 Calling OpenAI (GPT-4o-mini)...');
-    const gptResponse = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are part of the Wellcoaches Nine Perspectives cognitive framework. Return valid JSON only.',
-        },
-        { role: 'user', content: gptPrompt },
-      ],
-      temperature: 0.7,
-    });
-
-    const rawGPT = gptResponse.choices[0].message.content;
-    let gptJSON;
-    let perspectives = [];
-
-    try {
-      gptJSON = parseResponse(rawGPT);
-      perspectives = gptJSON?.perspectives || [];
-    } catch (err) {
-      console.error('⚠️ Failed to parse GPT JSON:', err.message);
-      gptJSON = { perspectives: [], summary: '' };
-    }
-
-    // -------------------------------------------------------------
-    // Step 3: Core Observer
-    // -------------------------------------------------------------
-    let observerSummary = null;
-    try {
-      observerSummary = await analyzePerspectives(perspectives);
-    } catch (err) {
-      console.warn('⚠️ Core Observer failed:', err.message);
-    }
-
-    // -------------------------------------------------------------
-    // Step 4: Claude Synthesis
-    // -------------------------------------------------------------
-    console.log('💬 Calling Claude (3.5 Haiku)...');
-    const claudeResponse = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 2500,
-      temperature: 0.2,
-      messages: [
-        { role: 'user', content: synthesisPrompt(gptJSON, observerSummary) },
-      ],
-    });
-
-    const finalOutput = claudeResponse.content[0].text?.trim() || '';
-    console.log('✅ Claude synthesis complete.');
-
-    // -------------------------------------------------------------
-    // Step 5: Save to DynamoDB
-    // -------------------------------------------------------------
-    await saveSession(userPrompt, perspectives, observerSummary, finalOutput);
-    await saveReflectionToDynamo(
-      userId,
+    res.json({
+      success: true,
       sessionId,
-      userPrompt,
-      perspectives,
-      observerSummary,
-      finalOutput
-    );
-
-    // -------------------------------------------------------------
-    // Step 6: Redirect to /result/:sessionId
-    // -------------------------------------------------------------
-    res.redirect(`/result/${sessionId}`);
-  } catch (error) {
-    console.error('❌ Error in /ask route:', error);
-    res.status(500).send(`<pre>${error}</pre>`);
-  }
-});
-
-// -------------------------------------------------------------
-// ROUTE – Result Page
-// -------------------------------------------------------------
-app.get('/result/:sessionId', async (req, res) => {
-  const userId = 'test-user';
-  const sessionId = req.params.sessionId;
-  const reflections = await getReflectionsBySession(userId, sessionId);
-
-  if (!reflections.length) {
-    return res.status(404).send('No reflections found for this session.');
-  }
-
-  const latest = reflections[0];
-  const template = fs.readFileSync(
-    path.join(__dirname, 'views', 'result.html'),
-    'utf8'
-  );
-
-  const escapedPrompt = latest.prompt_text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>');
-
-  const filled = template
-    .replace('{{escapedUserPrompt}}', escapedPrompt)
-    .replace('{{claudeOutput}}', formatSynthesis(latest.synthesis_output))
-    .replace('{{perspectivesJSON}}', latest.perspectives_output)
-    .replace('{{showBlindspots}}', 'block')
-    .replace('{{rawUserPrompt}}', latest.prompt_text.replace(/"/g, '&quot;'))
-    .replace('{{sessionId}}', sessionId)
-    .replace(
-      '{{newReflection}}',
-      JSON.stringify({
-        timestamp: new Date(latest.timestamp).toLocaleString(),
-        prompt: latest.prompt_text,
-        synthesis: latest.synthesis_output.replace(/^"|"$/g, ''),
-      })
-    );
-
-  res.send(filled);
-});
-
-// -------------------------------------------------------------
-// ROUTE – API: Get History (shows all reflections by user)
-// -------------------------------------------------------------
-app.get('/api/history', async (req, res) => {
-  const userId = 'test-user';
-  try {
-    // 🧭 Show all reflections (across all sessions)
-    const command = new QueryCommand({
-      TableName: process.env.DYNAMO_TABLE,
-      KeyConditionExpression: 'user_id = :uid',
-      ExpressionAttributeValues: marshall({ ':uid': userId }),
+      analyses,
+      count: analyses.length,
+      synthesisSuggestion: shouldSuggestSynthesisAll(analyses.length),
     });
-
-    const { Items } = await dynamo.send(command);
-    if (!Items?.length) return res.json({ success: true, reflections: [] });
-
-    const reflections = Items.map(unmarshall)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .map((r) => ({
-        timestamp: new Date(r.timestamp).toLocaleString(),
-        prompt: r.prompt_text,
-        synthesis: r.synthesis_output.replace(/^"|"$/g, ''), // ✅ Clean stray quotes
-      }));
-
-    res.json({ success: true, reflections });
   } catch (err) {
-    console.error('❌ Failed to fetch reflections:', err);
-    res.json({ success: false, reflections: [] });
-  }
-});
-
-// -------------------------------------------------------------
-// ROUTE – Expand Perspective
-// -------------------------------------------------------------
-app.post('/expand', async (req, res) => {
-  const { prompt, perspective } = req.body;
-  if (!prompt || !perspective)
-    return res.status(400).json({ error: 'Missing prompt or perspective.' });
-
-  try {
-    const expandPrompt = `
-You are expanding from the "${perspective}" perspective within the Wellcoaches Nine Perspectives model.
-
-User's situation:
-"${prompt}"
-
-Provide a deeper, reflective analysis (5–6 sentences) from the ${perspective} perspective only.
-`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert Wellcoaches AI assistant specializing in the ${perspective} perspective.`,
-        },
-        { role: 'user', content: expandPrompt },
-      ],
-      temperature: 0.7,
+    console.error('❌ Error fetching session:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
     });
-
-    const expanded =
-      response.choices?.[0]?.message?.content?.trim() ||
-      '(no content returned)';
-    res.json({ expanded });
-  } catch (err) {
-    console.error('❌ Error expanding perspective:', err);
-    res.status(500).json({ error: 'Expansion failed.' });
   }
 });
 
-// -------------------------------------------------------------
-// START SERVER
-// -------------------------------------------------------------
-app.listen(3000, () => {
-  console.log('✅ Wellcoaches MVP running at http://localhost:3000');
+/**
+ * GET /api/sessions - Get all sessions for user
+ */
+app.get('/api/sessions', async (req, res) => {
+  try {
+    const sessions = await getUserSessions(userId);
+
+    res.json({
+      success: true,
+      count: sessions.length,
+      sessions,
+    });
+  } catch (err) {
+    console.error('❌ Error fetching sessions:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * POST /api/session/new - Create new session
+ */
+app.post('/api/session/new', async (req, res) => {
+  try {
+    const sessionId = await createSession(userId);
+
+    res.json({
+      success: true,
+      sessionId,
+      message: 'New conversation started',
+    });
+  } catch (err) {
+    console.error('❌ Error creating session:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * POST /api/preference - Save user preference for a session
+ */
+app.post('/api/preference', async (req, res) => {
+  try {
+    const { sessionId, preference, value } = req.body;
+
+    if (!sessionId || !preference) {
+      return res.status(400).json({
+        success: false,
+        error: 'sessionId and preference are required',
+      });
+    }
+
+    await updateSessionPreference(userId, sessionId, preference, value);
+
+    res.json({
+      success: true,
+      message: `Preference updated: ${preference} = ${value}`,
+    });
+  } catch (err) {
+    console.error('❌ Error updating preference:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * POST /api/method/suggest - Get suggested method and options based on query
+ */
+app.post('/api/method/suggest', async (req, res) => {
+  try {
+    const { userQuery, sessionId } = req.body;
+
+    if (!userQuery) {
+      return res.status(400).json({
+        success: false,
+        error: 'userQuery is required',
+      });
+    }
+
+    const suggestedMethod = suggestMethod(userQuery);
+    const outputStyle = detectOutputStyle(userQuery);
+    const roleContext = detectRoleContext(userQuery);
+    const bandwidth = detectBandwidth(userQuery);
+
+    // Check if SYNTHESIS_ALL should be suggested
+    let synthesisSuggestion = null;
+    if (sessionId) {
+      const sessionAnalyses = await getSessionAnalyses(userId, sessionId);
+      if (shouldSuggestSynthesisAll(sessionAnalyses.length)) {
+        synthesisSuggestion = `You've done ${sessionAnalyses.length} analyses. Consider SYNTHESIS_ALL to integrate insights.`;
+      }
+    }
+
+    res.json({
+      success: true,
+      suggestedMethod,
+      methodDescription: getMethodDescription(suggestedMethod),
+      detectedOutputStyle: outputStyle,
+      detectedRoleContext: roleContext,
+      bandwidth,
+      synthesisSuggestion,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * GET /api/methods - Get all available methods with descriptions
+ */
+app.get('/api/methods', (req, res) => {
+  const methods = [
+    { key: 'QUICK', description: getMethodDescription('QUICK') },
+    { key: 'FULL', description: getMethodDescription('FULL') },
+    { key: 'CONFLICT_RESOLUTION', description: getMethodDescription('CONFLICT_RESOLUTION') },
+    { key: 'STAKEHOLDER_ANALYSIS', description: getMethodDescription('STAKEHOLDER_ANALYSIS') },
+    { key: 'PATTERN_RECOGNITION', description: getMethodDescription('PATTERN_RECOGNITION') },
+    { key: 'SCENARIO_TEST', description: getMethodDescription('SCENARIO_TEST') },
+    { key: 'TIME_HORIZON', description: getMethodDescription('TIME_HORIZON') },
+    { key: 'HUMAN_HARM_CHECK', description: getMethodDescription('HUMAN_HARM_CHECK') },
+    { key: 'SIMPLE_SYNTHESIS', description: getMethodDescription('SIMPLE_SYNTHESIS') },
+    { key: 'SYNTHESIS_ALL', description: getMethodDescription('SYNTHESIS_ALL') },
+    { key: 'INNER_PEACE_SYNTHESIS', description: getMethodDescription('INNER_PEACE_SYNTHESIS') },
+    { key: 'COACHING_PLAN', description: getMethodDescription('COACHING_PLAN') },
+    { key: 'SKILLS', description: getMethodDescription('SKILLS') },
+    { key: 'NOTES_SUMMARY', description: getMethodDescription('NOTES_SUMMARY') },
+  ];
+
+  res.json({
+    success: true,
+    methods,
+  });
+});
+
+/**
+ * GET /api/styles - Get available output styles
+ */
+app.get('/api/styles', (req, res) => {
+  res.json({
+    success: true,
+    styles: [
+      {
+        key: 'natural',
+        name: 'Natural',
+        description: 'Integrated narrative, no labels, flowing prose (default)',
+      },
+      {
+        key: 'structured',
+        name: 'Structured',
+        description: 'Explicit perspective labels, systematic breakdown',
+      },
+      {
+        key: 'abbreviated',
+        name: 'Abbreviated',
+        description: 'Streamlined, core insights only',
+      },
+    ],
+  });
+});
+
+/**
+ * Health check
+ */
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// =====================================================================
+// Start Server
+// =====================================================================
+app.listen(PORT, () => {
+  console.log(`\n${'='.repeat(60)}`);
+  console.log('🚀 Multi-Perspective AI Server');
+  console.log(`🌐 Running at http://localhost:${PORT}`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`💾 DynamoDB Table: ${process.env.DYNAMO_TABLE}`);
+  console.log(`💬 Max history: ${MAX_HISTORY_MESSAGES} exchanges`);
+  console.log(`⚠️  Warning threshold: ${WARN_THRESHOLD} messages`);
+  console.log(`${'='.repeat(60)}\n`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n\n👋 Server shutting down...');
+  process.exit(0);
 });

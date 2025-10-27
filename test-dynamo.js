@@ -1,63 +1,42 @@
-import 'dotenv/config';
-import {
-  DynamoDBClient,
-  PutItemCommand,
-  GetItemCommand,
-} from '@aws-sdk/client-dynamodb';
-import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
-import { v4 as uuidv4 } from 'uuid';
+import { DynamoDBClient, PutItemCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
+import { marshall } from '@aws-sdk/util-dynamodb';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+console.log('Testing DynamoDB connection...');
+console.log('Region:', process.env.AWS_REGION);
+console.log('Table:', process.env.DYNAMO_TABLE);
+console.log('Access Key:', process.env.AWS_ACCESS_KEY_ID?.substring(0, 10) + '...');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const tableName = process.env.DYNAMO_TABLE || 'PromptHistory';
 
-const user_id = 'test-user';
-const session_id = 'test-session-' + uuidv4();
-const item = {
-  user_id,
-  session_id,
-  timestamp: Date.now(),
-  prompt_text: 'Testing DynamoDB write connection',
-  synthesis_output:
-    'This is a test record written at ' + new Date().toISOString(),
-};
-
-async function testDynamo() {
-  try {
-    console.log('🪣 Attempting to write item to DynamoDB...');
-    console.log('   Table:', tableName);
-    console.log('   Region:', process.env.AWS_REGION);
-
-    // Write item
-    await client.send(
-      new PutItemCommand({
-        TableName: tableName,
-        Item: marshall(item),
-      })
-    );
-    console.log('✅ Successfully wrote item to DynamoDB.');
-
-    // Read it back
-    const result = await client.send(
-      new GetItemCommand({
-        TableName: tableName,
-        Key: marshall({
-          user_id,
-          session_id,
-        }),
-      })
-    );
-
-    if (result.Item) {
-      console.log('📦 Read back item from DynamoDB:');
-      console.log(JSON.stringify(unmarshall(result.Item), null, 2));
-    } else {
-      console.warn(
-        '⚠️ Write succeeded but read returned no item. Check your key schema!'
-      );
-    }
-  } catch (err) {
-    console.error('❌ DynamoDB test failed:', err);
-  }
+// Test write
+try {
+  const putCommand = new PutItemCommand({
+    TableName: process.env.DYNAMO_TABLE,
+    Item: marshall({
+      PK: 'TEST',
+      SK: `TEST-${Date.now()}`,
+      test: 'test123'
+    })
+  });
+  
+  await client.send(putCommand);
+  console.log('✅ Write successful!');
+} catch (err) {
+  console.error('❌ Write failed:', err.message);
 }
 
-testDynamo();
+// Test read
+try {
+  const scanCommand = new ScanCommand({
+    TableName: process.env.DYNAMO_TABLE,
+    Limit: 1
+  });
+  
+  const result = await client.send(scanCommand);
+  console.log('✅ Read successful! Items:', result.Items?.length || 0);
+} catch (err) {
+  console.error('❌ Read failed:', err.message);
+}
