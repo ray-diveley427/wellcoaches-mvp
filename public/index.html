@@ -3,121 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Perspective AI - Interactive Demo</title>
+    <title>Multi-Perspective AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
+    <!-- Header -->
     <header class="header">
-        <div class="logo">
-            <div class="logo-icon">M</div>
-            <div class="logo-text">Multi-Perspective AI</div>
-        </div>
-        <div class="header-nav">
-            <div class="dropdown" id="methodsDropdown">
-                <button class="dropdown-toggle" id="methodsToggle">
-                    <span>Analysis Methods</span>
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </button>
-                <div class="dropdown-menu">
-                    <div class="dropdown-section">
-                        <div class="dropdown-header">Quick & Focused</div>
-                        <div class="method-item" data-method="QUICK">
-                            <div class="method-item-header">
-                                <div class="method-name">QUICK</div>
-                                <div class="method-length">200-400 words</div>
-                            </div>
-                            <div class="method-description">Fast insights for daily decisions. 1-2 core tensions, immediate clarity.</div>
-                        </div>
-                        <div class="method-item" data-method="FULL">
-                            <div class="method-item-header">
-                                <div class="method-name">FULL</div>
-                                <div class="method-length">600-800 words</div>
-                            </div>
-                            <div class="method-description">Comprehensive analysis with 3-4 perspectives and strategic options.</div>
-                        </div>
+        <div class="header-content">
+            <div class="logo" onclick="window.location.reload()">
+                <div class="logo-text">Multi<span class="logo-dash">—</span>Perspective <span class="logo-ai">AI</span></div>
+            </div>
+            <nav class="nav">
+                <!-- Methods Dropdown -->
+                <div class="dropdown methods-dropdown" id="methodsDropdown">
+                    <div class="nav-item dropdown-toggle">
+                        <span>Methods</span>
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
                     </div>
-                    <div class="dropdown-section">
-                        <div class="dropdown-header">Specialized Analysis</div>
-                        <div class="method-item" data-method="CONFLICT">
-                            <div class="method-item-header">
-                                <div class="method-name">CONFLICT</div>
-                                <div class="method-length">300-500 words</div>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-section">
+                            <div class="dropdown-header">Filter by Complexity</div>
+                            <div class="filter-buttons-dropdown">
+                                <button class="filter-btn-small active" data-filter="all">All Methods</button>
+                                <button class="filter-btn-small" data-filter="beginner">Beginner</button>
+                                <button class="filter-btn-small" data-filter="intermediate">Intermediate</button>
+                                <button class="filter-btn-small" data-filter="advanced">Advanced</button>
                             </div>
-                            <div class="method-description">For incompatible perspectives creating gridlock. Shows how both sides hold truth.</div>
                         </div>
-                        <div class="method-item" data-method="STAKEHOLDER">
-                            <div class="method-item-header">
-                                <div class="method-name">STAKEHOLDER</div>
-                                <div class="method-length">400-600 words</div>
-                            </div>
-                            <div class="method-description">Maps multiple people/groups with different agendas and priorities.</div>
-                        </div>
-                        <div class="method-item" data-method="PATTERN">
-                            <div class="method-item-header">
-                                <div class="method-name">PATTERN</div>
-                                <div class="method-length">600-800 words</div>
-                            </div>
-                            <div class="method-description">Identifies repeating dynamics and root causes of recurring problems.</div>
-                        </div>
-                        <div class="method-item" data-method="SCENARIO_TEST">
-                            <div class="method-item-header">
-                                <div class="method-name">SCENARIO TEST</div>
-                                <div class="method-length">600-800 words</div>
-                            </div>
-                            <div class="method-description">Compares specific options, clarifies tradeoffs, shows differentiation.</div>
-                        </div>
-                    </div>
-                    <div class="dropdown-section">
-                        <div class="dropdown-header">Advanced Methods</div>
-                        <div class="method-item" data-method="SYNTHESIS">
-                            <div class="method-item-header">
-                                <div class="method-name">SYNTHESIS</div>
-                                <div class="method-length">800-1500 words</div>
-                            </div>
-                            <div class="method-description">Deep integration across individual, relational, and systemic levels.</div>
-                        </div>
-                        <div class="method-item" data-method="STANDARD">
-                            <div class="method-item-header">
-                                <div class="method-name">STANDARD</div>
-                                <div class="method-length">800-1200 words</div>
-                            </div>
-                            <div class="method-description">Comprehensive analysis with 5-6 key perspectives and interconnections.</div>
+                        <div class="dropdown-section" id="methodsList">
+                            <!-- Methods will be populated here by JavaScript -->
                         </div>
                     </div>
                 </div>
-            </div>
-            <button class="nav-button" onclick="togglePerspectiveVisibility()">Toggle Visibility</button>
+
+                <!-- FAQ Dropdown -->
+                <div class="dropdown" id="faqDropdown">
+                    <div class="nav-item dropdown-toggle">
+                        <span>FAQ</span>
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-section">
+                            <div class="dropdown-header">About Multi-Perspective AI</div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">What is Multi-Perspective AI?</div>
+                                    <div class="dropdown-item-desc">Nine cognitive perspectives for insight</div>
+                                </div>
+                            </div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">The Nine Perspectives</div>
+                                    <div class="dropdown-item-desc">Understanding the framework</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown-section">
+                            <div class="dropdown-header">Common Questions</div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                                </svg>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">Who is this for?</div>
+                                    <div class="dropdown-item-desc">Leaders, coaches, healthcare, personal use</div>
+                                </div>
+                            </div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">Which method should I use?</div>
+                                    <div class="dropdown-item-desc">Guidance on choosing methods</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown-section">
+                            <div class="dropdown-header">Privacy & Safety</div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">Privacy & data security</div>
+                                    <div class="dropdown-item-desc">How your data is protected</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Toggle -->
+                <div class="nav-item" id="historyToggle">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/>
+                    </svg>
+                    <span>History</span>
+                </div>
+
+                <!-- Account Dropdown -->
+                <div class="dropdown account-dropdown" id="accountDropdown">
+                    <div class="account-icon-button">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-section">
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">Settings</div>
+                                    <div class="dropdown-item-desc">Manage preferences</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
         </div>
     </header>
 
-    <main class="main">
+    <!-- History Sidebar -->
+    <div class="history-sidebar" id="historySidebar">
+        <div class="history-header">
+            <div class="history-header-top">
+              <h3 class="history-title">History</h3>
+              <button class="history-close" id="historyClose">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+          
+            <div class="history-search">
+              <svg class="history-search-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+              </svg>
+              <input type="text" id="historySearch" placeholder="Search conversations...">
+            </div>
+          
+            <div class="history-filters">
+              <button class="history-filter-btn active" data-filter="all">All</button>
+              <button class="history-filter-btn" data-filter="today">Today</button>
+              <button class="history-filter-btn" data-filter="week">This Week</button>
+            </div>
+          </div>
+          
+        <div class="history-content" id="historyContent">
+            <!-- History items populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main" id="mainContent">
         <div class="chat-container">
             <div class="chat-header">
-                <h2>More Angles. New Vision. Better Strategy.</h2>
+                <h2>More Angles. New Vision. Better Strategy. Exhale.</h2>
             </div>
             <div class="chat-messages" id="chatMessages">
-                <div class="welcome-message">
-                    <div class="welcome-icon">✨</div>
-                    <h3>Welcome to Multi-Perspective AI</h3>
-                    <p>I help you see situations through multiple perspectives using the Moore Multiplicity Model. Ask me to analyze a decision, explore a challenge, or understand different viewpoints.</p>
-                    <div class="suggestion-chips">
-                        <div class="suggestion-chip" onclick="useSuggestion('I\'m struggling to balance work demands with personal time')">⚖️ Work-life balance</div>
-                        <div class="suggestion-chip" onclick="useSuggestion('My team is divided on which direction to take')">🤝 Team conflict</div>
-                        <div class="suggestion-chip" onclick="useSuggestion('Should I take this new opportunity or stay where I am?')">🎯 Career decision</div>
-                        <div class="suggestion-chip" onclick="useSuggestion('I keep procrastinating on important projects')">🔄 Recurring pattern</div>
-                    </div>
+                <div class="message assistant">
+                    <div style="font-size: 16px;">Welcome 👋</div>
+                    <div style="margin-top: 0.5rem;">Tap <strong>Methods</strong> to choose an analysis approach, or tell me what's on your mind.</div>
                 </div>
             </div>
             <div class="chat-input-area">
+                <!-- Upload Zone -->
+                <div class="upload-zone" id="uploadZone">
+                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <div class="upload-text">Click to upload or drag and drop</div>
+                    <div class="upload-hint">Documents, images, PDFs, and more</div>
+                </div>
+
+                <!-- Input Container -->
                 <div class="input-container">
                     <div class="input-wrapper">
                         <textarea 
                             class="chat-input" 
                             id="chatInput" 
                             placeholder="Describe your situation or ask a question..."
-                            rows="1"></textarea>
+                            rows="1"
+                        ></textarea>
+                        <button class="upload-button" id="uploadButton" title="Attach files">
+                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                        <input type="file" id="fileInput" multiple hidden>
                     </div>
                     <button class="send-button" id="sendButton">
                         <span>Send</span>
@@ -129,9 +218,134 @@
             </div>
         </div>
     </main>
+       <!-- FAQ Modal -->
+<div id="faqModal" class="modal hidden">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 class="modal-title">About the Moore Multiplicity Model</h2>
+        <button id="closeFaq" class="modal-close" title="Close FAQ">&times;</button>
+      </div>
+  
+      <div id="faqContent" class="modal-body"></div>
+  
+      <div class="modal-footer">
+        <button id="closeFaqFooter" class="modal-footer-btn">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <style>
+    /* Modal container and backdrop */
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+    }
+    .modal.hidden {
+      display: none;
+    }
+  
+    /* Modal window */
+    .modal-container {
+      background: #fff;
+      width: 90%;
+      max-width: 960px;
+      height: 90%;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+      position: relative;
+    }
+  
+    /* Header */
+    .modal-header {
+    background: linear-gradient(135deg, #4b1b78 0%, #6a249d 100%);
+    color: #ffffff;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    }
 
+    .modal-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover {
+      opacity: 0.8;
+    }
+  
+    /* Body (scrollable) */
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      background-color: #f9fafb;
+    }
+  
+    /* Footer */
+    .modal-footer {
+      background: #f3f4f6;
+      border-top: 1px solid #e5e7eb;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .modal-footer-btn {
+      background: #14b8a6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .modal-footer-btn:hover {
+      background: #0d9488;
+    }
+  </style>
+  
+    <!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <h3 class="modal-title">Delete Conversation?</h3>
+      <p class="modal-text">
+        This will permanently delete this conversation from your history. 
+        Are you sure you want to continue?
+      </p>
+      <div class="modal-actions">
+        <button id="cancelDelete" class="btn-modal cancel">Cancel</button>
+        <button id="confirmDelete" class="btn-modal delete">Delete</button>
+      </div>
+    </div>
+  </div>
+  
+  
     <!-- Scripts -->
-    <script src="/js/api.js"></script>
-    <script src="/js/app.js"></script>
+    <script src="js/mpaiAPI.js"></script>
+    <script src="js/historyAPI.js"></script>
+    <script src="js/app.js"></script>
+
+
 </body>
 </html>

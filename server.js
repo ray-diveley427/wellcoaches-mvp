@@ -5,6 +5,19 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+
+
+const dbClient = new DynamoDBClient({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+});
+const docClient = DynamoDBDocumentClient.from(dbClient);
+const TABLE_NAME = "mpai-sessions";
 
 // Utils
 import {
@@ -16,13 +29,6 @@ import {
   shouldSuggestSynthesisAll,
   getMethodDescription,
 } from './utils/claudeHandler.js';
-import {
-  saveAnalysis,
-  getSessionAnalyses,
-  getUserSessions,
-  createSession,
-  updateSessionPreference,
-} from './utils/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,36 +39,105 @@ const PORT = process.env.PORT || 3000;
 // Configuration
 const MAX_HISTORY_MESSAGES = 15; // Keep last 15 exchanges (30 messages total)
 const WARN_THRESHOLD = 20; // Warn user after 20 messages
+const DEFAULT_USER_ID = 'user-1'; // TODO: Replace with auth-based user ID
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// For development, allow CORS
+// Allow CORS for dev
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   next();
 });
 
-const userId = 'user-1'; // TODO: Replace with actual user auth
-
 // =====================================================================
 // ROUTES
 // =====================================================================
 
 /**
- * GET / - Serve main UI
+ * Serve main UI
  */
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 /**
- * POST /api/analyze - Main analysis endpoint
- * Accepts: userQuery, method (optional), outputStyle (optional), roleContext (optional), sessionId (optional)
- * Returns: analysisId, sessionId, response, method, outputStyle, roleContext
+ * Serve FAQ
+ */
+app.get('/faq', (req, res) => {
+  res.sendFile(path.join(__dirname, 'moore-multiplicity-faq.html'));
+});
+
+/**
+ * Fetch user history from DynamoDB
+ */
+// ✅ Always return an array (never 404)
+app.get("/api/history/:userId", async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const pk = userId.startsWith("USER#") ? userId : `USER#${userId}`;
+
+    const data = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk",
+        ExpressionAttributeValues: { ":pk": pk },
+        ScanIndexForward: false,
+        Limit: 50,
+      })
+    );
+
+    // Always return a 200 — even if empty
+    res.json(data.Items || []);
+  } catch (err) {
+    console.error("❌ Error fetching DynamoDB history:", err);
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
+
+
+
+// Delete a full session (all items for that session)
+app.delete("/api/history/:userId/:sessionId", async (req, res) => {
+  const { userId, sessionId } = req.params;
+  try {
+    // 1️⃣ Get all items for this session
+    const data = await docClient.send(new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": `USER#${userId}`,
+        ":sk": `SESSION#${sessionId}`,
+      },
+    }));
+
+    // 2️⃣ Delete each item (batch)
+    for (const item of data.Items || []) {
+      await docClient.send(new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          PK: item.PK,
+          SK: item.SK,
+        },
+      }));
+    }
+
+    console.log(`🗑️ Deleted ${data.Count} items from session ${sessionId}`);
+    res.json({ success: true, message: `Deleted session ${sessionId}` });
+  } catch (err) {
+    console.error("❌ Error deleting session:", err);
+    res.status(500).json({ success: false, error: "Failed to delete session" });
+  }
+});
+
+
+/**
+ * POST /api/analyze
+ * Runs an MPAI analysis and stores result in DynamoDB
+ * — now with conversation memory restored!
  */
 app.post('/api/analyze', async (req, res) => {
   try {
@@ -72,118 +147,75 @@ app.post('/api/analyze', async (req, res) => {
       outputStyle: providedOutputStyle,
       roleContext: providedRoleContext,
       sessionId: providedSessionId,
+      userId = DEFAULT_USER_ID
     } = req.body;
 
     if (!userQuery || !userQuery.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: 'User query is required',
-      });
+      return res.status(400).json({ success: false, error: 'User query is required' });
     }
 
-    // Create or use existing session
-    const sessionId = providedSessionId || (await createSession(userId));
+    // 1️⃣ Build session and analysis IDs
+    const sessionId = providedSessionId || uuidv4();
+    const analysisId = uuidv4();
 
-    // Get session analysis history
-    const sessionAnalyses = await getSessionAnalyses(userId, sessionId);
-    const analysisCount = sessionAnalyses.length;
+    // 2️⃣ Load recent messages for context
+    let priorMessages = [];
+    try {
+      const data = await docClient.send(new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `USER#${userId}`,
+          ":sk": `SESSION#${sessionId}`,
+        },
+        Limit: 20,
+        ScanIndexForward: true // oldest → newest
+      }));
 
-    console.log(`\n${'='.repeat(60)}`);
-    console.log('📊 MPAI Analysis Request');
-    console.log(`Session: ${sessionId}`);
-    console.log(`Analysis #${analysisCount + 1} (${sessionAnalyses.length} prior messages)`);
-
-    // Build conversation history with sliding window
-    // Keep only the most recent N exchanges to prevent token overflow
-    const recentAnalyses = sessionAnalyses
-      .reverse() // Oldest first
-      .slice(-MAX_HISTORY_MESSAGES); // Take last N
-
-    const conversationHistory = recentAnalyses.flatMap(analysis => [
-      { role: 'user', content: analysis.user_query },
-      { role: 'assistant', content: analysis.response }
-    ]);
-
-    console.log(`💬 Including ${conversationHistory.length} messages in context (last ${recentAnalyses.length} exchanges)`);
-
-    // Warn if conversation is getting very long
-    if (analysisCount > WARN_THRESHOLD) {
-      console.warn(`⚠️  Long conversation detected: ${analysisCount} messages. Consider suggesting new session.`);
+      priorMessages = (data.Items || [])
+        .flatMap(i => [
+          i.user_query ? { role: "user", content: i.user_query } : null,
+          i.response ? { role: "assistant", content: i.response } : null
+        ])
+        .filter(Boolean);
+    } catch (err) {
+      console.warn("⚠️ Failed to load prior messages:", err);
     }
 
-    // Detect defaults if not provided
+    // 3️⃣ Detect defaults
     const outputStyle = providedOutputStyle || detectOutputStyle(userQuery);
     const roleContext = providedRoleContext || detectRoleContext(userQuery);
     const bandwidth = detectBandwidth(userQuery);
-
-    // Suggest or use provided method
     let method = providedMethod || suggestMethod(userQuery);
 
-    // Override with SYNTHESIS_ALL if appropriate
-    if (method === 'QUICK' && shouldSuggestSynthesisAll(analysisCount)) {
-      console.log(`💡 Suggesting SYNTHESIS_ALL (${analysisCount} prior analyses)`);
-    }
-
-    console.log(`Method: ${method}`);
-    console.log(`Style: ${outputStyle} | Context: ${roleContext}`);
-    console.log(`Bandwidth: ${bandwidth}`);
-    console.log(`Query: ${userQuery.substring(0, 80)}...`);
-    console.log(`${'='.repeat(60)}`);
-
-    // Call Claude with MPAI and conversation history
-    const result = await callMPAI(
-      userQuery, 
-      method, 
-      outputStyle, 
-      roleContext,
-      conversationHistory
-    );
+    // 4️⃣ Call Claude (now with priorMessages)
+    const result = await callMPAI(userQuery, method, outputStyle, roleContext, priorMessages);
 
     if (!result.success) {
-      // Check if token limit was exceeded
-      if (result.tokenLimitExceeded) {
-        return res.status(400).json({
-          success: false,
-          error: result.error,
-          tokenLimitExceeded: true,
-          suggestion: 'Please start a new session to continue.',
-        });
-      }
-      
-      return res.status(500).json({
-        success: false,
-        error: result.error,
-      });
+      return res.status(500).json({ success: false, error: result.error });
     }
 
-    // Save to DynamoDB
-    const analysisId = await saveAnalysis(userId, sessionId, {
-      userQuery,
+    // 5️⃣ Save new exchange to DynamoDB
+    const item = {
+      PK: `USER#${userId}`,
+      SK: `SESSION#${sessionId}#ANALYSIS#${analysisId}`,
+      user_id: userId,
+      session_id: sessionId,
+      analysis_id: analysisId,
+      user_query: userQuery,
+      response: result.response,
       method,
-      outputStyle,
-      roleContext,
-      claudeResponse: result.response,
       bandwidth,
-    });
+      output_style: outputStyle,
+      role_context: roleContext,
+      timestamp: new Date().toISOString(),
+      ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30 // 30 days
+    };
 
-    // Save user preferences if not defaults
-    const preferences = {};
-    if (providedOutputStyle && providedOutputStyle !== 'natural') {
-      preferences.outputStyle = outputStyle;
-    }
-    if (providedRoleContext && providedRoleContext !== 'personal') {
-      preferences.roleContext = roleContext;
-    }
+    await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
 
-    if (Object.keys(preferences).length > 0) {
-      await updateSessionPreference(userId, sessionId, 'preferences', JSON.stringify(preferences));
-    }
-
-    // Determine if SYNTHESIS_ALL should be suggested
-    const shouldSuggestSynthesis = shouldSuggestSynthesisAll(analysisCount);
-
-    // Build response with warnings if needed
-    const responseData = {
+    // 6️⃣ Respond to client
+    res.json({
       success: true,
       analysisId,
       sessionId,
@@ -191,177 +223,21 @@ app.post('/api/analyze', async (req, res) => {
       outputStyle,
       roleContext,
       bandwidth,
-      analysisNumber: analysisCount + 1,
       response: result.response,
-      usage: result.usage,
-      suggestions: {
-        shouldSuggestSynthesis,
-        synthesisSuggestion: shouldSuggestSynthesis 
-          ? `You've done ${analysisCount + 1} analyses. Would you like to do a SYNTHESIS to integrate all insights?`
-          : null,
-      },
-    };
-
-    // Add warning if conversation is getting long
-    if (analysisCount > WARN_THRESHOLD) {
-      responseData.warnings = {
-        longConversation: true,
-        message: `This conversation has ${analysisCount + 1} messages. For best performance, consider starting a new session soon.`,
-      };
-    }
-
-    res.json(responseData);
-  } catch (err) {
-    console.error('❌ Error in /api/analyze:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
+      usage: result.usage || {},
     });
+
+  } catch (err) {
+    console.error("❌ Error in /api/analyze:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-/**
- * GET /api/session/:sessionId - Get all analyses in a session
- */
-app.get('/api/session/:sessionId', async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    const analyses = await getSessionAnalyses(userId, sessionId);
 
-    res.json({
-      success: true,
-      sessionId,
-      analyses,
-      count: analyses.length,
-      synthesisSuggestion: shouldSuggestSynthesisAll(analyses.length),
-    });
-  } catch (err) {
-    console.error('❌ Error fetching session:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
+
 
 /**
- * GET /api/sessions - Get all sessions for user
- */
-app.get('/api/sessions', async (req, res) => {
-  try {
-    const sessions = await getUserSessions(userId);
-
-    res.json({
-      success: true,
-      count: sessions.length,
-      sessions,
-    });
-  } catch (err) {
-    console.error('❌ Error fetching sessions:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-/**
- * POST /api/session/new - Create new session
- */
-app.post('/api/session/new', async (req, res) => {
-  try {
-    const sessionId = await createSession(userId);
-
-    res.json({
-      success: true,
-      sessionId,
-      message: 'New conversation started',
-    });
-  } catch (err) {
-    console.error('❌ Error creating session:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-/**
- * POST /api/preference - Save user preference for a session
- */
-app.post('/api/preference', async (req, res) => {
-  try {
-    const { sessionId, preference, value } = req.body;
-
-    if (!sessionId || !preference) {
-      return res.status(400).json({
-        success: false,
-        error: 'sessionId and preference are required',
-      });
-    }
-
-    await updateSessionPreference(userId, sessionId, preference, value);
-
-    res.json({
-      success: true,
-      message: `Preference updated: ${preference} = ${value}`,
-    });
-  } catch (err) {
-    console.error('❌ Error updating preference:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-/**
- * POST /api/method/suggest - Get suggested method and options based on query
- */
-app.post('/api/method/suggest', async (req, res) => {
-  try {
-    const { userQuery, sessionId } = req.body;
-
-    if (!userQuery) {
-      return res.status(400).json({
-        success: false,
-        error: 'userQuery is required',
-      });
-    }
-
-    const suggestedMethod = suggestMethod(userQuery);
-    const outputStyle = detectOutputStyle(userQuery);
-    const roleContext = detectRoleContext(userQuery);
-    const bandwidth = detectBandwidth(userQuery);
-
-    // Check if SYNTHESIS_ALL should be suggested
-    let synthesisSuggestion = null;
-    if (sessionId) {
-      const sessionAnalyses = await getSessionAnalyses(userId, sessionId);
-      if (shouldSuggestSynthesisAll(sessionAnalyses.length)) {
-        synthesisSuggestion = `You've done ${sessionAnalyses.length} analyses. Consider SYNTHESIS_ALL to integrate insights.`;
-      }
-    }
-
-    res.json({
-      success: true,
-      suggestedMethod,
-      methodDescription: getMethodDescription(suggestedMethod),
-      detectedOutputStyle: outputStyle,
-      detectedRoleContext: roleContext,
-      bandwidth,
-      synthesisSuggestion,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-/**
- * GET /api/methods - Get all available methods with descriptions
+ * GET /api/methods - List available methods
  */
 app.get('/api/methods', (req, res) => {
   const methods = [
@@ -381,59 +257,46 @@ app.get('/api/methods', (req, res) => {
     { key: 'NOTES_SUMMARY', description: getMethodDescription('NOTES_SUMMARY') },
   ];
 
-  res.json({
-    success: true,
-    methods,
-  });
+  res.json({ success: true, methods });
 });
 
 /**
- * GET /api/styles - Get available output styles
- */
-app.get('/api/styles', (req, res) => {
-  res.json({
-    success: true,
-    styles: [
-      {
-        key: 'natural',
-        name: 'Natural',
-        description: 'Integrated narrative, no labels, flowing prose (default)',
-      },
-      {
-        key: 'structured',
-        name: 'Structured',
-        description: 'Explicit perspective labels, systematic breakdown',
-      },
-      {
-        key: 'abbreviated',
-        name: 'Abbreviated',
-        description: 'Streamlined, core insights only',
-      },
-    ],
-  });
-});
-
-/**
- * Health check
+ * GET /api/health
  */
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-  });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// =====================================================================
-// Start Server
-// =====================================================================
+
+// Save one conversation (end-of-analysis)
+app.post("/api/history", async (req, res) => {
+  try {
+    const { userId, sessionId, userQuery, response } = req.body;
+    const item = {
+      PK: `USER#${userId}`,
+      SK: `SESSION#${sessionId || uuidv4()}`,
+      user_id: userId,
+      user_query: userQuery,
+      response,
+      timestamp: new Date().toISOString(),
+      ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+    };
+    await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Error saving history:", err);
+    res.status(500).json({ error: "Failed to save history" });
+  }
+});
+
+
+
 app.listen(PORT, () => {
   console.log(`\n${'='.repeat(60)}`);
   console.log('🚀 Multi-Perspective AI Server');
   console.log(`🌐 Running at http://localhost:${PORT}`);
-  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`💾 DynamoDB Table: ${process.env.DYNAMO_TABLE}`);
+  console.log(`💾 DynamoDB Table: ${TABLE_NAME}`);
   console.log(`💬 Max history: ${MAX_HISTORY_MESSAGES} exchanges`);
-  console.log(`⚠️  Warning threshold: ${WARN_THRESHOLD} messages`);
   console.log(`${'='.repeat(60)}\n`);
 });
 

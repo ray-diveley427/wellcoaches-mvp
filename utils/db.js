@@ -167,3 +167,52 @@ export async function updateSessionPreference(userId, sessionId, preference, val
     console.error('❌ Failed to update preference:', err);
   }
 }
+
+// db.js
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, QueryCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+
+const client = new DynamoDBClient({ region: "us-east-1" });
+const docClient = DynamoDBDocumentClient.from(client);
+const TABLE = "MultiPerspectiveHistory";
+
+// Save one full conversation
+export async function saveConversation({ userId, title, method, messages }) {
+  const item = {
+    userId,
+    timestamp: Date.now(),
+    title,
+    method,
+    messages,
+  };
+  await docClient.send(new PutCommand({ TableName: TABLE, Item: item }));
+  return item;
+}
+
+// Load all conversations for a user
+export async function getConversations(userId) {
+  const res = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE,
+      KeyConditionExpression: "userId = :u",
+      ExpressionAttributeValues: { ":u": userId },
+      ScanIndexForward: false, // newest first
+    })
+  );
+  return res.Items || [];
+}
+
+// Delete all conversations for a user
+export async function deleteConversations(userId) {
+  const items = await getConversations(userId);
+  await Promise.all(
+    items.map((i) =>
+      docClient.send(
+        new DeleteCommand({
+          TableName: TABLE,
+          Key: { userId: i.userId, timestamp: i.timestamp },
+        })
+      )
+    )
+  );
+}

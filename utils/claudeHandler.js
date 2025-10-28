@@ -47,7 +47,7 @@ export async function callMPAI(
 
     // Make the API call
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', // Recommended model per requirements
+      model: 'claude-sonnet-4-20250514', // Using Sonnet 4 as per requirements
       max_tokens: 2000,
       system: systemPrompt,
       messages: messages,
@@ -223,15 +223,32 @@ export function detectRoleContext(userQuery) {
 export function suggestMethod(userQuery) {
   const query = userQuery.toLowerCase();
 
-  // INNER_PEACE_SYNTHESIS: internal conflict about what to do
-  if ((query.includes('torn between') || query.includes('can\'t decide between')) &&
-      (query.includes('part of me') || query.includes('but also'))) {
+  // INNER_PEACE_SYNTHESIS: internal conflict about what to do (EXPANDED)
+  const internalConflictIndicators = [
+    'torn between', 'can\'t decide between', 'part of me',
+    'but also', 'at war with myself', 'conflicted',
+    'inner conflict', 'head says', 'heart says',
+    'know I should but', 'feel pulled', 'internal struggle',
+    'competing desires', 'two minds', 'split between'
+  ];
+  
+  const hasInternalConflict = internalConflictIndicators.some(
+    indicator => query.includes(indicator)
+  );
+  
+  // Exclude if it's clearly external conflict
+  const isExternalConflict = 
+    query.includes('between people') ||
+    query.includes('team conflict') ||
+    query.includes('stakeholder') && query.includes('disagree');
+  
+  if (hasInternalConflict && !isExternalConflict) {
     return 'INNER_PEACE_SYNTHESIS';
   }
 
-  // CONFLICT_RESOLUTION: stuck between two things
+  // CONFLICT_RESOLUTION: stuck between two things (external)
   if (query.includes('conflict') || query.includes('stuck between') || 
-      query.includes('torn') || query.includes('gridlock')) {
+      query.includes('gridlock') || (query.includes('torn') && isExternalConflict)) {
     return 'CONFLICT_RESOLUTION';
   }
 
@@ -268,7 +285,8 @@ export function suggestMethod(userQuery) {
 
   // PATTERN_RECOGNITION: recurring pattern
   if (query.includes('pattern') || query.includes('keep happening') || 
-      query.includes('recurring') || query.includes('here we go again')) {
+      query.includes('recurring') || query.includes('here we go again') ||
+      query.includes('keep doing') || query.includes('always end up')) {
     return 'PATTERN_RECOGNITION';
   }
 
@@ -281,7 +299,8 @@ export function suggestMethod(userQuery) {
   // HUMAN_HARM_CHECK: risk/safety/ethics
   if (query.includes('risk') || query.includes('harm') || 
       query.includes('safety') || query.includes('ethics') ||
-      query.includes('ethical')) {
+      query.includes('ethical') || query.includes('danger') ||
+      query.includes('could hurt')) {
     return 'HUMAN_HARM_CHECK';
   }
 
@@ -314,20 +333,20 @@ export function shouldSuggestSynthesisAll(sessionAnalysisCount) {
  */
 export function getMethodDescription(method) {
   const descriptions = {
-    QUICK: 'Quick analysis (200-400 words) - fast clarity',
-    FULL: 'Full analysis (600-800 words) - comprehensive view',
-    CONFLICT_RESOLUTION: 'Conflict resolution - revealing both sides',
-    STAKEHOLDER_ANALYSIS: 'Stakeholder analysis - multiple perspectives mapped',
-    PATTERN_RECOGNITION: 'Pattern recognition - uncovering blind spots',
-    SCENARIO_TEST: 'Scenario test - comparing options',
-    TIME_HORIZON: 'Time horizon - balancing short vs long term',
-    HUMAN_HARM_CHECK: 'Safety check - risk assessment',
-    SIMPLE_SYNTHESIS: 'Simple synthesis - three-level integration',
-    SYNTHESIS_ALL: 'Deep synthesis - integrating all prior analyses',
-    INNER_PEACE_SYNTHESIS: 'Inner peace synthesis - resolving internal conflict',
-    COACHING_PLAN: 'Coaching plan - structured development',
-    SKILLS: 'Skills development - strengthening perspectives',
-    NOTES_SUMMARY: 'Notes summary - organizing through perspectives',
+    QUICK: 'Quick analysis (200-400 words) - fast clarity on core tensions',
+    FULL: 'Full analysis (600-800 words) - comprehensive multi-perspective view',
+    CONFLICT_RESOLUTION: 'Conflict resolution - revealing both sides of gridlock',
+    STAKEHOLDER_ANALYSIS: 'Stakeholder analysis - mapping multiple perspectives',
+    PATTERN_RECOGNITION: 'Pattern recognition - uncovering recurring blind spots',
+    SCENARIO_TEST: 'Scenario test - comparing options through perspectives',
+    TIME_HORIZON: 'Time horizon - balancing short-term vs long-term needs',
+    HUMAN_HARM_CHECK: 'Safety check - systematic risk and ethics assessment',
+    SIMPLE_SYNTHESIS: 'Simple synthesis - three-level integration with vision',
+    SYNTHESIS_ALL: 'Deep synthesis - integrating all prior conversations',
+    INNER_PEACE_SYNTHESIS: 'Inner peace - resolving internal conflict with integration path',
+    COACHING_PLAN: 'Coaching plan - structured development roadmap',
+    SKILLS: 'Skills development - strengthening specific perspectives',
+    NOTES_SUMMARY: 'Notes summary - organizing content through perspectives',
   };
 
   return descriptions[method] || 'Multi-perspective analysis';
