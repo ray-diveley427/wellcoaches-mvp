@@ -85,20 +85,106 @@ app.get("/api/history/:userId", async (req, res) => {
         TableName: TABLE_NAME,
         KeyConditionExpression: "PK = :pk",
         ExpressionAttributeValues: { ":pk": pk },
-        ScanIndexForward: false,
-        Limit: 50,
+        ScanIndexForward: false, // newest first
+        Limit: 200,
       })
     );
 
-    // Always return a 200 — even if empty
-    res.json(data.Items || []);
+    const allItems = data.Items || [];
+
+    // ✅ Step 1: Find the latest NON-EMPTY count per session
+    const latestCountBySession = {};
+    for (const item of allItems) {
+      const sid = item.session_id;
+      const hasPerspectives = item.perspectives && item.perspectives.trim() !== "";
+      
+      if (!latestCountBySession[sid]) {
+        // First time seeing this session - store it regardless
+        latestCountBySession[sid] = {
+          countText: item.perspectives || "",
+          timestamp: item.timestamp,
+        };
+      } else {
+        // We've seen this session before
+        const currentIsEmpty = !latestCountBySession[sid].countText || 
+                               latestCountBySession[sid].countText.trim() === "";
+        
+        if (hasPerspectives) {
+          // This item has a perspectives value
+          if (currentIsEmpty) {
+            // Stored value is empty, so update with this one
+            latestCountBySession[sid] = {
+              countText: item.perspectives,
+              timestamp: item.timestamp,
+            };
+          } else if (new Date(item.timestamp) > new Date(latestCountBySession[sid].timestamp)) {
+            // This one is newer and has perspectives, update it
+            latestCountBySession[sid] = {
+              countText: item.perspectives,
+              timestamp: item.timestamp,
+            };
+          }
+        }
+      }
+    }
+
+    // ✅ Step 2: Return all items, but attach latest count for each session
+    const items = allItems.map((item) => {
+      // Parse perspectives to show names
+      let perspectivesDisplay = "";
+      try {
+        const perspData = item.perspectives || latestCountBySession[item.session_id]?.countText || "";
+        if (perspData) {
+          const parsed = JSON.parse(perspData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            perspectivesDisplay = parsed.join(', ');
+          } else {
+            perspectivesDisplay = perspData;
+          }
+        }
+      } catch (e) {
+        perspectivesDisplay = item.perspectives || latestCountBySession[item.session_id]?.countText || "";
+      }
+      
+      return {
+        session_id: item.session_id,
+        analysis_id: item.analysis_id || item.SK?.split('#ANALYSIS#')[1],
+        user_query: item.user_query,
+        response: item.response,
+        title: item.title || "Untitled Conversation",
+        method: item.method || "QUICK",
+        preview: item.preview || "",
+        perspectives: perspectivesDisplay,
+        timestamp: item.timestamp,
+      };
+    });
+
+    res.json(items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
   } catch (err) {
     console.error("❌ Error fetching DynamoDB history:", err);
     res.status(500).json({ error: "Failed to fetch history" });
   }
 });
 
+// Delete a specific analysis by analysis_id (must come before session delete)
+app.delete("/api/history/:userId/:sessionId/:analysisId", async (req, res) => {
+  const { userId, sessionId, analysisId } = req.params;
+  try {
+    await docClient.send(new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: `USER#${userId}`,
+        SK: `SESSION#${sessionId}#ANALYSIS#${analysisId}`,
+      },
+    }));
 
+    console.log(`🗑️ Deleted analysis ${analysisId}`);
+    res.json({ success: true, message: `Deleted analysis ${analysisId}` });
+  } catch (err) {
+    console.error("❌ Error deleting analysis:", err);
+    res.status(500).json({ success: false, error: "Failed to delete analysis" });
+  }
+});
 
 // Delete a full session (all items for that session)
 app.delete("/api/history/:userId/:sessionId", async (req, res) => {
@@ -147,7 +233,7 @@ app.post('/api/analyze', async (req, res) => {
       outputStyle: providedOutputStyle,
       roleContext: providedRoleContext,
       sessionId: providedSessionId,
-      userId = DEFAULT_USER_ID
+      userId 
     } = req.body;
 
     if (!userQuery || !userQuery.trim()) {
@@ -191,6 +277,16 @@ app.post('/api/analyze', async (req, res) => {
     // 4️⃣ Call Claude (now with priorMessages)
     const result = await callMPAI(userQuery, method, outputStyle, roleContext, priorMessages);
 
+    console.log("🧠 MPAI Analysis Result:", result);
+
+    const perspectives =
+      result.perspectives && Array.isArray(result.perspectives)
+        ? result.perspectives
+        : result.perspectivesList ||
+          result.perspectiveNames ||
+          ["Thinker", "Relational", "Achiever", "Creative", "Systemic"];
+
+
     if (!result.success) {
       return res.status(500).json({ success: false, error: result.error });
     }
@@ -208,6 +304,9 @@ app.post('/api/analyze', async (req, res) => {
       bandwidth,
       output_style: outputStyle,
       role_context: roleContext,
+      title: userQuery.split(/[?.!]/)[0].slice(0, 60) || "Untitled Conversation",
+      preview: result.response ? result.response.slice(0, 120) : "",
+      perspectives: `${result.perspectives?.length || 0} perspectives`,
       timestamp: new Date().toISOString(),
       ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30 // 30 days
     };
@@ -224,8 +323,18 @@ app.post('/api/analyze', async (req, res) => {
       roleContext,
       bandwidth,
       response: result.response,
+      perspectives: result.perspectives,        // ✅ add this
+      count: result.perspectives?.length || 0,  // ✅ add this
       usage: result.usage || {},
     });
+    
+    
+    console.log("🧩 Returning to frontend:", {
+      method,
+      perspectives,
+      count: perspectives?.length
+    });
+    
 
   } catch (err) {
     console.error("❌ Error in /api/analyze:", err);
@@ -271,23 +380,56 @@ app.get('/api/health', (req, res) => {
 // Save one conversation (end-of-analysis)
 app.post("/api/history", async (req, res) => {
   try {
-    const { userId, sessionId, userQuery, response } = req.body;
+    const {
+      userId,
+      sessionId,
+      userQuery,
+      response,
+      title,
+      method,
+      preview,
+      perspectives,
+    } = req.body;
+
+    const sessionKey = `SESSION#${sessionId || uuidv4()}`;
+
+    // Build item for DynamoDB
     const item = {
       PK: `USER#${userId}`,
-      SK: `SESSION#${sessionId || uuidv4()}`,
+      SK: sessionKey,
       user_id: userId,
+      session_id: sessionId || uuidv4(),
       user_query: userQuery,
       response,
+      method: method || "QUICK",
+      perspectives, // ✅ Save this list
+      title:
+        title ||
+        (userQuery
+          ? userQuery.split(/[?.!]/)[0].slice(0, 60)
+          : "Untitled Conversation"),
+      preview:
+        preview ||
+        (response ? response.slice(0, 120) : "No preview available"),
+      perspectives: perspectives || "5 perspectives",
       timestamp: new Date().toISOString(),
-      ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+      ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // 30 days
     };
-    await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-    res.json({ success: true });
+
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: item,
+      })
+    );
+
+    res.json({ success: true, item });
   } catch (err) {
     console.error("❌ Error saving history:", err);
     res.status(500).json({ error: "Failed to save history" });
   }
 });
+
 
 
 

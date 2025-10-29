@@ -973,3 +973,51 @@ body {
     opacity: 0;
     transform: translateX(-10px);
   }
+  /* ============================================
+   HISTORY TAG COLOR MAPPING (based on methods)
+   ============================================ */
+
+.history-item-tag {
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+  
+  /* Beginner Tags */
+  .history-item-tag[data-type="QUICK"],
+  .history-item-tag[data-type="STAKEHOLDER"],
+  .history-item-tag[data-type="NOTES SUMMARY"],
+  .history-item-tag[data-type="CONFLICT"] {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+  }
+  
+  /* Intermediate Tags */
+  .history-item-tag[data-type="PATTERN"],
+  .history-item-tag[data-type="SCENARIO TEST"],
+  .history-item-tag[data-type="TIME HORIZON"] {
+    background: #fffbeb;
+    color: #92400e;
+    border-color: #fde68a;
+  }
+  
+  /* Advanced Tags */
+  .history-item-tag[data-type="FULL"],
+  .history-item-tag[data-type="SYNTHESIS"],
+  .history-item-tag[data-type="SYNTHESIS (ALL)"],
+  .history-item-tag[data-type="INNER PEACE SYNTHESIS"],
+  .history-item-tag[data-type="COACHING PLAN"],
+  .history-item-tag[data-type="SKILLS"],
+  .history-item-tag[data-type="HUMAN HARM CHECK"] {
+    background: #f3e8ff;
+    color: #6d28d9;
+    border-color: #ddd6fe;
+  }
+  

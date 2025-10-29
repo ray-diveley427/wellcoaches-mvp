@@ -28,16 +28,33 @@ export async function signIn() {
 }
 
 // --- LOGOUT ---
+
 export async function signOut() {
   console.log("🔹 Signing out...");
   
-  // Clear all tokens
+  // ✅ Clear all tokens
   localStorage.removeItem("id_token");
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
   sessionStorage.clear();
   
   console.log("✅ Tokens cleared from localStorage");
+  
+  // ✅ NEW: Clear conversation history from memory
+  if (window.conversationHistory) {
+    window.conversationHistory = [];
+  }
+  
+  // ✅ NEW: Clear the UI
+  const historyContent = document.getElementById('historyContent');
+  if (historyContent) {
+    historyContent.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-title">No conversations yet</div>
+        <div class="history-empty-text">Please log in to view your history</div>
+      </div>
+    `;
+  }
   
   // Build logout URL - MUST be /logout not /login
   const logoutUrl = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;

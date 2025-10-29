@@ -1,598 +1,917 @@
 // =====================================================================
 // Multi-Perspective AI - Main Application
-// Integrates with existing backend API (api.js)
 // =====================================================================
+// Note: This version expects auth.js functions to be available globally
 
 // =====================================================================
 // METHODS DATA WITH COMPLEXITY LEVELS
 // =====================================================================
 const methods = [
-    { key: 'QUICK', name: 'QUICK', complexity: 1, complexityStars: '★☆☆☆☆', category: 'beginner', tag: 'BEGINNER', description: 'Get quick insights for daily decisions and straightforward situations. Perfect when you need guidance fast.' },
-    { key: 'CONFLICT_RESOLUTION', name: 'CONFLICT', complexity: 2, complexityStars: '★★☆☆☆', category: 'beginner', tag: 'BEGINNER', description: 'Understand the core tension when you feel torn between two approaches. Validates both sides and finds a path forward.' },
-    { key: 'STAKEHOLDER_ANALYSIS', name: 'STAKEHOLDER', complexity: 2, complexityStars: '★★☆☆☆', category: 'beginner', tag: 'BEGINNER', description: 'Understand perspectives of multiple people involved. Reveals hidden motivations and finds common ground.' },
-    { key: 'NOTES_SUMMARY', name: 'NOTES SUMMARY', complexity: 2, complexityStars: '★★★☆☆', category: 'beginner', tag: 'BEGINNER', description: 'Organize any documents - for example, meeting notes, transcripts, or assessments - through relevant perspectives for clarity and insight.' },
-    { key: 'PATTERN_RECOGNITION', name: 'PATTERN', complexity: 3, complexityStars: '★★★☆☆', category: 'intermediate', tag: 'INTERMEDIATE', description: 'Identify root causes of recurring problems and understand your role in perpetuating patterns.' },
-    { key: 'SCENARIO_TEST', name: 'SCENARIO TEST', complexity: 3, complexityStars: '★★★☆☆', category: 'intermediate', tag: 'INTERMEDIATE', description: 'Thoroughly analyze 2-3 specific options to understand strengths, weaknesses, and hidden implications.' },
-    { key: 'TIME_HORIZON', name: 'TIME HORIZON', complexity: 3, complexityStars: '★★★☆☆', category: 'intermediate', tag: 'INTERMEDIATE', description: 'Balance immediate needs with future consequences. See 1-year, 3-year, and 5-year perspectives.' },
-    { key: 'HUMAN_HARM_CHECK', name: 'HUMAN HARM CHECK', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Comprehensive assessment of potential harms from major decisions. Identifies vulnerable populations and mitigation strategies.' },
-    { key: 'FULL', name: 'FULL', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Full multi-perspective analysis considering all nine perspectives. For complex situations needing thorough understanding.' },
-    { key: 'SIMPLE_SYNTHESIS', name: 'SYNTHESIS', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Integrate insights from multiple analyses or explore across personal, relational, and systemic levels.' },
-    { key: 'SYNTHESIS_ALL', name: 'SYNTHESIS (ALL)', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Deep integration across individual, relational, and systemic levels. Most comprehensive analysis.' },
-    { key: 'INNER_PEACE_SYNTHESIS', name: 'INNER PEACE SYNTHESIS', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Resolve internal conflicts and improve well-being. Identify competing parts within yourself and find pathways to integration.' },
-    { key: 'COACHING_PLAN', name: 'COACHING PLAN', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Transform analysis into actionable development plan with vision, strategies, and concrete next steps.' },
-    { key: 'SKILLS', name: 'SKILLS', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Develop skills in applying any of the nine perspectives, based on the book: The Science of Leadership.' }
-  ];
-  
-  // =====================================================================
-  // STATE MANAGEMENT
-  // =====================================================================
-  let currentSessionId = null;
-  let perspectiveVisibility = 'visible';
-  let selectedMethod = null;
-  let isLoading = false;
-  let currentFilter = 'all';
-  
-  // =====================================================================
-  // DOM ELEMENTS
-  // =====================================================================
-  const elements = {
-    chatInput: document.getElementById('chatInput'),
-    sendButton: document.getElementById('sendButton'),
-    chatMessages: document.getElementById('chatMessages'),
-    methodsList: document.getElementById('methodsList'),
-    historySidebar: document.getElementById('historySidebar'),
-    mainContent: document.getElementById('mainContent'),
-    historyContent: document.getElementById('historyContent'),
-  };
-  
-  // =====================================================================
-  // MARKDOWN TO HTML CONVERTER
-  // =====================================================================
-  function convertMarkdownToHTML(markdown) {
-    let html = markdown;
-    html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
-    html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
-    html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    html = html.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
-    html = html.replace(/`(.*?)`/g, '<code>$1</code>');
-    html = html.replace(/^\- (.*?)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>');
-    html = html.replace(/\n\n/g, '</p><p>');
-    html = html.replace(/\n/g, '<br>');
-    return '<p>' + html + '</p>';
-  }
-  
-  // =====================================================================
-  // UTILITIES
-  // =====================================================================
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-  function scrollToBottom() {
-    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
-  }
-  function autoResize() {
-    elements.chatInput.style.height = 'auto';
-    elements.chatInput.style.height = Math.min(elements.chatInput.scrollHeight, 120) + 'px';
-  }
-  function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-      position: fixed;
-      bottom: 2rem; right: 2rem;
-      padding: 1rem 1.5rem;
-      background: ${type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#14b8a6'};
-      color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 2000; animation: slideInUp 0.3s ease-out;`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }
-  
-  // =====================================================================
-  // METHODS DROPDOWN
-  // =====================================================================
-  function renderMethodsDropdown(filter = 'all') {
-    if (!elements.methodsList) return;
-    currentFilter = filter;
-    const filtered = filter === 'all' ? methods : methods.filter(m => m.category === filter);
-    elements.methodsList.innerHTML = '';
-    filtered.forEach(method => {
-      const el = document.createElement('div');
-      el.className = 'method-item';
-      el.innerHTML = `
-        <div class="method-header">
-          <div>
-            <div class="method-name">${method.name}</div>
-            <span class="method-tag tag-${method.category}">${method.tag}</span>
-          </div>
-          <div class="method-complexity">${method.complexityStars}</div>
-        </div>
-        <div class="method-description">${method.description}</div>`;
-      el.addEventListener('click', () => selectMethod(method.key));
-      elements.methodsList.appendChild(el);
-    });
-  }
-  function selectMethod(methodKey) {
-    selectedMethod = methodKey;
-    closeDropdowns();
-    const method = methods.find(m => m.key === methodKey);
-    if (method) {
-      elements.chatInput.placeholder = `Describe your situation for ${method.name} analysis...`;
-      showToast(`Method selected: ${method.name}`);
-    }
-    elements.chatInput.focus();
-  }
-  function togglePerspectiveVisibility() {
-    perspectiveVisibility = perspectiveVisibility === 'visible' ? 'invisible' : 'visible';
-    showToast(`Perspective visibility: ${perspectiveVisibility}`);
-  }
-  
-  // =====================================================================
-  // CHAT MESSAGES
-  // =====================================================================
-  function addMessage(type, content) {
-    const div = document.createElement('div');
-    div.className = `message ${type}`;
-    div.innerHTML = type === 'user' ? escapeHtml(content) : convertMarkdownToHTML(content);
-    elements.chatMessages.appendChild(div);
-    scrollToBottom();
-  }
-  function addLoadingMessage() {
-    const id = `loading-${Date.now()}`;
-    const div = document.createElement('div');
-    div.id = id;
-    div.className = 'message assistant';
-    div.innerHTML = `<div class="loading"><span>Analyzing</span>
-        <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>`;
-    elements.chatMessages.appendChild(div);
-    scrollToBottom();
-    return id;
-  }
-  function removeMessage(id) {
-    const m = document.getElementById(id);
-    if (m) m.remove();
-  }
-  
-  // =====================================================================
-  // SEND MESSAGE
-  // =====================================================================
-  async function sendMessage() {
-    const message = elements.chatInput.value.trim();
-    if (!message || isLoading) return;
-    const welcome = elements.chatMessages.querySelector('.message.assistant:first-child');
-    if (welcome && welcome.textContent.includes('Welcome')) welcome.remove();
-  
-    addMessage('user', message);
-    elements.chatInput.value = '';
-    autoResize();
-    const loadingId = addLoadingMessage();
-    isLoading = true; elements.sendButton.disabled = true;
-  
-    try {
-      const result = await mpaiAPI.analyze(message, selectedMethod, perspectiveVisibility, currentSessionId);
-      removeMessage(loadingId);
-      if (result.success) {
-        currentSessionId = result.sessionId;
-        addMessage('assistant', result.response);
-        selectedMethod = null;
-        elements.chatInput.placeholder = 'Describe your situation or ask a question...';
-          // ✅ Save full analysis to DynamoDB after AI response
-        try {
-            const conversation = {
-            title: message.slice(0, 60),
-            method: result.method || selectedMethod || 'QUICK',
-            messages: [
-                { role: 'user', content: message },
-                { role: 'assistant', content: result.response }
-            ],
-            timestamp: Date.now()
-            };
-            await saveHistory(conversation);
-             // ✅ Optional: silently refresh sidebar list even if closed
-            if (!elements.historySidebar.classList.contains('open')) {
-                await loadHistory();
-            }
-            console.log('💾 Conversation saved to DynamoDB');
-        } catch (saveErr) {
-            console.warn('⚠️ Failed to save conversation:', saveErr);
-        }
+  { key: 'QUICK', name: 'QUICK', complexity: 1, complexityStars: '★☆☆☆☆', category: 'beginner', tag: 'BEGINNER', description: 'Get quick insights for daily decisions and straightforward situations. Perfect when you need guidance fast.' },
+  { key: 'CONFLICT_RESOLUTION', name: 'CONFLICT', complexity: 2, complexityStars: '★★☆☆☆', category: 'beginner', tag: 'BEGINNER', description: 'Understand the core tension when you feel torn between two approaches. Validates both sides and finds a path forward.' },
+  { key: 'STAKEHOLDER_ANALYSIS', name: 'STAKEHOLDER', complexity: 2, complexityStars: '★★☆☆☆', category: 'beginner', tag: 'BEGINNER', description: 'Understand perspectives of multiple people involved. Reveals hidden motivations and finds common ground.' },
+  { key: 'NOTES_SUMMARY', name: 'NOTES SUMMARY', complexity: 2, complexityStars: '★★★☆☆', category: 'beginner', tag: 'BEGINNER', description: 'Organize any documents - for example, meeting notes, transcripts, or assessments - through relevant perspectives for clarity and insight.' },
+  { key: 'PATTERN_RECOGNITION', name: 'PATTERN', complexity: 3, complexityStars: '★★★☆☆', category: 'intermediate', tag: 'INTERMEDIATE', description: 'Identify root causes of recurring problems and understand your role in perpetuating patterns.' },
+  { key: 'SCENARIO_TEST', name: 'SCENARIO TEST', complexity: 3, complexityStars: '★★★☆☆', category: 'intermediate', tag: 'INTERMEDIATE', description: 'Thoroughly analyze 2-3 specific options to understand strengths, weaknesses, and hidden implications.' },
+  { key: 'TIME_HORIZON', name: 'TIME HORIZON', complexity: 3, complexityStars: '★★★☆☆', category: 'intermediate', tag: 'INTERMEDIATE', description: 'Balance immediate needs with future consequences. See 1-year, 3-year, and 5-year perspectives.' },
+  { key: 'HUMAN_HARM_CHECK', name: 'HUMAN HARM CHECK', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Comprehensive assessment of potential harms from major decisions. Identifies vulnerable populations and mitigation strategies.' },
+  { key: 'FULL', name: 'FULL', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Full multi-perspective analysis considering all nine perspectives. For complex situations needing thorough understanding.' },
+  { key: 'SIMPLE_SYNTHESIS', name: 'SYNTHESIS', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Integrate insights from multiple analyses or explore across personal, relational, and systemic levels.' },
+  { key: 'SYNTHESIS_ALL', name: 'SYNTHESIS (ALL)', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Deep integration across individual, relational, and systemic levels. Most comprehensive analysis.' },
+  { key: 'INNER_PEACE_SYNTHESIS', name: 'INNER PEACE SYNTHESIS', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Resolve internal conflicts and improve well-being. Identify competing parts within yourself and find pathways to integration.' },
+  { key: 'COACHING_PLAN', name: 'COACHING PLAN', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Transform analysis into actionable development plan with vision, strategies, and concrete next steps.' },
+  { key: 'SKILLS', name: 'SKILLS', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Develop skills in applying any of the nine perspectives, based on the book: The Science of Leadership.' }
+];
 
-
-        if (result.suggestions?.shouldSuggestSynthesis) showSynthesisSuggestion(result.suggestions.synthesisSuggestion);
-        if (result.warnings?.longConversation) showToast(result.warnings.message, 'warning');
-      } else {
-        if (result.tokenLimitExceeded) {
-          addMessage('assistant', 'Conversation too long. Starting new session...');
-          setTimeout(() => { currentSessionId = null; clearChat(); }, 2000);
-        } else addMessage('assistant', `Error: ${result.error}`);
-      }
-      if (document.getElementById('historySidebar').classList.contains('open')) {
-        loadHistory();
-      }      
-    } catch (error) {
-      removeMessage(loadingId);
-      console.error('❌ Error sending message:', error);
-      addMessage('assistant', `Error: ${error.message}`);
-    } finally {
-      isLoading = false;
-      elements.sendButton.disabled = false;
-      elements.chatInput.focus();
-    }
-  }
-  function showSynthesisSuggestion(msg) {
-    const div = document.createElement('div');
-    div.className = 'message assistant';
-    div.style.background = 'linear-gradient(135deg,#fef3c7 0%,#fde68a 100%)';
-    div.style.borderColor = '#fbbf24';
-    div.innerHTML = `<strong>💡 Suggestion:</strong> ${msg}`;
-    elements.chatMessages.appendChild(div);
-    scrollToBottom();
-  }
-  function clearChat() {
-    elements.chatMessages.innerHTML = `
-      <div class="message assistant">
-        <div style="font-size:16px;">Welcome 👋</div>
-        <div style="margin-top:0.5rem;">Tap <strong>Methods</strong> to choose an analysis approach, or tell me what's on your mind.</div>
-      </div>`;
-  }
-  
-  // =====================================================================
-// HISTORY (DynamoDB Integration + Search + Actions)
 // =====================================================================
+// STATE MANAGEMENT
+// =====================================================================
+let currentSessionId = null;
+let perspectiveVisibility = 'visible';
+let selectedMethod = null;
+let isLoading = false;
+let currentFilter = 'all';
 let fullHistoryCache = [];
 let activeFilter = 'all';
 
-/**
- * Load saved analyses for the current user from DynamoDB
- */
-async function loadHistory(userId = 'user-1') {
+// =====================================================================
+// DOM ELEMENTS
+// =====================================================================
+const elements = {
+  chatInput: document.getElementById('chatInput'),
+  sendButton: document.getElementById('sendButton'),
+  chatMessages: document.getElementById('chatMessages'),
+  methodsList: document.getElementById('methodsList'),
+  historySidebar: document.getElementById('historySidebar'),
+  mainContent: document.getElementById('mainContent'),
+  historyContent: document.getElementById('historyContent'),
+};
+
+// =====================================================================
+// HELPER: Get Current User ID from Token
+// =====================================================================
+function getCurrentUserId() {
+  const idToken = localStorage.getItem("id_token");
+  if (!idToken) {
+    console.log("🔑 No id_token found in localStorage");
+    return null;
+  }
+  
   try {
-    const res = await fetch(`/api/history/${userId}`);
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
+    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    const userId = payload.sub;
+    console.log("✅ User ID extracted from token:", userId);
+    return userId; // Cognito user ID
+  } catch (error) {
+    console.error("❌ Failed to decode token:", error);
+    return null;
+  }
+}
+
+// =====================================================================
+// MARKDOWN TO HTML CONVERTER
+// =====================================================================
+function convertMarkdownToHTML(markdown) {
+  let html = markdown;
+  html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
+  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+  html = html.replace(/^\- (.*?)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>');
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  return '<p>' + html + '</p>';
+}
+
+// =====================================================================
+// UTILITIES
+// =====================================================================
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+function scrollToBottom() {
+  elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+}
+function autoResize() {
+  elements.chatInput.style.height = 'auto';
+  elements.chatInput.style.height = Math.min(elements.chatInput.scrollHeight, 120) + 'px';
+}
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 2rem; right: 2rem;
+    padding: 1rem 1.5rem;
+    background: ${type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#14b8a6'};
+    color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 2000; animation: slideInUp 0.3s ease-out;`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// =====================================================================
+// METHODS DROPDOWN
+// =====================================================================
+function renderMethodsDropdown(filter = 'all') {
+  if (!elements.methodsList) return;
+  currentFilter = filter;
+  const filtered = filter === 'all' ? methods : methods.filter(m => m.category === filter);
+  elements.methodsList.innerHTML = '';
+  filtered.forEach(method => {
+    const el = document.createElement('div');
+    el.className = 'method-item';
+    el.innerHTML = `
+      <div class="method-header">
+        <div>
+          <div class="method-name">${method.name}</div>
+          <span class="method-tag tag-${method.category}">${method.tag}</span>
+        </div>
+        <div class="method-complexity">${method.complexityStars}</div>
+      </div>
+      <div class="method-description">${method.description}</div>`;
+    el.addEventListener('click', () => selectMethod(method.key));
+    elements.methodsList.appendChild(el);
+  });
+}
+function selectMethod(methodKey) {
+  selectedMethod = methodKey;
+  closeDropdowns();
+  const method = methods.find(m => m.key === methodKey);
+  if (method) {
+    elements.chatInput.placeholder = `Describe your situation for ${method.name} analysis...`;
+    showToast(`Method selected: ${method.name}`);
+  }
+  elements.chatInput.focus();
+}
+function togglePerspectiveVisibility() {
+  perspectiveVisibility = perspectiveVisibility === 'visible' ? 'invisible' : 'visible';
+  showToast(`Perspective visibility: ${perspectiveVisibility}`);
+}
+
+// =====================================================================
+// CHAT MESSAGES
+// =====================================================================
+function addMessage(type, content) {
+  const div = document.createElement('div');
+  div.className = `message ${type}`;
+  div.innerHTML = type === 'user' ? escapeHtml(content) : convertMarkdownToHTML(content);
+  elements.chatMessages.appendChild(div);
+  scrollToBottom();
+}
+function addLoadingMessage() {
+  const id = `loading-${Date.now()}`;
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'message assistant';
+  div.innerHTML = `<div class="loading"><span>Analyzing</span>
+      <div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>`;
+  elements.chatMessages.appendChild(div);
+  scrollToBottom();
+  return id;
+}
+function removeLoadingMessage(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+function clearChat() {
+  elements.chatMessages.innerHTML = '';
+}
+
+// =====================================================================
+// SEND MESSAGE
+// =====================================================================
+async function sendMessage() {
+  if (isLoading) return;
+  const query = elements.chatInput.value.trim();
+  if (!query) return;
+  
+  // ✅ Check if user is logged in
+  const userId = getCurrentUserId();
+  if (!userId) {
+    showToast('Please log in to use the chat', 'error');
+    return;
+  }
+  
+  addMessage('user', query);
+  elements.chatInput.value = '';
+  autoResize();
+  elements.sendButton.disabled = true;
+  isLoading = true;
+  const loadingId = addLoadingMessage();
+  
+  try {
+    const result = await mpaiAPI.analyze(query, selectedMethod, perspectiveVisibility, currentSessionId);
+    removeLoadingMessage(loadingId);
+    
+    if (result.success) {
+      addMessage('assistant', result.response);
+      
+      // ✅ Ensure session ID consistency
+      if (!currentSessionId) currentSessionId = result.sessionId;
+
+      // ✅ Show method used
+      if (result.method) {
+        const method = methods.find(m => m.key === result.method);
+        if (method) showToast(`Used method: ${method.name}`, 'info');
+      }
+
+      // ✅ Save this conversation snippet to backend history
+      await window.historyAPI.saveHistory({
+        id: Date.now(),
+        session_id: currentSessionId,
+        title: query.split(/[?.!]/)[0].slice(0, 60), // derive title from user's first sentence
+        method: selectedMethod || result.method || "QUICK",
+        preview: result.response.slice(0, 120),
+        perspectives: `${result.count || result.perspectives?.length || 5} perspectives`,
+        timestamp: new Date().toISOString()
+      });
+
+      // ✅ Reload sidebar with new entry
+      await loadHistory();
+      
+    } else {
+      addMessage('assistant', `Error: ${result.error || 'Unknown error occurred'}`);
+      showToast('Analysis failed', 'error');
+    }
+  } catch (err) {
+    removeLoadingMessage(loadingId);
+    console.error('Send error:', err);
+    addMessage('assistant', `Error: ${err.message}`);
+    showToast('Failed to send message', 'error');
+  } finally {
+    elements.sendButton.disabled = false;
+    isLoading = false;
+    elements.chatInput.focus();
+  }
+}
+
+
+// =====================================================================
+// CONVERSATION HISTORY
+// =====================================================================
+async function loadHistory() {
+  try {
+    const userId = getCurrentUserId();
+    
+    if (!userId) {
+      console.log("⚠️ No user ID found - user not logged in");
       elements.historyContent.innerHTML = `
-        <div style="padding:2rem;text-align:center;color:var(--text-secondary);">
-          <p>No conversation history yet.</p>
+        <div class="history-empty">
+          <div class="history-empty-title">Please log in</div>
+          <div class="history-empty-text">Sign in to view your conversation history</div>
         </div>`;
       fullHistoryCache = [];
       return;
     }
+    
+    console.log("📚 Loading history for user:", userId);
+    
+    const res = await fetch(`/api/history/${userId}`);
+    console.log("📡 History API response status:", res.status);
+    const data = await res.json();
+    console.log("📦 History data received:", data.length, "items");
+    
+    if (!Array.isArray(data) || data.length === 0) {
+      console.log("📭 No history items found");
+      elements.historyContent.innerHTML = `
+        <div class="history-empty">
+          <div class="history-empty-title">No conversations yet</div>
+          <div class="history-empty-text">Start a conversation to build your history</div>
+        </div>`;
+      fullHistoryCache = [];
+      return;
+    }
+    
     fullHistoryCache = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    renderFilteredHistory();
+    console.log("✅ History loaded, rendering", fullHistoryCache.length, "items");
+    renderEnhancedHistory(fullHistoryCache);
+
+    
   } catch (err) {
     console.error('❌ Error loading history:', err);
+    elements.historyContent.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-title">Error loading history</div>
+        <div class="history-empty-text">${err.message}</div>
+      </div>`;
+    fullHistoryCache = [];
   }
 }
 
-/**
- * Filter & search handling
- */
 function renderFilteredHistory() {
-    const searchTerm = document.getElementById('historySearch').value.toLowerCase();
-    const now = new Date();
+  const searchTerm = document.getElementById('historySearch')?.value?.toLowerCase() || '';
+  const now = new Date();
+  
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfToday.getDate() - 7);
+  
+  let filtered = fullHistoryCache.filter(item => {
+    const text = `${item.user_query || ''} ${item.response || ''}`.toLowerCase();
+    if (!text.includes(searchTerm)) return false;
     
-    // Midnight local time for "today"
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfWeek = new Date(startOfToday);
-    startOfWeek.setDate(startOfToday.getDate() - 7);
-  
-    let filtered = fullHistoryCache.filter(item => {
-      const text = `${item.user_query || ''} ${item.response || ''}`.toLowerCase();
-      if (!text.includes(searchTerm)) return false;
-  
-      const ts = new Date(item.timestamp);
-      if (isNaN(ts.getTime())) return false; // skip invalid dates
-  
-      if (activeFilter === 'today') {
-        return ts >= startOfToday;
-      } else if (activeFilter === 'week') {
-        return ts >= startOfWeek;
-      } else {
-        return true;
-      }
-    });
-  
-    const sessions = groupBySession(filtered);
-    renderHistory(sessions);
-  
-    // Optional: update visible filter label
-    document.querySelectorAll('.history-filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          // Remove 'active' from all buttons
-          document.querySelectorAll('.history-filter-btn').forEach(b => b.classList.remove('active'));
-          
-          // Add 'active' to clicked button
-          btn.classList.add('active');
-      
-          // Update filter state
-          activeFilter = btn.dataset.filter;
-          
-          // Refresh history list with new filter
-          renderFilteredHistory();
-        });
-      });
-      
-      
-  }
-  
-
-/**
- * Group DynamoDB items by session_id
- */
-function groupBySession(items) {
-  const sessions = {};
-  items.forEach(i => {
-    const id = i.session_id;
-    if (!sessions[id]) sessions[id] = [];
-    sessions[id].push(i);
+    const ts = new Date(item.timestamp);
+    if (isNaN(ts.getTime())) return false;
+    
+    if (activeFilter === 'today') {
+      return ts >= startOfToday;
+    } else if (activeFilter === 'week') {
+      return ts >= startOfWeek;
+    } else {
+      return true;
+    }
   });
-  return sessions;
+  
+  const sessions = groupBySession(filtered);
+  renderHistory(sessions);
 }
 
-/**
- * Render grouped history with buttons
- */
-function renderHistory(sessions) {
-  const container = elements.historyContent;
-  container.innerHTML = '';
-  Object.entries(sessions).forEach(([sessionId, items]) => {
-    const latest = items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-    const firstQuery = items[0]?.user_query || '(No query)';
-    const lastResponse = latest?.response?.slice(0, 100) || '';
+function groupBySession(items) {
+  const grouped = {};
+  items.forEach(item => {
+    const sid = item.session_id;
+    if (!grouped[sid]) {
+      grouped[sid] = {
+        session_id: sid,
+        timestamp: item.timestamp,
+        exchanges: []
+      };
+    }
+    grouped[sid].exchanges.push({
+      user_query: item.user_query,
+      response: item.response,
+      timestamp: item.timestamp
+    });
+  });
+  
+  return Object.values(grouped).sort((a, b) => 
+    new Date(b.timestamp) - new Date(a.timestamp)
+  );
+}
 
-    const el = document.createElement('div');
-    el.className = 'history-item';
-    el.innerHTML = `
-      <div class="history-item-body">
-        <div class="history-item-title">${escapeHtml(firstQuery)}</div>
-        <div class="history-item-preview">${escapeHtml(lastResponse)}</div>
-        <div class="history-item-meta">
-          <span>${latest.method || ''}</span>
-          <span>${new Date(latest.timestamp).toLocaleString()}</span>
-        </div>
+function renderHistoryItems(historyData) {
+  const container = document.getElementById("historyContent");
+  container.innerHTML = "";
+
+  if (!historyData.length) {
+    container.innerHTML = `<div style="padding:1rem;color:var(--text-secondary);">No history yet</div>`;
+    return;
+  }
+
+  historyData.forEach((item) => {
+    const timeAgo = formatTimeAgo(item.timestamp || Date.now());
+    const perspectives = item.perspectives || "5 perspectives";
+    const method = item.method || "QUICK";
+    const title = item.title || (item.user_query ? item.user_query.split(/[?.!]/)[0].slice(0, 60) : "Untitled Conversation");
+    const preview = item.preview || "";
+
+    const card = document.createElement("div");
+    card.className = "history-item";
+
+    card.innerHTML = `
+      <div class="history-item-header">
+        <div class="history-item-title">${title}</div>
+        <div class="history-item-tag" data-type="${method}">${method}</div>
       </div>
+
+      <div class="history-item-preview">${preview}</div>
+
+      <div class="history-item-meta">
+        <span>${perspectives}</span> • <span>${timeAgo}</span>
+      </div>
+
       <div class="history-item-actions">
-        <button class="btn-small" data-action="resume" data-id="${sessionId}">Resume</button>
-        <button class="btn-small" data-action="share" data-id="${sessionId}">Share</button>
-        <button class="btn-small delete" data-action="delete" data-id="${sessionId}">Delete</button>
+        <button class="btn-small" data-action="resume">Resume</button>
+        <button class="btn-small" data-action="share">Share</button>
+        <button class="btn-small" data-action="delete">Delete</button>
       </div>
     `;
-    container.appendChild(el);
-  });
 
-  // Button actions
-  container.querySelectorAll('.btn-small').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const action = btn.dataset.action;
-      const id = btn.dataset.id;
-      if (action === 'resume') loadSession(id);
-      else if (action === 'share') shareSession(id);
-      else if (action === 'delete') deleteSession(id);
-    });
+    // Action buttons
+    card.querySelector('[data-action="resume"]').onclick = () =>
+      resumeConversation(item.id);
+    card.querySelector('[data-action="share"]').onclick = () =>
+      shareConversation(item.id);
+    card.querySelector('[data-action="delete"]').onclick = () =>
+      deleteConversation(item.id);
+
+    container.appendChild(card);
   });
 }
 
-/**
- * Load a specific session
- */
-async function loadSession(sessionId) {
-  const sessionItems = fullHistoryCache.filter(i => i.session_id === sessionId);
-  if (sessionItems.length === 0) return showToast('Session not found', 'error');
-
-  clearChat();
-  currentSessionId = sessionId; // ✅ store the resumed session globally
-  showToast('Session resumed', 'success');
-
-  sessionItems
-    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-    .forEach(i => {
-      addMessage('user', i.user_query);
-      addMessage('assistant', i.response);
-    });
-
-  elements.chatInput.placeholder = 'Continue your conversation...';
-  elements.chatInput.focus();
-  closeHistory();
+function formatTimeAgo(date) {
+  const diff = (Date.now() - new Date(date)) / 1000;
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  return `${Math.floor(diff / 86400)} days ago`;
 }
 
 
-/**
- * Share (copy to clipboard)
- */
-function shareSession(sessionId) {
-  const url = `${window.location.origin}?session=${sessionId}`;
-  navigator.clipboard.writeText(url);
-  showToast('Session link copied to clipboard!');
+function renderHistory(sessions) {
+  if (!sessions || sessions.length === 0) {
+    elements.historyContent.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-title">No matches found</div>
+        <div class="history-empty-text">Try adjusting your filters or search</div>
+      </div>`;
+    return;
+  }
+  
+  let html = '';
+  sessions.forEach(session => {
+    const firstExchange = session.exchanges[0];
+    const preview = firstExchange.user_query.length > 60 
+      ? firstExchange.user_query.substring(0, 60) + '...' 
+      : firstExchange.user_query;
+    const date = new Date(session.timestamp).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    });
+    html += `
+      <div class="history-session" data-session-id="${session.session_id}">
+        <div class="history-session-header">
+          <div class="history-session-preview">${escapeHtml(preview)}</div>
+          <div class="history-session-actions">
+            <button class="history-action-btn" onclick="loadSession('${session.session_id}')" title="Resume conversation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+            <button class="history-action-btn" onclick="shareSession('${session.session_id}', event)" title="Share conversation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/>
+                <line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+            </button>
+            <button class="history-action-btn history-delete-btn" onclick="deleteSession('${session.session_id}', event)" title="Delete conversation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="history-session-meta">${date} · ${session.exchanges.length} exchange${session.exchanges.length !== 1 ? 's' : ''}</div>
+      </div>`;
+  });
+  
+  elements.historyContent.innerHTML = html;
+  
+  document.querySelectorAll('.history-session').forEach(el => {
+    el.addEventListener('click', e => {
+      // Don't load session if clicking on action buttons
+      if (!e.target.closest('.history-action-btn')) {
+        loadSession(el.getAttribute('data-session-id'));
+      }
+    });
+  });
 }
 
-/**
- * Delete session (removes from DynamoDB)
- */
-async function deleteSession(sessionId) {
-    if (!confirm("Are you sure you want to permanently delete this session?")) return;
+async function deleteSession(sessionId, event) {
+  event.stopPropagation();
   
-    try {
-      const res = await fetch(`/api/history/user-1/${sessionId}`, { method: 'DELETE' });
-      const data = await res.json();
-  
-      if (data.success) {
-        // 👇 Fade-out animation before removing the session
-        const el = document.querySelector(`[data-id="${sessionId}"]`)?.closest('.history-item');
-        if (el) {
-          el.classList.add('removed');
-          setTimeout(() => el.remove(), 300);
-        }
-  
-        fullHistoryCache = fullHistoryCache.filter(i => i.session_id !== sessionId);
-        renderFilteredHistory();
-        showToast('Session deleted successfully.', 'warning');
-      } else {
-        showToast('Failed to delete session.', 'error');
-      }
-    } catch (err) {
-      console.error("❌ Error deleting session:", err);
-      showToast('Error deleting session.', 'error');
-    }
+  // ✅ Add validation
+  if (!sessionId) {
+    console.error("❌ deleteSession called with undefined sessionId");
+    showToast('Invalid session ID', 'error');
+    return;
   }
   
-
+  console.log("🗑️ deleteSession called with sessionId:", sessionId);
   
+  if (!confirm('Delete this conversation? This cannot be undone.')) return;
   
-
-  
-  // =====================================================================
-  // DROPDOWNS & HISTORY PANEL
-  // =====================================================================
-  function closeDropdowns() {
-    document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
-  }
-  function toggleHistory() {
-    elements.historySidebar.classList.toggle('open');
-    elements.mainContent.classList.toggle('with-history');
-    if (elements.historySidebar.classList.contains('open')) loadHistory();
-  }
-  function closeHistory() {
-    elements.historySidebar.classList.remove('open');
-    elements.mainContent.classList.remove('with-history');
-  }
-  
-  // =====================================================================
-  // EVENT LISTENERS
-  // =====================================================================
-  function setupEventListeners() {
-    elements.sendButton.addEventListener('click', sendMessage);
-    elements.chatInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-    });
-    elements.chatInput.addEventListener('input', autoResize);
-    document.querySelectorAll('.dropdown').forEach(d => {
-      const t = d.querySelector('.dropdown-toggle, .account-icon-button');
-      if (t) {
-        t.addEventListener('click', e => {
-          e.stopPropagation();
-          const wasOpen = d.classList.contains('open');
-          closeDropdowns();
-          if (!wasOpen) d.classList.add('open');
-        });
-      }
-    });
-    document.addEventListener('click', e => { if (!e.target.closest('.dropdown')) closeDropdowns(); });
-    document.querySelectorAll('.filter-btn-small').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        document.querySelectorAll('.filter-btn-small').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderMethodsDropdown(btn.getAttribute('data-filter'));
-      });
-    });
-    document.getElementById('historyToggle')?.addEventListener('click', toggleHistory);
-    document.getElementById('historyClose')?.addEventListener('click', closeHistory);
-    document.getElementById('uploadButton')?.addEventListener('click', () => document.getElementById('fileInput').click());
-    document.getElementById('fileInput')?.addEventListener('change', e => {
-      const files = e.target.files;
-      if (files.length > 0) showToast(`${files.length} file(s) selected (upload feature coming soon)`);
-    });
-    // New Chat Button
-    document.getElementById('newSessionBtn')?.addEventListener('click', () => {
-      currentSessionId = null;
-      clearChat();
-      showToast('🆕 Started a new conversation');
-    });
+  try {
+    const userId = getCurrentUserId();
     
-    async function toggleAuthButtons(isLoggedIn) {
-      document.getElementById("loginBtn")?.classList.toggle("hidden", isLoggedIn);
-      document.getElementById("logoutBtn")?.classList.toggle("hidden", !isLoggedIn);
+    if (!userId) {
+      showToast('Please log in first', 'error');
+      return;
     }
-
-    async function initializeUserSession() {
-      const user = await getCurrentUser();
-      if (user) {
-        console.log("✅ Logged in user:", user.username);
-        showToast(`👋 Welcome, ${user.username}`);
-      }
-    }
-
-
-  }
-  
-  // =====================================================================
-  // INITIALIZATION
-  // =====================================================================
-  document.addEventListener('DOMContentLoaded', async () => {
-    renderMethodsDropdown('all');
-    setupEventListeners();
-  
-    try {
-      const health = await mpaiAPI.health();
-      console.log('✅ API Health:', health);
-    } catch (error) {
-      console.error('❌ API Health Check Failed:', error);
-    }
-  
-    // ✅ Safe to load history *after* DOM and APIs are ready
-    const token = localStorage.getItem("id_token");
-
-    if (token) {
-      try {
-        await loadHistory();
-        console.log("📜 History loaded for logged-in user");
-      } catch (err) {
-        console.warn("⚠️ Failed to load history:", err);
+    
+    console.log(`🗑️ Deleting session ${sessionId} for user ${userId}`);
+    
+    const res = await fetch(`/api/history/${userId}/${sessionId}`, { method: 'DELETE' });
+    const data = await res.json();
+    
+    console.log("📡 Delete response:", data);
+    
+    if (data.success) {
+      showToast('Conversation deleted', 'success');
+      await loadHistory();
+      if (currentSessionId === sessionId) {
+        currentSessionId = null;
+        clearChat();
       }
     } else {
-      document.getElementById("historyContent").innerHTML = `
-        <div style="padding:2rem;text-align:center;color:var(--text-secondary);">
-          <p>Please log in to view your conversation history.</p>
-        </div>`;
+      showToast('Failed to delete conversation', 'error');
     }
+  } catch (err) {
+    console.error('Delete error:', err);
+    showToast('Failed to delete conversation', 'error');
+  }
+}
 
+// Delete a specific analysis (not the whole session)
+async function deleteAnalysis(userId, sessionId, analysisId, event) {
+  event?.stopPropagation();
+  
+  if (!analysisId) {
+    console.error("❌ No analysis_id provided");
+    showToast('Cannot delete - missing analysis ID', 'error');
+    return;
+  }
+  
+  if (!confirm("Delete this specific analysis? This cannot be undone.")) {
+    return;
+  }
+  
+  try {
+    console.log(`🗑️ Deleting analysis ${analysisId} from session ${sessionId}`);
+    
+    const response = await fetch(`/api/history/${userId}/${sessionId}/${analysisId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Delete failed: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log("✅ Delete successful:", result);
+    
+    showToast('Analysis deleted');
+    await loadHistory();
+  } catch (err) {
+    console.error('❌ Delete error:', err);
+    showToast('Failed to delete analysis', 'error');
+  }
+}
+
+function shareSession(sessionId, event) {
+  event.stopPropagation();
+  
+  const sessionData = fullHistoryCache.filter(item => item.session_id === sessionId);
+  if (sessionData.length === 0) {
+    showToast('Session not found', 'error');
+    return;
+  }
+  
+  // Build shareable text
+  let shareText = '--- Conversation Export ---\n\n';
+  sessionData
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .forEach(item => {
+      shareText += `User: ${item.user_query}\n\n`;
+      shareText += `Assistant: ${item.response}\n\n`;
+      shareText += '---\n\n';
+    });
+  
+  // Copy to clipboard
+  navigator.clipboard.writeText(shareText)
+    .then(() => {
+      showToast('Conversation copied to clipboard', 'success');
+    })
+    .catch(err => {
+      console.error('Copy failed:', err);
+      showToast('Failed to copy to clipboard', 'error');
+    });
+}
+
+function loadSession(sessionId) {
+  const sessionData = fullHistoryCache.filter(item => item.session_id === sessionId);
+  if (sessionData.length === 0) {
+    showToast('Session not found', 'error');
+    return;
+  }
+  currentSessionId = sessionId;
+  clearChat();
+  sessionData.forEach(item => {
+    if (item.user_query) addMessage('user', item.user_query);
+    if (item.response) addMessage('assistant', item.response);
+  });
+  closeHistory();
+  showToast('Session loaded');
+}
+
+function toggleHistory() {
+  elements.historySidebar.classList.toggle('open');
+  elements.mainContent.classList.toggle('sidebar-open');
+  if (elements.historySidebar.classList.contains('open')) {
+    console.log("📂 History sidebar opened, loading history...");
+    loadHistory();
+  }
+}
+
+function closeHistory() {
+  elements.historySidebar.classList.remove('open');
+  elements.mainContent.classList.remove('sidebar-open');
+}
+
+function closeDropdowns() {
+  document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
+}
+
+// =====================================================================
+// EVENT LISTENERS
+// =====================================================================
+function setupEventListeners() {
+  elements.chatInput.addEventListener('input', autoResize);
+  elements.chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  elements.sendButton.addEventListener('click', sendMessage);
+  
+  document.querySelectorAll('.dropdown').forEach(d => {
+    const t = d.querySelector('.dropdown-toggle, .account-icon-button');
+    if (t) {
+      t.addEventListener('click', e => {
+        e.stopPropagation();
+        const wasOpen = d.classList.contains('open');
+        closeDropdowns();
+        if (!wasOpen) d.classList.add('open');
+      });
+    }
   });
   
+  document.addEventListener('click', e => { 
+    if (!e.target.closest('.dropdown')) closeDropdowns(); 
+  });
   
-  // =====================================================================
-  // FAQ MODAL HANDLING
-  // =====================================================================
-  const faqMappings = {
-    "What is Multi-Perspective AI?": "overview",
-    "The Nine Perspectives": "dimensions",
-    "Who is this for?": "leadership",
-    "Which method should I use?": "map",
-    "Privacy & data security": "science"
-  };
-  document.querySelectorAll('#faqDropdown .dropdown-item').forEach(item => {
-    item.addEventListener('click', async () => {
-      const title = item.querySelector('.dropdown-item-title')?.textContent?.trim();
-      const section = faqMappings[title];
-      try {
-        const res = await fetch('/faq/moore-multiplicity-faq.html');
-        const html = await res.text();
-        const faqContent = document.getElementById('faqContent');
-        faqContent.innerHTML = html;
-        document.getElementById('faqModal').classList.remove('hidden');
-        setTimeout(() => {
-          if (section) {
-            const target = faqContent.querySelector(`#${section}`);
-            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, 200);
-      } catch (err) {
-        console.error('Error loading FAQ:', err);
-      }
+  document.querySelectorAll('.filter-btn-small').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      document.querySelectorAll('.filter-btn-small').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMethodsDropdown(btn.getAttribute('data-filter'));
     });
   });
-  const closeFaqModal = () => document.getElementById('faqModal').classList.add('hidden');
-  document.getElementById('closeFaq').addEventListener('click', closeFaqModal);
-  document.getElementById('closeFaqFooter').addEventListener('click', closeFaqModal);
   
-  // =====================================================================
-  // EXPORTS FOR GLOBAL USE
-  // =====================================================================
-  window.selectMethod = selectMethod;
-  window.loadSession = loadSession;
-  window.togglePerspectiveVisibility = togglePerspectiveVisibility;
+  document.getElementById('historyToggle')?.addEventListener('click', toggleHistory);
+  document.getElementById('historyClose')?.addEventListener('click', closeHistory);
+  document.getElementById('uploadButton')?.addEventListener('click', () => document.getElementById('fileInput').click());
+  document.getElementById('fileInput')?.addEventListener('change', e => {
+    const files = e.target.files;
+    if (files.length > 0) showToast(`${files.length} file(s) selected (upload feature coming soon)`);
+  });
   
+  document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+  
+  document.getElementById('newSessionBtn')?.addEventListener('click', () => {
+    currentSessionId = null;
+    clearChat();
+    showToast('🆕 Started a new conversation');
+  });
+  
+  // History filter buttons
+  document.querySelectorAll('.history-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.history-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.getAttribute('data-filter') || 'all';
+      renderFilteredHistory();
+    });
+  });
+  
+  // History search
+  document.getElementById('historySearch')?.addEventListener('input', () => {
+    renderFilteredHistory();
+  });
+}
+
+async function handleLogout() {
+  try {
+    // Clear conversation history from memory
+    fullHistoryCache = [];
+    currentSessionId = null;
+    
+    // Clear the UI
+    elements.historyContent.innerHTML = `
+      <div style="padding:2rem;text-align:center;color:var(--text-secondary);">
+        <p>Please log in to view your conversation history.</p>
+      </div>`;
+    
+    // Clear chat messages
+    clearChat();
+    
+    console.log("✅ Conversation history cleared");
+    
+    // Call the signOut function (expects it to be globally available from auth.js)
+    if (typeof signOut === 'function') {
+      await signOut();
+    } else {
+      console.error("❌ signOut function not found");
+    }
+    
+  } catch (error) {
+    console.error("❌ Error during logout:", error);
+  }
+}
+
+// =====================================================================
+// INITIALIZATION
+// =====================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+  renderMethodsDropdown('all');
+  setupEventListeners();
+
+  try {
+    const health = await mpaiAPI.health();
+    console.log('✅ API Health:', health);
+  } catch (error) {
+    console.error('❌ API Health Check Failed:', error);
+  }
+
+  // Check if user is logged in and load history
+  const userId = getCurrentUserId();
+  
+  if (userId) {
+    try {
+      await loadHistory();
+      console.log("📜 History loaded for logged-in user");
+    } catch (err) {
+      console.warn("⚠️ Failed to load history:", err);
+    }
+  } else {
+    elements.historyContent.innerHTML = `
+      <div style="padding:2rem;text-align:center;color:var(--text-secondary);">
+        <p>Please log in to view your conversation history.</p>
+      </div>`;
+  }
+});
+
+
+// =====================================================================
+// FAQ MODAL HANDLING
+// =====================================================================
+const faqMappings = {
+  "What is Multi-Perspective AI?": "overview",
+  "The Nine Perspectives": "dimensions",
+  "Who is this for?": "leadership",
+  "Which method should I use?": "map",
+  "Privacy & data security": "science"
+};
+
+document.querySelectorAll('#faqDropdown .dropdown-item').forEach(item => {
+  item.addEventListener('click', async () => {
+    const title = item.querySelector('.dropdown-item-title')?.textContent?.trim();
+    const section = faqMappings[title];
+    try {
+      const res = await fetch('/faq/moore-multiplicity-faq.html');
+      const html = await res.text();
+      const faqContent = document.getElementById('faqContent');
+      faqContent.innerHTML = html;
+      document.getElementById('faqModal').classList.remove('hidden');
+      setTimeout(() => {
+        if (section) {
+          const target = faqContent.querySelector(`#${section}`);
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 200);
+    } catch (err) {
+      console.error('Error loading FAQ:', err);
+    }
+  });
+});
+
+const closeFaqModal = () => document.getElementById('faqModal').classList.add('hidden');
+document.getElementById('closeFaq')?.addEventListener('click', closeFaqModal);
+document.getElementById('closeFaqFooter')?.addEventListener('click', closeFaqModal);
+
+// =====================================================================
+// ENHANCED HISTORY CARD RENDERING (ADDED LOGIC)
+// =====================================================================
+
+// This new renderer keeps your existing history logic intact but displays
+// richer cards with tags, perspectives, and actions when called manually.
+// You can toggle between this and your grouped session list view easily.
+function renderEnhancedHistory(historyData) {
+  const container = document.getElementById("historyContent");
+  container.innerHTML = "";
+
+  if (!Array.isArray(historyData) || !historyData.length) {
+    container.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-title">No history yet</div>
+        <div class="history-empty-text">Start a conversation to build your history</div>
+      </div>`;
+    return;
+  }
+
+  historyData.forEach((item) => {
+    // ✅ Add defensive check for session_id
+    if (!item.session_id) {
+      console.warn("⚠️ Item missing session_id:", item);
+      return; // Skip items without session_id
+    }
+
+    const timeAgo = formatTimeAgo(item.timestamp || Date.now());
+    const perspectives = item.perspectives || "No perspectives";
+    const method = item.method || "QUICK";
+    const title = item.title || "Untitled Conversation";
+    const preview = item.preview || (item.user_query ? item.user_query.slice(0, 120) + "..." : "");
+
+    const card = document.createElement("div");
+    card.className = "history-item";
+    
+    // ✅ Store session_id as data attribute
+    card.dataset.sessionId = item.session_id;
+
+    card.innerHTML = `
+      <div class="history-item-header">
+        <div class="history-item-title">${escapeHtml(title)}</div>
+        <div class="history-item-tag" data-type="${method}">${method}</div>
+      </div>
+
+      <div class="history-item-preview">${escapeHtml(preview)}</div>
+
+      <div class="history-item-meta">
+        <span>${perspectives}</span> • <span>${timeAgo}</span>
+      </div>
+
+      <div class="history-item-actions">
+        <button class="btn-small" data-action="resume">Resume</button>
+        <button class="btn-small" data-action="share">Share</button>
+        <button class="btn-small" data-action="delete">Delete</button>
+      </div>
+    `;
+
+    // ✅ Hook up button actions - get session_id from the card's dataset
+    const sessionId = item.session_id;
+    
+    card.querySelector('[data-action="resume"]').onclick = () => {
+      console.log("📂 Resume clicked for session:", sessionId);
+      loadSession(sessionId);
+    };
+    
+    card.querySelector('[data-action="share"]').onclick = (event) => {
+      console.log("🔗 Share clicked for session:", sessionId);
+      shareSession(sessionId, event);
+    };
+    
+    card.querySelector('[data-action="delete"]').onclick = (event) => {
+      const userId = getCurrentUserId();
+      const analysisId = item.analysis_id;
+      console.log("🗑️ Delete clicked - Session:", sessionId, "Analysis:", analysisId);
+      
+      if (!analysisId) {
+        console.error("❌ No analysis_id found for item:", item);
+        showToast('Cannot delete - missing analysis ID', 'error');
+        return;
+      }
+      
+      deleteAnalysis(userId, sessionId, analysisId, event);
+    };
+
+    container.appendChild(card);
+  });
+  
+  console.log("✅ Rendered", historyData.length, "history cards");
+}
+
+
+// Optional utility if you want to call this from console or after load
+window.renderEnhancedHistory = renderEnhancedHistory;
+
+// =====================================================================
+// AUTO-RENDER ENHANCED HISTORY ON LOAD (optional)
+// =====================================================================
+// Comment out this block if you prefer your grouped session layout.
+
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const userId = getCurrentUserId();
+    if (!userId) return;
+    const res = await fetch(`/api/history/${userId}`);
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      renderEnhancedHistory(data);
+      console.log("🎨 Rendered enhanced history cards");
+    }
+  } catch (err) {
+    console.error("❌ Failed to render enhanced history:", err);
+  }
+});
+
+
+
+// =====================================================================
+// EXPORTS FOR GLOBAL USE
+// =====================================================================
+window.selectMethod = selectMethod;
+window.loadSession = loadSession;
+window.togglePerspectiveVisibility = togglePerspectiveVisibility;
+window.deleteSession = deleteSession;
+window.deleteAnalysis = deleteAnalysis;
+window.shareSession = shareSession;

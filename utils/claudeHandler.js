@@ -60,6 +60,51 @@ export async function callMPAI(
 
     console.log(`✅ Claude response received (${responseText.length} chars)`);
     console.log(`💰 Actual tokens - Input: ${message.usage.input_tokens}, Output: ${message.usage.output_tokens}`);
+    // 🧩 Detect perspectives used in the response
+const allPerspectives = [
+  "Thinker", "Relational", "Achiever", "Creative", "Systemic",
+  "Conscious", "Shared", "Transformational", "Relational-Expanded"
+];
+
+// Try to detect which are mentioned in Claude's reply
+const matchedPerspectives = allPerspectives.filter(p =>
+  responseText.toLowerCase().includes(p.toLowerCase())
+);
+
+// If none found, infer by method
+let inferredPerspectives = [];
+if (matchedPerspectives.length > 0) {
+  inferredPerspectives = matchedPerspectives;
+} else {
+  switch (method) {
+    case "QUICK":
+      inferredPerspectives = ["Thinker"];
+      break;
+    case "STAKEHOLDER_ANALYSIS":
+      inferredPerspectives = ["Relational", "Achiever", "Thinker"];
+      break;
+    case "CONFLICT_RESOLUTION":
+      inferredPerspectives = ["Thinker", "Relational", "Achiever"];
+      break;
+    case "PATTERN_RECOGNITION":
+      inferredPerspectives = ["Thinker", "Systemic", "Creative"];
+      break;
+    case "TIME_HORIZON":
+      inferredPerspectives = ["Systemic", "Achiever", "Thinker"];
+      break;
+    case "HUMAN_HARM_CHECK":
+      inferredPerspectives = ["Systemic", "Relational", "Conscious"];
+      break;
+    case "FULL":
+    case "SYNTHESIS_ALL":
+      inferredPerspectives = allPerspectives;
+      break;
+    default:
+      inferredPerspectives = ["Thinker", "Relational", "Achiever", "Creative", "Systemic"];
+  }
+}
+
+console.log("🧭 Inferred perspectives:", inferredPerspectives);
 
     return {
       success: true,
@@ -68,6 +113,7 @@ export async function callMPAI(
       outputStyle,
       roleContext,
       modelUsed: message.model,
+      perspectives: inferredPerspectives,
       usage: {
         inputTokens: message.usage.input_tokens,
         outputTokens: message.usage.output_tokens,
