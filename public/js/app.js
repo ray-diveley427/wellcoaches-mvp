@@ -102,15 +102,18 @@ function autoResize() {
   elements.chatInput.style.height = 'auto';
   elements.chatInput.style.height = Math.min(elements.chatInput.scrollHeight, 120) + 'px';
 }
+// Find this function in app.js (around line 105)
+// REPLACE the entire showToast function with this:
+
 function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.style.cssText = `
     position: fixed;
-    bottom: 2rem; right: 2rem;
+    top: 5rem; right: 2rem;
     padding: 1rem 1.5rem;
     background: ${type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#14b8a6'};
     color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 2000; animation: slideInUp 0.3s ease-out;`;
+    z-index: 2000; animation: slideInDown 0.3s ease-out;`;
   toast.textContent = message;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
@@ -623,6 +626,24 @@ function closeDropdowns() {
 // =====================================================================
 // EVENT LISTENERS
 // =====================================================================
+// Add to app.js setupEventListeners() function
+document.addEventListener('click', (e) => {
+  const historySidebar = document.getElementById('historySidebar');
+  const historyToggle = document.getElementById('historyToggle');
+  
+  // Close if clicking outside sidebar AND not on the toggle button
+  if (historySidebar && 
+      historySidebar.classList.contains('open') && 
+      !historySidebar.contains(e.target) && 
+      !historyToggle?.contains(e.target)) {
+    closeHistory();
+  }
+});
+
+// Keep it open while hovering
+historySidebar.addEventListener('mouseenter', () => {
+  // Just prevents it from closing
+});
 function setupEventListeners() {
   elements.chatInput.addEventListener('input', autoResize);
   elements.chatInput.addEventListener('keydown', e => {
