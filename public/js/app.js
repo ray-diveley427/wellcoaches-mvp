@@ -497,6 +497,27 @@ async function deleteSession(sessionId) {
       const files = e.target.files;
       if (files.length > 0) showToast(`${files.length} file(s) selected (upload feature coming soon)`);
     });
+    // New Chat Button
+    document.getElementById('newSessionBtn')?.addEventListener('click', () => {
+      currentSessionId = null;
+      clearChat();
+      showToast('🆕 Started a new conversation');
+    });
+    
+    async function toggleAuthButtons(isLoggedIn) {
+      document.getElementById("loginBtn")?.classList.toggle("hidden", isLoggedIn);
+      document.getElementById("logoutBtn")?.classList.toggle("hidden", !isLoggedIn);
+    }
+
+    async function initializeUserSession() {
+      const user = await getCurrentUser();
+      if (user) {
+        console.log("✅ Logged in user:", user.username);
+        showToast(`👋 Welcome, ${user.username}`);
+      }
+    }
+
+
   }
   
   // =====================================================================
@@ -514,12 +535,22 @@ async function deleteSession(sessionId) {
     }
   
     // ✅ Safe to load history *after* DOM and APIs are ready
-    try {
-      await loadHistory(); // or historyAPI.loadHistory() if that’s what you imported
-      console.log('📜 History loaded successfully');
-    } catch (err) {
-      console.warn('⚠️ Failed to load history:', err);
+    const token = localStorage.getItem("id_token");
+
+    if (token) {
+      try {
+        await loadHistory();
+        console.log("📜 History loaded for logged-in user");
+      } catch (err) {
+        console.warn("⚠️ Failed to load history:", err);
+      }
+    } else {
+      document.getElementById("historyContent").innerHTML = `
+        <div style="padding:2rem;text-align:center;color:var(--text-secondary);">
+          <p>Please log in to view your conversation history.</p>
+        </div>`;
     }
+
   });
   
   

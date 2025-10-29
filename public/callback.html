@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Completing login...</title>
+</head>
+<body>
+  <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+    <h2>Completing login...</h2>
+    <p>Please wait...</p>
+  </div>
+
+  <script>
+    console.log("🔹 Callback URL:", window.location.href);
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (!code) {
+      document.body.innerHTML = '<p style="color:red;">No code. <a href="http://localhost:3000/">Try again</a></p>';
+    } else {
+      console.log("✅ Code received");
+      
+      fetch("https://us-east-1eucicqax3.auth.us-east-1.amazoncognito.com/oauth2/token", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: '7m3hp4bdldr9642grf15rhhp24',
+          code: code,
+          redirect_uri: 'http://localhost:3000/callback.html'
+        })
+      })
+      .then(async r => {
+        const text = await r.text();
+        console.log("Response:", r.status, text);
+        if (!r.ok) throw new Error(text);
+        return JSON.parse(text);
+      })
+      .then(tokens => {
+        console.log("✅ Tokens received!");
+        localStorage.setItem("id_token", tokens.id_token);
+        localStorage.setItem("access_token", tokens.access_token);
+        if (tokens.refresh_token) localStorage.setItem("refresh_token", tokens.refresh_token);
+        
+        document.body.innerHTML = '<h2 style="color:green; text-align:center;">✅ Success! Redirecting...</h2>';
+        setTimeout(() => window.location.href = "http://localhost:3000/", 1000);
+      })
+      .catch(e => {
+        console.error("❌ Error:", e);
+        document.body.innerHTML = `<div style="padding:20px;"><h2>Failed</h2><p style="color:red;">${e.message}</p><a href="http://localhost:3000/">Try again</a></div>`;
+      });
+    }
+  </script>
+</body>
+</html>

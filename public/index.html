@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Perspective AI</title>
+    
+    <!-- ✅ ONLY load ONE version of oidc-client - the stable v1.11.5 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/oidc-client/1.11.5/oidc-client.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
 </head>
@@ -113,28 +117,52 @@
                     </svg>
                     <span>History</span>
                 </div>
+                <!-- New Chat -->
+                <div class="nav-item" id="newSessionBtn">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
+                    </svg>
+                    <span>New Chat</span>
+                </div>
+  
+                
 
                 <!-- Account Dropdown -->
                 <div class="dropdown account-dropdown" id="accountDropdown">
                     <div class="account-icon-button">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-                        </svg>
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                    </svg>
                     </div>
                     <div class="dropdown-menu">
-                        <div class="dropdown-section">
-                            <div class="dropdown-item">
-                                <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
-                                </svg>
-                                <div class="dropdown-item-content">
-                                    <div class="dropdown-item-title">Settings</div>
-                                    <div class="dropdown-item-desc">Manage preferences</div>
-                                </div>
-                            </div>
+                    <div class="dropdown-section">
+                
+                        <!-- Login -->
+                        <div class="dropdown-item" id="loginBtn">
+                        <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 10a1 1 0 011-1h9a1 1 0 110 2H4a1 1 0 01-1-1zm12-5a1 1 0 10-2 0v1h2V5zm-2 10v1a1 1 0 102 0v-1h-2z"/>
+                        </svg>
+                        <div class="dropdown-item-content">
+                            <div class="dropdown-item-title">Login</div>
+                            <div class="dropdown-item-desc">Sign in to load your history</div>
                         </div>
+                        </div>
+                
+                        <!-- Logout -->
+                        <div class="dropdown-item hidden" id="logoutBtn">
+                        <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M17 10a1 1 0 00-1-1H7a1 1 0 100 2h9a1 1 0 001-1z"/>
+                        </svg>
+                        <div class="dropdown-item-content">
+                            <div class="dropdown-item-title">Logout</div>
+                            <div class="dropdown-item-desc">Sign out of your account</div>
+                        </div>
+                        </div>
+                
+                    </div>
                     </div>
                 </div>
+  
             </nav>
         </div>
     </header>
@@ -341,11 +369,49 @@
   </div>
   
   
-    <!-- Scripts -->
+    <!-- Scripts - Load in correct order -->
     <script src="js/mpaiAPI.js"></script>
     <script src="js/historyAPI.js"></script>
     <script src="js/app.js"></script>
 
+    <!-- ✅ Auth handling - Load auth.js as module -->
+    <script type="module">
+        import { signIn, signOut, isAuthenticated, getUser } from "./js/auth.js";
+      
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+      
+        // Check if user is logged in on page load
+        async function updateAuthUI() {
+          const loggedIn = await isAuthenticated();
+          
+          if (loggedIn) {
+            const user = await getUser();
+            console.log("User is logged in:", user.profile?.email || user.profile?.sub);
+            loginBtn.classList.add("hidden");
+            logoutBtn.classList.remove("hidden");
+          } else {
+            console.log("User is not logged in");
+            logoutBtn.classList.add("hidden");
+            loginBtn.classList.remove("hidden");
+          }
+        }
+        
+        // Update UI on page load
+        updateAuthUI();
+      
+        // Login button click
+        loginBtn.addEventListener("click", async () => {
+          console.log("Login button clicked");
+          await signIn();
+        });
+      
+        // Logout button click
+        logoutBtn.addEventListener("click", async () => {
+          console.log("Logout button clicked");
+          await signOut();
+        });
+      </script>
 
 </body>
 </html>
