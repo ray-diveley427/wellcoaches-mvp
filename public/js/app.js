@@ -329,8 +329,8 @@ function renderFilteredHistory() {
     }
   });
   
-  const sessions = groupBySession(filtered);
-  renderHistory(sessions);
+  // Use renderEnhancedHistory for consistent styling
+  renderEnhancedHistory(filtered);
 }
 
 function groupBySession(items) {
