@@ -3,40 +3,39 @@
 // Basic API wrapper for MPAI backend
 // =======================================================
 
+function getEffectiveUserId() {
+  const idToken = localStorage.getItem('id_token');
+  if (idToken && idToken.split('.').length === 3) {
+    try {
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      if (payload && payload.sub) return payload.sub;
+    } catch (_) {}
+  }
+  return localStorage.getItem('mpai_user_id') || 'user-1';
+}
+
 const mpaiAPI = {
     /**
      * Call the main analyze endpoint
      */
     async analyze(userQuery, method = null, perspectiveVisibility = 'visible', sessionId = null) {
       try {
-        // ✅ Get user ID from token
-        const idToken = localStorage.getItem("id_token");
-        if (!idToken) {
-          throw new Error('User not authenticated');
-        }
-        const tokenPayload = JSON.parse(atob(idToken.split('.')[1]));
-        const userId = tokenPayload.sub;
-        
-        // ✅ Build payload with userId
-        const payload = { 
-          userQuery, 
-          perspectiveVisibility,
-          userId  // Add userId to request
-        };
+        const userId = getEffectiveUserId();
+        const payload = { userQuery, perspectiveVisibility, userId };
         if (method) payload.method = method;
         if (sessionId) payload.sessionId = sessionId;
-    
+  
         const response = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-    
+  
         if (!response.ok) {
           const error = await response.json();
           throw new Error(error.error || 'Analysis failed');
         }
-    
+  
         return await response.json();
       } catch (err) {
         console.error('❌ API error:', err);

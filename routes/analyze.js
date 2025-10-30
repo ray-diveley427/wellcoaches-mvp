@@ -65,7 +65,12 @@ router.post('/', async (req, res) => {
       return res.status(500).json({ success: false, error: result.error });
     }
 
-    // Save new exchange to DynamoDB
+    // Derive helper fields
+    const responseText = result.response || '';
+    const preview = responseText.slice(0, 120);
+    const perspectivesCount = (Array.isArray(result.perspectives) && result.perspectives.length) || result.count || 1;
+
+    // Save new exchange to DynamoDB (include snake_case and camelCase for compatibility)
     const item = {
       PK: `USER#${userId}`,
       SK: `SESSION#${sessionId}#ANALYSIS#${analysisId}`,
@@ -73,11 +78,18 @@ router.post('/', async (req, res) => {
       session_id: sessionId,
       analysis_id: analysisId,
       user_query: userQuery,
-      response: result.response,
+      response: responseText,
+      // method + context
       method,
       outputStyle,
       roleContext,
       bandwidth,
+      // duplicate keys for export/back-compat
+      output_style: outputStyle,
+      role_context: roleContext,
+      // presentation helpers
+      preview,
+      perspectives: `${perspectivesCount} perspectives`,
       timestamp: new Date().toISOString(),
       ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
     };
@@ -85,7 +97,7 @@ router.post('/', async (req, res) => {
 
     res.json({
       success: true,
-      response: result.response,
+      response: responseText,
       method,
       sessionId,
       analysisId,

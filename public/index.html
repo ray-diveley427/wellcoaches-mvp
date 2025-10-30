@@ -247,11 +247,11 @@
         </div>
     </main>
        <!-- FAQ Modal -->
-<div id="faqModal" class="modal hidden">
-    <div class="modal-container">
+<div id="faqModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="faqTitle">
+    <div class="modal-container" tabindex="-1">
       <div class="modal-header">
-        <h2 class="modal-title">About the Moore Multiplicity Model</h2>
-        <button id="closeFaq" class="modal-close" title="Close FAQ">&times;</button>
+        <h2 class="modal-title" id="faqTitle">About the Moore Multiplicity Model</h2>
+        <button id="closeFaq" class="modal-close" title="Close FAQ" aria-label="Close">&times;</button>
       </div>
   
       <div id="faqContent" class="modal-body"></div>
@@ -261,14 +261,15 @@
       </div>
     </div>
   </div>
-  
+
   <style>
     /* Modal container and backdrop */
     .modal {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.55);
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -277,59 +278,67 @@
     .modal.hidden {
       display: none;
     }
-  
+
     /* Modal window */
     .modal-container {
-      background: #fff;
+      background: #ffffff;
       width: 90%;
       max-width: 960px;
       height: 90%;
-      border-radius: 10px;
+      border-radius: 12px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+      border: 1px solid #e5e7eb;
       position: relative;
     }
-  
+
     /* Header */
     .modal-header {
-    background: linear-gradient(135deg, #4b1b78 0%, #6a249d 100%);
-    color: #ffffff;
-    padding: 1rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+      background: #ffffff;
+      color: #111827;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e5e7eb;
     }
 
     .modal-title {
       font-size: 1.125rem;
       font-weight: 600;
       margin: 0;
+      color: #111827;
     }
     .modal-close {
       background: none;
       border: none;
-      color: #fff;
+      color: #6b7280;
       font-size: 1.5rem;
       cursor: pointer;
       line-height: 1;
+      border-radius: 6px;
+      padding: 2px 6px;
+      transition: background 0.15s ease, color 0.15s ease;
     }
     .modal-close:hover {
-      opacity: 0.8;
+      background: #f3f4f6;
+      color: #111827;
     }
-  
+
     /* Body (scrollable) */
     .modal-body {
       flex: 1;
       overflow-y: auto;
       padding: 1.25rem;
       background-color: #f9fafb;
+      color: #111827;
     }
-  
+
     /* Footer */
     .modal-footer {
-      background: #f3f4f6;
+      background: #ffffff;
       border-top: 1px solid #e5e7eb;
       padding: 0.75rem 1.25rem;
       display: flex;
@@ -337,18 +346,19 @@
       align-items: center;
     }
     .modal-footer-btn {
-      background: #14b8a6;
+      background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
       color: white;
       border: none;
-      border-radius: 6px;
-      font-weight: 500;
+      border-radius: 8px;
+      font-weight: 600;
       font-size: 0.9rem;
-      padding: 0.5rem 1rem;
+      padding: 0.6rem 1rem;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     .modal-footer-btn:hover {
-      background: #0d9488;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(20, 184, 166, 0.35);
     }
   </style>
   
@@ -368,6 +378,10 @@
     </div>
   </div>
   
+  <style>
+    /* Prevent background scroll when any modal is open */
+    body.modal-open { overflow: hidden; }
+  </style>
   
     <!-- Scripts - Load in correct order -->
     <script src="js/mpaiAPI.js"></script>

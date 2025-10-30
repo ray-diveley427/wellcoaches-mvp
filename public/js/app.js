@@ -228,18 +228,7 @@ async function sendMessage() {
         if (method) showToast(`Used method: ${method.name}`, 'info');
       }
 
-      // ✅ Save this conversation snippet to backend history
-      await window.historyAPI.saveHistory({
-        id: Date.now(),
-        session_id: currentSessionId,
-        title: query.split(/[?.!]/)[0].slice(0, 60), // derive title from user's first sentence
-        method: selectedMethod || result.method || "QUICK",
-        preview: result.response.slice(0, 120),
-        perspectives: `${result.count || result.perspectives?.length || 5} perspectives`,
-        timestamp: new Date().toISOString()
-      });
-
-      // ✅ Reload sidebar with new entry
+      // ✅ Reload sidebar with server-persisted entry
       await loadHistory();
       
     } else {
@@ -590,24 +579,25 @@ function shareSession(sessionId, event) {
     });
 }
 
-function loadSession(sessionId) {
-  const sessionData = fullHistoryCache.filter(item => item.session_id === sessionId);
-  if (sessionData.length === 0) {
-    showToast('Session not found', 'error');
-    return;
-  }
-  
-  console.log(`📂 Loading session ${sessionId} with ${sessionData.length} messages`);
-  currentSessionId = sessionId;
-  console.log(`✅ currentSessionId set to: ${currentSessionId}`);
-  
+async function loadSession(sessionId) {
+  const sessionItems = fullHistoryCache.filter(i => i.session_id === sessionId);
+  if (sessionItems.length === 0) return showToast('Session not found', 'error');
+
   clearChat();
-  sessionData.forEach(item => {
-    if (item.user_query) addMessage('user', item.user_query);
-    if (item.response) addMessage('assistant', item.response);
-  });
+  currentSessionId = sessionId; // ✅ store the resumed session globally
+  selectedMethod = null; // ✅ clear any previously selected method
+  showToast('Session resumed', 'success');
+
+  sessionItems
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .forEach(i => {
+      addMessage('user', i.user_query);
+      addMessage('assistant', i.response);
+    });
+
+  elements.chatInput.placeholder = 'Continue your conversation...';
+  elements.chatInput.focus();
   closeHistory();
-  showToast('Session loaded');
 }
 
 function toggleHistory() {
@@ -794,7 +784,7 @@ document.querySelectorAll('#faqDropdown .dropdown-item').forEach(item => {
       const html = await res.text();
       const faqContent = document.getElementById('faqContent');
       faqContent.innerHTML = html;
-      document.getElementById('faqModal').classList.remove('hidden');
+      openModal(document.getElementById('faqModal'));
       setTimeout(() => {
         if (section) {
           const target = faqContent.querySelector(`#${section}`);
@@ -807,9 +797,61 @@ document.querySelectorAll('#faqDropdown .dropdown-item').forEach(item => {
   });
 });
 
-const closeFaqModal = () => document.getElementById('faqModal').classList.add('hidden');
-document.getElementById('closeFaq')?.addEventListener('click', closeFaqModal);
-document.getElementById('closeFaqFooter')?.addEventListener('click', closeFaqModal);
+// Modal helpers (accessibility + UX)
+function getFocusableElements(container) {
+  return Array.from(container.querySelectorAll(
+    'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
+  )).filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+}
+
+function openModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+
+  const container = modalEl.querySelector('.modal-container');
+  const focusables = getFocusableElements(container);
+  const first = focusables[0] || container;
+  const last = focusables[focusables.length - 1] || container;
+  const previousActive = document.activeElement;
+
+  // Store to restore later
+  modalEl._restoreFocus = () => { previousActive && previousActive.focus && previousActive.focus(); };
+
+  // Focus the first element
+  setTimeout(() => first.focus(), 0);
+
+  // Overlay click closes (only when clicking the backdrop, not inside container)
+  modalEl._onClick = (e) => { if (e.target === modalEl) closeModal(modalEl); };
+  modalEl.addEventListener('click', modalEl._onClick);
+
+  // Esc to close
+  modalEl._onKeydown = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeModal(modalEl); }
+    if (e.key === 'Tab') {
+      // focus trap
+      if (focusables.length === 0) { e.preventDefault(); return; }
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener('keydown', modalEl._onKeydown);
+}
+
+function closeModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  modalEl.removeEventListener('click', modalEl._onClick);
+  document.removeEventListener('keydown', modalEl._onKeydown);
+  if (modalEl._restoreFocus) modalEl._restoreFocus();
+}
+
+// Wire close buttons to use improved close
+const faqModalEl = document.getElementById('faqModal');
+const closeFaqModal = () => closeModal(faqModalEl);
+document.getElementById('closeFaq').addEventListener('click', closeFaqModal);
+document.getElementById('closeFaqFooter').addEventListener('click', closeFaqModal);
 
 // =====================================================================
 // ENHANCED HISTORY CARD RENDERING (ADDED LOGIC)
@@ -863,9 +905,9 @@ function renderEnhancedHistory(historyData) {
       </div>
 
       <div class="history-item-actions">
-        <button class="btn-small" data-action="resume">Resume</button>
-        <button class="btn-small" data-action="share">Share</button>
-        <button class="btn-small" data-action="delete">Delete</button>
+        <button class="btn-small btn-resume" data-action="resume" data-id="${item.session_id}">Resume</button>
+        <button class="btn-small btn-share" data-action="share" data-id="${item.session_id}">Share</button>
+        <button class="btn-small btn-delete" data-action="delete" data-id="${item.session_id}">Delete</button>
       </div>
     `;
 

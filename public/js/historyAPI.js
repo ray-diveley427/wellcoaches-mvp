@@ -1,7 +1,20 @@
 // public/js/historyAPI.js
-const API_BASE = "http://localhost:3000/api/history";
+const API_BASE = "/api/history";
 
 function getUserId() {
+  // Prefer authenticated user from ID token
+  const idToken = localStorage.getItem("id_token");
+  if (idToken && idToken.split(".").length === 3) {
+    try {
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      if (payload && payload.sub) {
+        return payload.sub;
+      }
+    } catch (e) {
+      console.warn("Unable to decode id_token for userId, falling back to local id.");
+    }
+  }
+  // Fallback: stable local ID
   let id = localStorage.getItem("mpai_user_id");
   if (!id) {
     id = "user-" + Math.random().toString(36).substring(2, 10);
