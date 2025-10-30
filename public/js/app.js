@@ -615,10 +615,25 @@ async function loadSession(sessionId) {
 
   elements.chatInput.placeholder = 'Continue your conversation...';
   elements.chatInput.focus();
-  closeHistory();
+  
+  // Only close history if not pinned (pinned sidebar should stay open)
+  const isPinned = elements.historySidebar.classList.contains('pinned');
+  if (!isPinned) {
+    closeHistory();
+  }
+  // If pinned, sidebar stays open - don't do anything
 }
 
 function toggleHistory() {
+  const isPinned = elements.historySidebar.classList.contains('pinned');
+  
+  // If pinned, just toggle open state (sidebar stays pinned, just slides in/out)
+  if (isPinned) {
+    elements.historySidebar.classList.toggle('open');
+    return;
+  }
+  
+  // Normal toggle behavior when not pinned
   elements.historySidebar.classList.toggle('open');
   elements.mainContent.classList.toggle('sidebar-open');
   if (elements.historySidebar.classList.contains('open')) {
@@ -628,8 +643,40 @@ function toggleHistory() {
 }
 
 function closeHistory() {
+  const isPinned = elements.historySidebar.classList.contains('pinned');
+  
+  // If pinned, unpin it when closing
+  if (isPinned) {
+    togglePin(); // This will handle closing and unpinning
+    return;
+  }
+  
+  // Normal close behavior when not pinned
   elements.historySidebar.classList.remove('open');
   elements.mainContent.classList.remove('sidebar-open');
+}
+
+function togglePin() {
+  const isPinned = elements.historySidebar.classList.contains('pinned');
+  const pinButton = document.getElementById('historyPin');
+  
+  if (isPinned) {
+    // Unpin: remove pinned class and close sidebar
+    elements.historySidebar.classList.remove('pinned');
+    elements.historySidebar.classList.remove('open');
+    elements.mainContent.classList.remove('history-pinned');
+    elements.mainContent.classList.remove('sidebar-open');
+    pinButton.classList.remove('active');
+  } else {
+    // Pin: add pinned class and ensure sidebar is open
+    elements.historySidebar.classList.add('pinned');
+    elements.historySidebar.classList.add('open');
+    elements.mainContent.classList.add('sidebar-open');
+    elements.mainContent.classList.add('history-pinned');
+    pinButton.classList.add('active');
+    // Loading history when pinning
+    loadHistory();
+  }
 }
 
 function closeDropdowns() {
@@ -676,16 +723,24 @@ function setupEventListeners() {
   
   document.getElementById('historyToggle')?.addEventListener('click', toggleHistory);
   document.getElementById('historyClose')?.addEventListener('click', closeHistory);
+  document.getElementById('historyPin')?.addEventListener('click', togglePin);
   
-  // Close history when clicking outside
+  // Close history when clicking outside (only if not pinned)
   document.addEventListener('click', (e) => {
     const historySidebar = document.getElementById('historySidebar');
     const historyToggle = document.getElementById('historyToggle');
+    const historyPin = document.getElementById('historyPin');
+    
+    // Don't close if pinned
+    if (historySidebar && historySidebar.classList.contains('pinned')) {
+      return;
+    }
     
     if (historySidebar && 
         historySidebar.classList.contains('open') && 
         !historySidebar.contains(e.target) && 
-        !historyToggle?.contains(e.target)) {
+        !historyToggle?.contains(e.target) &&
+        !historyPin?.contains(e.target)) {
       closeHistory();
     }
   });
