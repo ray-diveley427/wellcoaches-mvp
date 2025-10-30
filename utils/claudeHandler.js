@@ -21,10 +21,7 @@ export async function callMPAI(
     // Build the full system prompt with method-specific guidance
     const systemPrompt = buildMPAIPrompt(method, userQuery, outputStyle, roleContext);
 
-    console.log(`\n🎯 Calling Claude with method: ${method}`);
-    console.log(`📝 Style: ${outputStyle} | Context: ${roleContext}`);
-    console.log(`💬 Conversation history: ${conversationHistory.length} messages`);
-    console.log(`📖 User query: ${userQuery.substring(0, 100)}...`);
+    // Calling Claude API
 
     // Build messages array with history + current query
     const messages = [
@@ -39,8 +36,7 @@ export async function callMPAI(
     const estimatedTokens = Math.round(
       (systemPrompt.length + JSON.stringify(messages).length) / 4
     );
-    console.log(`📊 Estimated input tokens: ~${estimatedTokens}`);
-
+    // Token estimation (only warn if very high)
     if (estimatedTokens > 150000) {
       console.warn('⚠️  High token usage detected. Consider starting a new session.');
     }
@@ -58,8 +54,7 @@ export async function callMPAI(
       ? message.content[0].text 
       : '';
 
-    console.log(`✅ Claude response received (${responseText.length} chars)`);
-    console.log(`💰 Actual tokens - Input: ${message.usage.input_tokens}, Output: ${message.usage.output_tokens}`);
+    // Claude response received
     // 🧩 Detect perspectives used in the response
 const allPerspectives = [
   "Thinker", "Relational", "Achiever", "Creative", "Systemic",
@@ -104,7 +99,7 @@ if (matchedPerspectives.length > 0) {
   }
 }
 
-console.log("🧭 Inferred perspectives:", inferredPerspectives);
+// Perspectives inferred (count: inferredPerspectives.length)
 
     return {
       success: true,

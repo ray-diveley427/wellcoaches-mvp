@@ -129,8 +129,10 @@ function isAdmin(req, res, next) {
     return res.status(403).json({ error: 'Admin access required. Your email is not authorized.' });
   }
   
-  // User is authorized
-  console.log(`✅ Admin access granted: ${userEmail}`);
+  // User is authorized (logged only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`✅ Admin access granted: ${userEmail}`);
+  }
   return next();
 }
 
@@ -293,7 +295,7 @@ function resetDailyCostsIfNeeded() {
     costTracking.dailyTotal = 0;
     costTracking.userDaily = {};
     costTracking.lastResetDate = today;
-    console.log(`💰 Daily cost reset - new day: ${today}`);
+    // Daily reset (silent in production)
   }
 }
 

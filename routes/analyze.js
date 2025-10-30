@@ -32,7 +32,7 @@ function resetDailyCostsIfNeeded() {
     costTracking.dailyTotal = 0;
     costTracking.userDaily = {};
     costTracking.lastResetDate = today;
-    console.log(`💰 Daily cost reset - new day: ${today}`);
+    // Daily reset happens silently (not logged unless in debug mode)
   }
 }
 
@@ -80,11 +80,13 @@ function recordCost(userId, cost) {
   costTracking.userDaily[userKey].cost += cost;
   costTracking.dailyTotal += cost;
   
-  // Log for monitoring
-  console.log(`💰 Cost recorded: $${cost.toFixed(4)} | User: ${userId} | User Daily: $${costTracking.userDaily[userKey].cost.toFixed(2)} | Total Daily: $${costTracking.dailyTotal.toFixed(2)}`);
-  
   // Export to global for access from server.js
   global.costTracking = costTracking;
+  
+  // Log high-cost requests for monitoring (only if > $0.05)
+  if (cost > 0.05) {
+    console.log(`💰 High-cost request: $${cost.toFixed(4)} | User: ${userId} | Daily: $${costTracking.userDaily[userKey].cost.toFixed(2)}`);
+  }
 }
 
 // POST /api/analyze

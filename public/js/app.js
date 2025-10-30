@@ -53,14 +53,14 @@ const elements = {
 function getCurrentUserId() {
   const idToken = localStorage.getItem("id_token");
   if (!idToken) {
-    console.log("🔑 No id_token found in localStorage");
+    // No token - will use fallback user ID
     return null;
   }
   
   try {
     const payload = JSON.parse(atob(idToken.split('.')[1]));
     const userId = payload.sub;
-    console.log("✅ User ID extracted from token:", userId);
+    // User authenticated
     return userId; // Cognito user ID
   } catch (error) {
     console.error("❌ Failed to decode token:", error);
@@ -207,7 +207,7 @@ async function sendMessage() {
   const loadingId = addLoadingMessage();
   
   try {
-    console.log(`📤 Sending message with sessionId: ${currentSessionId || 'NEW SESSION'}`);
+    // Sending message
     const result = await mpaiAPI.analyze(query, selectedMethod, perspectiveVisibility, currentSessionId);
     removeLoadingMessage(loadingId);
     
@@ -217,9 +217,9 @@ async function sendMessage() {
       // ✅ Ensure session ID consistency
       if (!currentSessionId) {
         currentSessionId = result.sessionId;
-        console.log(`✅ New session created: ${currentSessionId}`);
+        // New session
       } else {
-        console.log(`✅ Continuing session: ${currentSessionId}`);
+        // Continuing session
       }
 
       // ✅ Show method used
@@ -233,9 +233,7 @@ async function sendMessage() {
         const { messageCount, estimatedTokens } = result.contextInfo;
         
         // Show message count if continuing a conversation (internal only)
-        if (currentSessionId && messageCount > 0) {
-          console.log(`📚 Context: ${messageCount} prior messages loaded`);
-        }
+        // Context loaded: {messageCount} messages
         
         // Warn if getting close to token limits (performance, not cost)
         if (estimatedTokens > 120000) {
@@ -279,7 +277,7 @@ async function loadHistory() {
     const userId = getCurrentUserId();
     
     if (!userId) {
-      console.log("⚠️ No user ID found - user not logged in");
+      // User not authenticated
       elements.historyContent.innerHTML = `
         <div class="history-empty">
           <div class="history-empty-title">Please log in</div>
@@ -289,15 +287,11 @@ async function loadHistory() {
       return;
     }
     
-    console.log("📚 Loading history for user:", userId);
-    
     const res = await fetch(`/api/history/${userId}`);
-    console.log("📡 History API response status:", res.status);
     const data = await res.json();
-    console.log("📦 History data received:", data.length, "items");
     
     if (!Array.isArray(data) || data.length === 0) {
-      console.log("📭 No history items found");
+      // No history
       elements.historyContent.innerHTML = `
         <div class="history-empty">
           <div class="history-empty-title">No conversations yet</div>
@@ -308,7 +302,7 @@ async function loadHistory() {
     }
     
     fullHistoryCache = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    console.log("✅ History loaded, rendering", fullHistoryCache.length, "items");
+    // History rendered
     
     // Group by session and render
     const sessions = groupBySession(fullHistoryCache);
@@ -500,7 +494,7 @@ async function deleteSession(sessionId, event) {
     return;
   }
   
-  console.log("🗑️ deleteSession called with sessionId:", sessionId);
+  // Deleting session
   
   if (!confirm('Delete this conversation? This cannot be undone.')) return;
   
@@ -512,12 +506,12 @@ async function deleteSession(sessionId, event) {
       return;
     }
     
-    console.log(`🗑️ Deleting session ${sessionId} for user ${userId}`);
+    // Deleting session
     
     const res = await fetch(`/api/history/${userId}/${sessionId}`, { method: 'DELETE' });
     const data = await res.json();
     
-    console.log("📡 Delete response:", data);
+    // Delete response received
     
     if (data.success) {
       showToast('Conversation deleted', 'success');
@@ -550,7 +544,7 @@ async function deleteAnalysis(userId, sessionId, analysisId, event) {
   }
   
   try {
-    console.log(`🗑️ Deleting analysis ${analysisId} from session ${sessionId}`);
+    // Deleting analysis
     
     const response = await fetch(`/api/history/${userId}/${sessionId}/${analysisId}`, {
       method: 'DELETE',
@@ -562,7 +556,7 @@ async function deleteAnalysis(userId, sessionId, analysisId, event) {
     }
     
     const result = await response.json();
-    console.log("✅ Delete successful:", result);
+    // Delete successful
     
     showToast('Analysis deleted');
     await loadHistory();
@@ -627,7 +621,7 @@ function toggleHistory() {
   elements.historySidebar.classList.toggle('open');
   elements.mainContent.classList.toggle('sidebar-open');
   if (elements.historySidebar.classList.contains('open')) {
-    console.log("📂 History sidebar opened, loading history...");
+    // Loading history
     loadHistory();
   }
 }
@@ -740,7 +734,7 @@ async function handleLogout() {
     // Clear chat messages
     clearChat();
     
-    console.log("✅ Conversation history cleared");
+    // History cleared
     
     // Call the signOut function (expects it to be globally available from auth.js)
     if (typeof signOut === 'function') {
@@ -763,7 +757,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     const health = await mpaiAPI.health();
-    console.log('✅ API Health:', health);
+      // API health check complete
   } catch (error) {
     console.error('❌ API Health Check Failed:', error);
   }
@@ -774,7 +768,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (userId) {
     try {
       await loadHistory();
-      console.log("📜 History loaded for logged-in user");
+        // History loaded
     } catch (err) {
       console.warn("⚠️ Failed to load history:", err);
     }
@@ -938,19 +932,19 @@ function renderEnhancedHistory(historyData) {
     const sessionId = item.session_id;
     
     card.querySelector('[data-action="resume"]').onclick = () => {
-      console.log("📂 Resume clicked for session:", sessionId);
+      // Resume clicked
       loadSession(sessionId);
     };
     
     card.querySelector('[data-action="share"]').onclick = (event) => {
-      console.log("🔗 Share clicked for session:", sessionId);
+      // Share clicked
       shareSession(sessionId, event);
     };
     
     card.querySelector('[data-action="delete"]').onclick = (event) => {
       const userId = getCurrentUserId();
       const analysisId = item.analysis_id;
-      console.log("🗑️ Delete clicked - Session:", sessionId, "Analysis:", analysisId);
+      // Delete clicked
       
       if (!analysisId) {
         console.error("❌ No analysis_id found for item:", item);
@@ -964,7 +958,7 @@ function renderEnhancedHistory(historyData) {
     container.appendChild(card);
   });
   
-  console.log("✅ Rendered", historyData.length, "history cards");
+  // History cards rendered
 }
 
 
