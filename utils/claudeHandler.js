@@ -21,7 +21,7 @@ export async function callMPAI(
     // Build the full system prompt with method-specific guidance
     const systemPrompt = buildMPAIPrompt(method, userQuery, outputStyle, roleContext);
 
-    // Calling Claude API
+    console.log(`🎯 Method: ${method} | Style: ${outputStyle} | Context: ${roleContext || 'none'}`);
 
     // Build messages array with history + current query
     const messages = [
@@ -36,7 +36,14 @@ export async function callMPAI(
     const estimatedTokens = Math.round(
       (systemPrompt.length + JSON.stringify(messages).length) / 4
     );
-    // Token estimation (only warn if very high)
+    console.log(`📊 Context: ${conversationHistory.length} prior messages | Estimated tokens: ~${estimatedTokens.toLocaleString()}`);
+    
+    // Debug: Show what messages are being sent to Claude
+    if (conversationHistory.length > 0) {
+      console.log(`   📝 Sending ${messages.length} total messages to Claude (${conversationHistory.length} history + 1 current)`);
+      console.log(`   📝 First historical message: ${conversationHistory[0]?.role}: ${conversationHistory[0]?.content?.substring(0, 60)}...`);
+    }
+    
     if (estimatedTokens > 150000) {
       console.warn('⚠️  High token usage detected. Consider starting a new session.');
     }
@@ -54,7 +61,10 @@ export async function callMPAI(
       ? message.content[0].text 
       : '';
 
-    // Claude response received
+    const inputTokens = message.usage.input_tokens;
+    const outputTokens = message.usage.output_tokens;
+    console.log(`✅ Response received | Input: ${inputTokens.toLocaleString()} tokens | Output: ${outputTokens.toLocaleString()} tokens`);
+    
     // 🧩 Detect perspectives used in the response
 const allPerspectives = [
   "Thinker", "Relational", "Achiever", "Creative", "Systemic",
@@ -99,7 +109,7 @@ if (matchedPerspectives.length > 0) {
   }
 }
 
-// Perspectives inferred (count: inferredPerspectives.length)
+console.log(`🧭 Perspectives used: ${inferredPerspectives.join(', ')}`);
 
     return {
       success: true,

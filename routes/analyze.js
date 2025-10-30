@@ -107,6 +107,8 @@ router.post('/', async (req, res) => {
 
     const sessionId = providedSessionId || uuidv4();
     const analysisId = uuidv4();
+    
+    console.log(`\n🔵 New request | Session: ${sessionId.substring(0, 8)}... | Query: "${userQuery.substring(0, 50)}..."`);
 
     // Load recent messages for context
     let priorMessages = [];
@@ -131,6 +133,13 @@ router.post('/', async (req, res) => {
         ])
         .filter(Boolean);
       contextInfo.messageCount = priorMessages.length;
+      if (contextInfo.messageCount > 0) {
+        console.log(`📚 Loading context: ${contextInfo.messageCount} prior messages from session ${sessionId}`);
+        console.log(`   First message: ${priorMessages[0]?.content?.substring(0, 80)}...`);
+        console.log(`   Last message: ${priorMessages[priorMessages.length - 1]?.content?.substring(0, 80)}...`);
+      } else {
+        console.log(`📭 No prior messages found for session ${sessionId} (new session or no history)`);
+      }
     } catch (err) {
       console.warn('⚠️ Failed to load prior messages:', err);
     }
@@ -139,6 +148,10 @@ router.post('/', async (req, res) => {
     const roleContext = providedRoleContext || detectRoleContext(userQuery);
     const bandwidth = detectBandwidth(userQuery);
     let method = providedMethod || suggestMethod(userQuery);
+    
+    if (!providedMethod) {
+      console.log(`💡 Auto-selected method: ${method} (bandwidth: ${bandwidth})`);
+    }
 
     // Estimate cost before making API call (rough estimate based on query length)
     // This is conservative - actual cost may be lower

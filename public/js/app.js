@@ -217,9 +217,9 @@ async function sendMessage() {
       // ✅ Ensure session ID consistency
       if (!currentSessionId) {
         currentSessionId = result.sessionId;
-        // New session
+        console.log(`✨ New session: ${currentSessionId}`);
       } else {
-        // Continuing session
+        console.log(`🔄 Continuing session: ${currentSessionId}`);
       }
 
       // ✅ Show method used
@@ -232,8 +232,9 @@ async function sendMessage() {
       if (result.contextInfo) {
         const { messageCount, estimatedTokens } = result.contextInfo;
         
-        // Show message count if continuing a conversation (internal only)
-        // Context loaded: {messageCount} messages
+        if (messageCount > 0) {
+          console.log(`📚 Using ${messageCount} prior messages for context`);
+        }
         
         // Warn if getting close to token limits (performance, not cost)
         if (estimatedTokens > 120000) {

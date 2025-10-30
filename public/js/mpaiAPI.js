@@ -23,7 +23,12 @@ const mpaiAPI = {
         const userId = getEffectiveUserId();
         const payload = { userQuery, perspectiveVisibility, userId };
         if (method) payload.method = method;
-        if (sessionId) payload.sessionId = sessionId;
+        if (sessionId) {
+          payload.sessionId = sessionId;
+          console.log(`📤 Sending with sessionId: ${sessionId.substring(0, 8)}...`);
+        } else {
+          console.log(`📤 Creating new session (no sessionId provided)`);
+        }
   
         const response = await fetch('/api/analyze', {
           method: 'POST',
