@@ -102,9 +102,6 @@ function autoResize() {
   elements.chatInput.style.height = 'auto';
   elements.chatInput.style.height = Math.min(elements.chatInput.scrollHeight, 120) + 'px';
 }
-// Find this function in app.js (around line 105)
-// REPLACE the entire showToast function with this:
-
 function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.style.cssText = `
@@ -210,6 +207,7 @@ async function sendMessage() {
   const loadingId = addLoadingMessage();
   
   try {
+    console.log(`📤 Sending message with sessionId: ${currentSessionId || 'NEW SESSION'}`);
     const result = await mpaiAPI.analyze(query, selectedMethod, perspectiveVisibility, currentSessionId);
     removeLoadingMessage(loadingId);
     
@@ -217,7 +215,12 @@ async function sendMessage() {
       addMessage('assistant', result.response);
       
       // ✅ Ensure session ID consistency
-      if (!currentSessionId) currentSessionId = result.sessionId;
+      if (!currentSessionId) {
+        currentSessionId = result.sessionId;
+        console.log(`✅ New session created: ${currentSessionId}`);
+      } else {
+        console.log(`✅ Continuing session: ${currentSessionId}`);
+      }
 
       // ✅ Show method used
       if (result.method) {
@@ -294,7 +297,10 @@ async function loadHistory() {
     
     fullHistoryCache = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     console.log("✅ History loaded, rendering", fullHistoryCache.length, "items");
-    renderEnhancedHistory(fullHistoryCache);
+    
+    // Group by session and render
+    const sessions = groupBySession(fullHistoryCache);
+    renderHistory(sessions);
 
     
   } catch (err) {
@@ -332,8 +338,9 @@ function renderFilteredHistory() {
     }
   });
   
-  // Use renderEnhancedHistory for consistent styling
-  renderEnhancedHistory(filtered);
+  // Use grouped session view for consistent display
+  const sessions = groupBySession(filtered);
+  renderHistory(sessions);
 }
 
 function groupBySession(items) {
@@ -422,8 +429,8 @@ function renderHistory(sessions) {
   if (!sessions || sessions.length === 0) {
     elements.historyContent.innerHTML = `
       <div class="history-empty">
-        <div class="history-empty-title">No matches found</div>
-        <div class="history-empty-text">Try adjusting your filters or search</div>
+        <div class="history-empty-title">No conversations yet</div>
+        <div class="history-empty-text">Start a conversation to build your history</div>
       </div>`;
     return;
   }
@@ -431,50 +438,44 @@ function renderHistory(sessions) {
   let html = '';
   sessions.forEach(session => {
     const firstExchange = session.exchanges[0];
-    const preview = firstExchange.user_query.length > 60 
-      ? firstExchange.user_query.substring(0, 60) + '...' 
-      : firstExchange.user_query;
-    const date = new Date(session.timestamp).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric'
-    });
+    const lastExchange = session.exchanges[session.exchanges.length - 1];
+    
+    // Title from first user query
+    const title = firstExchange.user_query?.split(/[?.!]/)[0].slice(0, 60) || "Untitled Conversation";
+    
+    // Preview from last assistant response
+    const preview = lastExchange.response 
+      ? lastExchange.response.substring(0, 120) + '...'
+      : firstExchange.user_query?.substring(0, 120) + '...' || '';
+    
+    // Format time
+    const timeAgo = formatTimeAgo(session.timestamp);
+    
+    // Count exchanges
+    const exchangeCount = session.exchanges.length;
+    const exchangeText = `${exchangeCount} exchange${exchangeCount !== 1 ? 's' : ''}`;
+    
     html += `
-      <div class="history-session" data-session-id="${session.session_id}">
-        <div class="history-session-header">
-          <div class="history-session-preview">${escapeHtml(preview)}</div>
-          <div class="history-session-actions">
-            <button class="history-action-btn" onclick="loadSession('${session.session_id}')" title="Resume conversation">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
-            <button class="history-action-btn" onclick="shareSession('${session.session_id}', event)" title="Share conversation">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
-                <polyline points="16 6 12 2 8 6"/>
-                <line x1="12" y1="2" x2="12" y2="15"/>
-              </svg>
-            </button>
-            <button class="history-action-btn history-delete-btn" onclick="deleteSession('${session.session_id}', event)" title="Delete conversation">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-              </svg>
-            </button>
-          </div>
+      <div class="history-item" data-session-id="${session.session_id}">
+        <div class="history-item-header">
+          <div class="history-item-title">${escapeHtml(title)}</div>
         </div>
-        <div class="history-session-meta">${date} · ${session.exchanges.length} exchange${session.exchanges.length !== 1 ? 's' : ''}</div>
+        
+        <div class="history-item-preview">${escapeHtml(preview)}</div>
+        
+        <div class="history-item-meta">
+          <span>${exchangeText}</span> • <span>${timeAgo}</span>
+        </div>
+        
+        <div class="history-item-actions">
+          <button class="btn-small" onclick="window.loadSession('${session.session_id}')">Resume</button>
+          <button class="btn-small" onclick="window.shareSession('${session.session_id}', event)">Share</button>
+          <button class="btn-small" onclick="window.deleteSession('${session.session_id}', event)">Delete</button>
+        </div>
       </div>`;
   });
   
   elements.historyContent.innerHTML = html;
-  
-  document.querySelectorAll('.history-session').forEach(el => {
-    el.addEventListener('click', e => {
-      // Don't load session if clicking on action buttons
-      if (!e.target.closest('.history-action-btn')) {
-        loadSession(el.getAttribute('data-session-id'));
-      }
-    });
-  });
 }
 
 async function deleteSession(sessionId, event) {
@@ -595,7 +596,11 @@ function loadSession(sessionId) {
     showToast('Session not found', 'error');
     return;
   }
+  
+  console.log(`📂 Loading session ${sessionId} with ${sessionData.length} messages`);
   currentSessionId = sessionId;
+  console.log(`✅ currentSessionId set to: ${currentSessionId}`);
+  
   clearChat();
   sessionData.forEach(item => {
     if (item.user_query) addMessage('user', item.user_query);
@@ -626,24 +631,6 @@ function closeDropdowns() {
 // =====================================================================
 // EVENT LISTENERS
 // =====================================================================
-// Add to app.js setupEventListeners() function
-document.addEventListener('click', (e) => {
-  const historySidebar = document.getElementById('historySidebar');
-  const historyToggle = document.getElementById('historyToggle');
-  
-  // Close if clicking outside sidebar AND not on the toggle button
-  if (historySidebar && 
-      historySidebar.classList.contains('open') && 
-      !historySidebar.contains(e.target) && 
-      !historyToggle?.contains(e.target)) {
-    closeHistory();
-  }
-});
-
-// Keep it open while hovering
-historySidebar.addEventListener('mouseenter', () => {
-  // Just prevents it from closing
-});
 function setupEventListeners() {
   elements.chatInput.addEventListener('input', autoResize);
   elements.chatInput.addEventListener('keydown', e => {
@@ -681,6 +668,20 @@ function setupEventListeners() {
   
   document.getElementById('historyToggle')?.addEventListener('click', toggleHistory);
   document.getElementById('historyClose')?.addEventListener('click', closeHistory);
+  
+  // Close history when clicking outside
+  document.addEventListener('click', (e) => {
+    const historySidebar = document.getElementById('historySidebar');
+    const historyToggle = document.getElementById('historyToggle');
+    
+    if (historySidebar && 
+        historySidebar.classList.contains('open') && 
+        !historySidebar.contains(e.target) && 
+        !historyToggle?.contains(e.target)) {
+      closeHistory();
+    }
+  });
+  
   document.getElementById('uploadButton')?.addEventListener('click', () => document.getElementById('fileInput').click());
   document.getElementById('fileInput')?.addEventListener('change', e => {
     const files = e.target.files;
@@ -904,28 +905,6 @@ function renderEnhancedHistory(historyData) {
 
 // Optional utility if you want to call this from console or after load
 window.renderEnhancedHistory = renderEnhancedHistory;
-
-// =====================================================================
-// AUTO-RENDER ENHANCED HISTORY ON LOAD (optional)
-// =====================================================================
-// Comment out this block if you prefer your grouped session layout.
-
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    const userId = getCurrentUserId();
-    if (!userId) return;
-    const res = await fetch(`/api/history/${userId}`);
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      renderEnhancedHistory(data);
-      console.log("🎨 Rendered enhanced history cards");
-    }
-  } catch (err) {
-    console.error("❌ Failed to render enhanced history:", err);
-  }
-});
-
-
 
 // =====================================================================
 // EXPORTS FOR GLOBAL USE

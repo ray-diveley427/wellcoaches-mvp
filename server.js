@@ -247,6 +247,10 @@ app.post('/api/analyze', async (req, res) => {
     // 2️⃣ Load recent messages for context
     let priorMessages = [];
     try {
+      console.log(`🔍 Querying DynamoDB for session: ${sessionId}`);
+      console.log(`   PK: USER#${userId}`);
+      console.log(`   SK begins_with: SESSION#${sessionId}`);
+      
       const data = await docClient.send(new QueryCommand({
         TableName: TABLE_NAME,
         KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
@@ -258,14 +262,27 @@ app.post('/api/analyze', async (req, res) => {
         ScanIndexForward: true // oldest → newest
       }));
 
+      console.log(`📊 DynamoDB returned ${data.Items?.length || 0} items`);
+      if (data.Items && data.Items.length > 0) {
+        console.log(`   First item SK: ${data.Items[0].SK}`);
+      }
+
       priorMessages = (data.Items || [])
         .flatMap(i => [
           i.user_query ? { role: "user", content: i.user_query } : null,
           i.response ? { role: "assistant", content: i.response } : null
         ])
         .filter(Boolean);
+      
+      console.log(`💬 Converted to ${priorMessages.length} messages for Claude`);
+      if (priorMessages.length > 0) {
+        console.log(`📝 Prior messages being sent to Claude:`);
+        priorMessages.forEach((msg, idx) => {
+          console.log(`   [${idx}] ${msg.role}: ${msg.content.substring(0, 80)}...`);
+        });
+      }
     } catch (err) {
-      console.warn("⚠️ Failed to load prior messages:", err);
+      console.error("⚠️ Failed to load prior messages:", err);
     }
 
     // 3️⃣ Detect defaults
@@ -312,6 +329,7 @@ app.post('/api/analyze', async (req, res) => {
     };
 
     await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+    console.log(`💾 Saved exchange to DynamoDB - Session: ${sessionId}, Analysis: ${analysisId}`);
 
     // 6️⃣ Respond to client
     res.json({
