@@ -228,6 +228,29 @@ async function sendMessage() {
         if (method) showToast(`Used method: ${method.name}`, 'info');
       }
 
+      // ✅ Context warnings (no cost info shown to users)
+      if (result.contextInfo) {
+        const { messageCount, estimatedTokens } = result.contextInfo;
+        
+        // Show message count if continuing a conversation (internal only)
+        if (currentSessionId && messageCount > 0) {
+          console.log(`📚 Context: ${messageCount} prior messages loaded`);
+        }
+        
+        // Warn if getting close to token limits (performance, not cost)
+        if (estimatedTokens > 120000) {
+          showToast(
+            '⚠️ Conversation getting long. Consider starting a new session for better performance.',
+            'warning'
+          );
+        } else if (estimatedTokens > 80000) {
+          showToast(
+            `📊 Using ${messageCount} prior messages. Conversation is getting long.`,
+            'info'
+          );
+        }
+      }
+
       // ✅ Reload sidebar with server-persisted entry
       await loadHistory();
       

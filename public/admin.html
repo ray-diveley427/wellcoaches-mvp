@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Multi-Perspective AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            padding: 2rem;
+        }
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .admin-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .admin-header h1 {
+            margin: 0 0 0.5rem 0;
+            color: #1e0a29;
+        }
+        .admin-header p {
+            color: #6b7280;
+            margin: 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .stat-card h3 {
+            font-size: 0.875rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 0.5rem 0;
+        }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #14b8a6;
+            margin: 0;
+        }
+        .stat-card .subvalue {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+        .section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .section h2 {
+            margin: 0 0 1.5rem 0;
+            color: #1e0a29;
+        }
+        .user-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .user-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .user-id {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .user-cost {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        .btn-refresh {
+            background: #14b8a6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+        .btn-refresh:hover {
+            background: #0d9488;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #14b8a6;
+            transition: width 0.3s;
+        }
+        .progress-fill.warning {
+            background: #f59e0b;
+        }
+        .progress-fill.danger {
+            background: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>🔐 Admin Dashboard</h1>
+            <p>Cost monitoring and usage analytics</p>
+            <button class="btn-refresh" onclick="refreshAll()">🔄 Refresh</button>
+        </div>
+
+        <div id="errorMessage" class="error" style="display: none;"></div>
+
+        <div id="loading" class="loading">Loading admin data...</div>
+
+        <div id="dashboard" style="display: none;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Daily Cost</h3>
+                    <p class="value" id="totalCost">$0.00</p>
+                    <div class="subvalue" id="costLimit">Limit: $100.00</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="costProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Users Today</h3>
+                    <p class="value" id="totalUsers">0</p>
+                    <div class="subvalue">Active users</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Cost Per Request</h3>
+                    <p class="value" id="avgCost">$0.0000</p>
+                    <div class="subvalue">Average</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Percentage of Limit</h3>
+                    <p class="value" id="percentageLimit">0%</p>
+                    <div class="subvalue" id="limitStatus">Within limits</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Cost Limits Configuration</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Max Per Request</h3>
+                        <p class="value">$<span id="maxPerRequest">0.50</span></p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Max Per User/Day</h3>
+                        <p class="value">$<span id="maxPerUser">10.00</span></p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Max Total/Day</h3>
+                        <p class="value">$<span id="maxTotal">100.00</span></p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Limits Status</h3>
+                        <p class="value" id="limitsEnabled">Disabled</p>
+                        <div class="subvalue">Set COST_LIMITS_ENABLED=true to enable</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>User Breakdown (Today)</h2>
+                <p style="color: #6b7280; margin-bottom: 1rem;">Cost tracking for today's session</p>
+                <ul class="user-list" id="userList">
+                    <li class="user-item">
+                        <div class="user-info">
+                            <div class="user-id">Loading...</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>Detailed User Stats (Last 30 Days)</h2>
+                <p style="color: #6b7280; margin-bottom: 1rem;">
+                    Complete breakdown by user including total costs, sessions, and activity
+                </p>
+                <div id="detailedUsersLoading" class="loading">Loading detailed user stats...</div>
+                <div id="detailedUsers" style="display: none;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e5e7eb;">
+                                <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">User ID</th>
+                                <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Total Cost</th>
+                                <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Analyses</th>
+                                <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Sessions</th>
+                                <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Avg Cost</th>
+                                <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Total Tokens</th>
+                                <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">Last Activity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailedUsersBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { getUser, isAuthenticated } from './js/auth.js';
+
+        // Check if user is authenticated and is admin
+        async function checkAdminAccess() {
+            const authenticated = await isAuthenticated();
+            if (!authenticated) {
+                window.location.href = '/';
+                return false;
+            }
+
+            const user = await getUser();
+            const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
+            
+            // For now, allow if authenticated (add email check in production)
+            // In production, check: adminEmails.includes(user.profile.email)
+            return true;
+        }
+
+        window.loadAdminData = async function() {
+            const authenticated = await isAuthenticated();
+            if (!authenticated) {
+                window.location.href = '/';
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+
+            try {
+                // Send auth token for admin check
+                const idToken = localStorage.getItem('id_token');
+                const response = await fetch('/api/admin/costs', {
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`
+                    }
+                });
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('Access denied. Admin only.');
+                    }
+                    throw new Error('Failed to load admin data');
+                }
+
+                const data = await response.json();
+                
+                // Update stats
+                document.getElementById('totalCost').textContent = `$${parseFloat(data.totalDailyCost).toFixed(2)}`;
+                document.getElementById('costLimit').textContent = `Limit: $${data.limits.maxTotalPerDay.toFixed(2)}`;
+                document.getElementById('totalUsers').textContent = data.userCosts.length;
+                document.getElementById('percentageLimit').textContent = `${data.percentageOfLimit}%`;
+                document.getElementById('maxPerRequest').textContent = data.limits.maxPerRequest.toFixed(2);
+                document.getElementById('maxPerUser').textContent = data.limits.maxPerUserPerDay.toFixed(2);
+                document.getElementById('maxTotal').textContent = data.limits.maxTotalPerDay.toFixed(2);
+
+                // Calculate average cost
+                const totalCost = parseFloat(data.totalDailyCost);
+                const userCount = data.userCosts.length;
+                const avgCost = userCount > 0 ? totalCost / userCount : 0;
+                document.getElementById('avgCost').textContent = `$${avgCost.toFixed(4)}`;
+
+                // Progress bar
+                const percentage = parseFloat(data.percentageOfLimit);
+                const progressBar = document.getElementById('costProgress');
+                progressBar.style.width = `${Math.min(percentage, 100)}%`;
+                if (percentage > 80) {
+                    progressBar.className = 'progress-fill danger';
+                } else if (percentage > 50) {
+                    progressBar.className = 'progress-fill warning';
+                } else {
+                    progressBar.className = 'progress-fill';
+                }
+
+                // Limit status
+                document.getElementById('limitStatus').textContent = 
+                    percentage > 80 ? '⚠️ Approaching limit' : 
+                    percentage > 50 ? '⚡ Monitor closely' : 
+                    '✅ Within limits';
+
+                // User list
+                const userList = document.getElementById('userList');
+                if (data.userCosts.length === 0) {
+                    userList.innerHTML = '<li class="user-item"><div class="user-info">No users today</div></li>';
+                } else {
+                    userList.innerHTML = data.userCosts.map(user => `
+                        <li class="user-item">
+                            <div class="user-info">
+                                <div class="user-id">${user.userId}</div>
+                                <div class="user-cost">Date: ${user.date}</div>
+                            </div>
+                            <div class="user-cost">$${parseFloat(user.cost).toFixed(4)}</div>
+                        </li>
+                    `).join('');
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            } catch (err) {
+                document.getElementById('errorMessage').textContent = err.message;
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        };
+
+        window.refreshAll = function() {
+            loadAdminData();
+            loadDetailedUserStats();
+        };
+
+        window.loadDetailedUserStats = async function() {
+            try {
+                const idToken = localStorage.getItem('id_token');
+                const response = await fetch('/api/admin/users?days=30', {
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('Access denied. Admin only.');
+                    }
+                    throw new Error('Failed to load user stats');
+                }
+                
+                const data = await response.json();
+                const tbody = document.getElementById('detailedUsersBody');
+                
+                if (data.users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #6b7280;">No user data found</td></tr>';
+                } else {
+                    tbody.innerHTML = data.users.map(user => `
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 1rem; font-weight: 600;">${user.userId}</td>
+                            <td style="padding: 1rem; text-align: right; color: #14b8a6; font-weight: 600;">$${parseFloat(user.totalCost).toFixed(2)}</td>
+                            <td style="padding: 1rem; text-align: right;">${user.totalAnalyses}</td>
+                            <td style="padding: 1rem; text-align: right;">${user.totalSessions}</td>
+                            <td style="padding: 1rem; text-align: right; color: #6b7280;">$${user.avgCostPerAnalysis}</td>
+                            <td style="padding: 1rem; text-align: right; color: #6b7280;">${user.totalTokens}</td>
+                            <td style="padding: 1rem; color: #6b7280; font-size: 0.875rem;">${new Date(user.lastActivity).toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                }
+                
+                document.getElementById('detailedUsersLoading').style.display = 'none';
+                document.getElementById('detailedUsers').style.display = 'block';
+            } catch (err) {
+                document.getElementById('detailedUsersLoading').textContent = `Error: ${err.message}`;
+            }
+        };
+
+        // Check auth and load data on page load
+        isAuthenticated().then(authenticated => {
+            if (authenticated) {
+                loadAdminData();
+                // Load detailed user stats
+                loadDetailedUserStats();
+                // No auto-refresh - user clicks Refresh button when needed
+            } else {
+                window.location.href = '/';
+            }
+        });
+    </script>
+</body>
+</html>
+

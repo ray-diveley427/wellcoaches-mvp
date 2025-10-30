@@ -10,7 +10,82 @@ import {
   suggestMethod
 } from '../utils/claudeHandler.js';
 
+// Import cost tracking from server (for this MVP, we'll use a shared module)
+// In production, use Redis or DynamoDB for distributed tracking
+let costTracking = global.costTracking || {
+  dailyTotal: 0,
+  userDaily: {},
+  lastResetDate: new Date().toISOString().split('T')[0]
+};
+
 const router = express.Router();
+
+// Cost limit config (from env or defaults) - DISABLED for now, ready to enable later
+const COST_LIMITS_ENABLED = process.env.COST_LIMITS_ENABLED === 'true'; // Set to 'true' in .env to enable
+const MAX_COST_PER_REQUEST = parseFloat(process.env.MAX_COST_PER_REQUEST) || 0.50;
+const MAX_COST_PER_USER_PER_DAY = parseFloat(process.env.MAX_COST_PER_USER_PER_DAY) || 10.00;
+const MAX_COST_TOTAL_PER_DAY = parseFloat(process.env.MAX_COST_TOTAL_PER_DAY) || 100.00;
+
+function resetDailyCostsIfNeeded() {
+  const today = new Date().toISOString().split('T')[0];
+  if (costTracking.lastResetDate !== today) {
+    costTracking.dailyTotal = 0;
+    costTracking.userDaily = {};
+    costTracking.lastResetDate = today;
+    console.log(`💰 Daily cost reset - new day: ${today}`);
+  }
+}
+
+function checkCostLimits(userId, estimatedCost) {
+  resetDailyCostsIfNeeded();
+  
+  const today = new Date().toISOString().split('T')[0];
+  const userKey = `${userId}_${today}`;
+  
+  // Get user's daily cost
+  const userDailyCost = costTracking.userDaily[userKey]?.cost || 0;
+  const newUserDailyCost = userDailyCost + estimatedCost;
+  const newTotalDaily = costTracking.dailyTotal + estimatedCost;
+  
+  const errors = [];
+  
+  // Check per-request limit
+  if (estimatedCost > MAX_COST_PER_REQUEST) {
+    errors.push(`Request cost ($${estimatedCost.toFixed(4)}) exceeds per-request limit ($${MAX_COST_PER_REQUEST})`);
+  }
+  
+  // Check per-user daily limit
+  if (newUserDailyCost > MAX_COST_PER_USER_PER_DAY) {
+    errors.push(`User daily cost ($${newUserDailyCost.toFixed(2)}) would exceed limit ($${MAX_COST_PER_USER_PER_DAY})`);
+  }
+  
+  // Check total daily limit
+  if (newTotalDaily > MAX_COST_TOTAL_PER_DAY) {
+    errors.push(`Total daily cost ($${newTotalDaily.toFixed(2)}) would exceed limit ($${MAX_COST_TOTAL_PER_DAY})`);
+  }
+  
+  return { allowed: errors.length === 0, errors };
+}
+
+function recordCost(userId, cost) {
+  resetDailyCostsIfNeeded();
+  
+  const today = new Date().toISOString().split('T')[0];
+  const userKey = `${userId}_${today}`;
+  
+  if (!costTracking.userDaily[userKey]) {
+    costTracking.userDaily[userKey] = { date: today, cost: 0 };
+  }
+  
+  costTracking.userDaily[userKey].cost += cost;
+  costTracking.dailyTotal += cost;
+  
+  // Log for monitoring
+  console.log(`💰 Cost recorded: $${cost.toFixed(4)} | User: ${userId} | User Daily: $${costTracking.userDaily[userKey].cost.toFixed(2)} | Total Daily: $${costTracking.dailyTotal.toFixed(2)}`);
+  
+  // Export to global for access from server.js
+  global.costTracking = costTracking;
+}
 
 // POST /api/analyze
 router.post('/', async (req, res) => {
@@ -33,7 +108,10 @@ router.post('/', async (req, res) => {
 
     // Load recent messages for context
     let priorMessages = [];
+    let contextInfo = { messageCount: 0, estimatedTokens: 0 };
     try {
+      // Load ALL messages for the session to preserve full context
+      // DynamoDB will respect its 1MB response limit, but most sessions won't hit that
       const data = await docClient.send(new QueryCommand({
         TableName: TABLE_NAME,
         KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
@@ -41,8 +119,8 @@ router.post('/', async (req, res) => {
           ':pk': `USER#${userId}`,
           ':sk': `SESSION#${sessionId}`,
         },
-        Limit: 20,
-        ScanIndexForward: true,
+        // No limit - load all messages to preserve context from beginning of conversation
+        ScanIndexForward: true, // Oldest first (chronological order for Claude)
       }));
       priorMessages = (data.Items || [])
         .flatMap(i => [
@@ -50,6 +128,7 @@ router.post('/', async (req, res) => {
           i.response ? { role: 'assistant', content: i.response } : null
         ])
         .filter(Boolean);
+      contextInfo.messageCount = priorMessages.length;
     } catch (err) {
       console.warn('⚠️ Failed to load prior messages:', err);
     }
@@ -58,6 +137,27 @@ router.post('/', async (req, res) => {
     const roleContext = providedRoleContext || detectRoleContext(userQuery);
     const bandwidth = detectBandwidth(userQuery);
     let method = providedMethod || suggestMethod(userQuery);
+
+    // Estimate cost before making API call (rough estimate based on query length)
+    // This is conservative - actual cost may be lower
+    const estimatedInputTokens = Math.round((JSON.stringify(priorMessages).length + userQuery.length) / 4);
+    const estimatedOutputTokens = 2000; // max_tokens setting
+    const estimatedInputCost = (estimatedInputTokens / 1_000_000) * 3;
+    const estimatedOutputCost = (estimatedOutputTokens / 1_000_000) * 15;
+    const estimatedCost = estimatedInputCost + estimatedOutputCost;
+    
+    // Check cost limits before proceeding (only if enabled)
+    if (COST_LIMITS_ENABLED) {
+      const costCheck = checkCostLimits(userId, estimatedCost);
+      if (!costCheck.allowed) {
+        console.error(`🚫 Request blocked due to cost limits:`, costCheck.errors);
+        return res.status(429).json({ 
+          success: false, 
+          error: 'Request exceeds cost limits. Please try again later or contact support.',
+          costLimitExceeded: true
+        });
+      }
+    }
 
     const result = await callMPAI(userQuery, method, outputStyle, roleContext, priorMessages);
 
@@ -69,6 +169,28 @@ router.post('/', async (req, res) => {
     const responseText = result.response || '';
     const preview = responseText.slice(0, 120);
     const perspectivesCount = (Array.isArray(result.perspectives) && result.perspectives.length) || result.count || 1;
+
+    // Calculate actual cost
+    const inputTokens = result.usage?.inputTokens || 0;
+    const outputTokens = result.usage?.outputTokens || 0;
+    contextInfo.estimatedTokens = inputTokens;
+    
+    // Cost calculation (Claude Sonnet 4 pricing as of 2025)
+    // Input: $3 per 1M tokens, Output: $15 per 1M tokens
+    const inputCost = (inputTokens / 1_000_000) * 3;
+    const outputCost = (outputTokens / 1_000_000) * 15;
+    const totalCost = inputCost + outputCost;
+    
+    // Record actual cost
+    recordCost(userId, totalCost);
+    
+    contextInfo.cost = {
+      input: inputCost,
+      output: outputCost,
+      total: totalCost,
+      inputTokens,
+      outputTokens
+    };
 
     // Save new exchange to DynamoDB (include snake_case and camelCase for compatibility)
     const item = {
@@ -90,6 +212,10 @@ router.post('/', async (req, res) => {
       // presentation helpers
       preview,
       perspectives: `${perspectivesCount} perspectives`,
+      // cost tracking (for internal monitoring)
+      cost: totalCost,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
       timestamp: new Date().toISOString(),
       ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
     };
@@ -103,6 +229,7 @@ router.post('/', async (req, res) => {
       analysisId,
       modelUsed: result.modelUsed,
       usage: result.usage,
+      contextInfo: { messageCount: contextInfo.messageCount, estimatedTokens: contextInfo.estimatedTokens }, // No cost info to frontend
     });
   } catch (err) {
     console.error('❌ Error analyzing:', err);
