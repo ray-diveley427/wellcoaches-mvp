@@ -377,8 +377,8 @@
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="border-bottom: 2px solid #e5e7eb;">
-                                <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">User ID</th>
                                 <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">Email</th>
+                                <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">User ID</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Monthly Cost</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Monthly Limit</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Total Cost</th>
@@ -578,8 +578,8 @@
                         
                         return `
                         <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 1rem; font-weight: 600;">${user.userId}</td>
                             <td style="padding: 1rem; color: #6b7280;">${user.email}</td>
+                            <td style="padding: 1rem; font-weight: 600;">${user.userId}</td>
                             <td style="padding: 1rem; text-align: right; color: ${monthlyColor}; font-weight: 600;">
                                 $${parseFloat(user.monthlyCost).toFixed(2)}
                                 ${isOverLimit ? ' ⚠️' : ''}
