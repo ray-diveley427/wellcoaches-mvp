@@ -523,7 +523,6 @@ body {
 .history-pin {
     background: none;
     border: none;
-    color: var(--text-secondary);
     cursor: pointer;
     padding: 0.25rem;
     border-radius: 4px;
@@ -533,18 +532,26 @@ body {
     justify-content: center;
 }
 
-.history-close:hover,
-.history-pin:hover {
+.history-pin .pin-emoji {
+    font-size: 18px;
+    transition: all 0.2s;
+}
+
+.history-close:hover {
     background: var(--bg-secondary);
     color: var(--text-primary);
 }
 
-.history-pin.active {
-    color: var(--teal);
+.history-pin:hover {
+    background: var(--bg-secondary);
 }
 
-.history-pin.active .pin-icon {
-    fill: var(--teal);
+.history-pin:hover .pin-emoji {
+    transform: scale(1.1);
+}
+
+.history-pin.active .pin-emoji {
+    filter: hue-rotate(135deg) saturate(1.8) brightness(1.1);
 }
 
 .history-search {
@@ -1197,4 +1204,5 @@ body {
 
 .history-item-actions .btn-small:nth-child(3) { background: #ef4444; color: #ffffff; }
 .history-item-actions .btn-small:nth-child(3):hover { background: #dc2626; }
+  
   
