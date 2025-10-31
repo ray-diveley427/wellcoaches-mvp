@@ -1,10 +1,14 @@
 // utils/claudeHandler.js
 import Anthropic from '@anthropic-ai/sdk';
 import { buildMPAIPrompt } from './mpaiInstructions.js';
+import { getMoralMindfulnessPrefix } from './moralMindfulnessPrefix.js';
 
 const anthropic = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY,
 });
+
+// Check if moral mindfulness prefix is enabled (default: true)
+const MORAL_MINDFULNESS_ENABLED = process.env.MORAL_MINDFULNESS_PREFIX_ENABLED !== 'false';
 
 /**
  * Call Claude with MPAI system prompt and user query
@@ -19,9 +23,15 @@ export async function callMPAI(
 ) {
   try {
     // Build the full system prompt with method-specific guidance
-    const systemPrompt = buildMPAIPrompt(method, userQuery, outputStyle, roleContext);
+    const mpaiPrompt = buildMPAIPrompt(method, userQuery, outputStyle, roleContext);
+    
+    // Prepend moral mindfulness prefix if enabled
+    const moralPrefix = getMoralMindfulnessPrefix(MORAL_MINDFULNESS_ENABLED);
+    const systemPrompt = moralPrefix 
+      ? `${moralPrefix}\n\n${mpaiPrompt}`
+      : mpaiPrompt;
 
-    console.log(`🎯 Method: ${method} | Style: ${outputStyle} | Context: ${roleContext || 'none'}`);
+    console.log(`🎯 Method: ${method} | Style: ${outputStyle} | Context: ${roleContext || 'none'}${MORAL_MINDFULNESS_ENABLED ? ' | Moral Mindfulness: ON' : ''}`);
 
     // Build messages array with history + current query
     const messages = [

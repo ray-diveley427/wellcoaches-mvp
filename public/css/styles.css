@@ -168,6 +168,108 @@ body {
     max-width: 500px;
 }
 
+/* Pro Tools Dropdown */
+.pro-tools-dropdown .dropdown-menu {
+    min-width: 550px;
+    max-width: 650px;
+}
+
+.pro-tools-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0;
+}
+
+.pro-tools-tab-btn {
+    flex: 1;
+    padding: 0.625rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pro-tools-tab-btn:hover {
+    background: var(--bg-primary);
+    border-color: var(--teal);
+    color: var(--text-primary);
+}
+
+.pro-tools-tab-btn.active {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: white;
+}
+
+.pro-tool-item {
+    padding: 0.875rem 1rem;
+    margin: 0.5rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.pro-tool-item:hover {
+    background: var(--bg-primary);
+    border-color: var(--teal);
+    transform: translateX(2px);
+}
+
+.pro-tool-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.pro-tool-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.pro-tool-badge {
+    padding: 0.25rem 0.625rem;
+    background: var(--teal);
+    color: white;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.pro-tool-desc {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
+}
+
+.pro-tool-activation {
+    font-size: 12px;
+    color: var(--teal-dark);
+    font-weight: 500;
+    font-style: italic;
+}
+
+.pro-tools-coming-soon {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.pro-tools-coming-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
 .dropdown-section {
     padding: 1rem;
     border-bottom: 1px solid var(--border);
@@ -867,6 +969,11 @@ body {
     }
 
     .methods-dropdown .dropdown-menu {
+        min-width: 320px;
+        max-width: 90vw;
+    }
+
+    .pro-tools-dropdown .dropdown-menu {
         min-width: 320px;
         max-width: 90vw;
     }

@@ -848,6 +848,114 @@ const faqMappings = {
   "Privacy & data security": "science"
 };
 
+// =====================================================================
+// PRO TOOLS DROPDOWN
+// =====================================================================
+const proTools = {
+  coach: [
+    {
+      name: 'Map to Competencies',
+      badge: 'ICF & NBHWC',
+      description: 'Maps the nine perspectives to both ICF Core Competencies and NBHWC Competencies for dual certification documentation.',
+      activation: 'Map to competencies'
+    },
+    {
+      name: 'Coherence Readiness Tool',
+      badge: 'Breakthrough',
+      description: 'Identifies which perspective holds the key pattern for breakthrough. Applies legitimacy-first principle.',
+      activation: 'Find the coherence point'
+    },
+    {
+      name: 'Moral Mindfulness Activation',
+      badge: 'Discovery',
+      description: 'Shifts from advice-giving to discovery-facilitation. Transforms perspectives into inquiry.',
+      activation: 'Activate moral mindfulness'
+    },
+    {
+      name: 'Future Self Exercise Tool',
+      badge: 'Evolution',
+      description: 'Projects perspectives forward to reveal potential evolution paths and future integration.',
+      activation: 'Run Future Self exercise'
+    },
+    {
+      name: 'Mentor Coaching Tool',
+      badge: 'Development',
+      description: 'Supports coaches in developing capacity to hold all nine perspectives while meeting competency requirements.',
+      activation: 'Mentor coaching mode'
+    },
+    {
+      name: 'Declipse Tool',
+      badge: 'Declipse',
+      description: 'Applies the Declipse methodology to generate powerful coaching questions aligned with ICF Core Competencies.',
+      activation: 'Apply Declipse lens'
+    }
+  ],
+  healthcare: [],
+  leader: []
+};
+
+function populateProTools(category = 'coach') {
+  const proToolsContent = document.getElementById('proToolsContent');
+  if (!proToolsContent) return;
+  
+  proToolsContent.innerHTML = '';
+  
+  if (proTools[category].length === 0) {
+    proToolsContent.innerHTML = `
+      <div class="pro-tools-coming-soon">
+        <div class="pro-tools-coming-icon">
+          ${category === 'healthcare' ? '🏥' : '👔'}
+        </div>
+        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">
+          ${category === 'healthcare' ? 'Healthcare Professional Tools' : 'Leadership Tools'}
+        </div>
+        <div style="font-size: 13px;">Coming Soon</div>
+      </div>
+    `;
+    return;
+  }
+  
+  proTools[category].forEach(tool => {
+    const toolElement = document.createElement('div');
+    toolElement.className = 'pro-tool-item';
+    toolElement.innerHTML = `
+      <div class="pro-tool-header">
+        <span class="pro-tool-name">${tool.name}</span>
+        <span class="pro-tool-badge">${tool.badge}</span>
+      </div>
+      <div class="pro-tool-desc">${tool.description}</div>
+      <div class="pro-tool-activation">Activation: "${tool.activation}"</div>
+    `;
+    
+    toolElement.addEventListener('click', () => {
+      const activation = tool.activation;
+      if (activation) {
+        elements.chatInput.value = activation;
+        elements.chatInput.focus();
+        closeDropdowns();
+      }
+    });
+    
+    proToolsContent.appendChild(toolElement);
+  });
+}
+
+// Initialize Pro Tools
+populateProTools('coach');
+
+// Pro Tools tab switching
+document.querySelectorAll('.pro-tools-tab-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.pro-tools-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    populateProTools(btn.dataset.tab);
+  });
+});
+
+// =====================================================================
+// FAQ DROPDOWN
+// =====================================================================
 document.querySelectorAll('#faqDropdown .dropdown-item').forEach(item => {
   item.addEventListener('click', async () => {
     const title = item.querySelector('.dropdown-item-title')?.textContent?.trim();
