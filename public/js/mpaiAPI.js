@@ -44,12 +44,34 @@ const mpaiAPI = {
   
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error || 'Analysis failed');
+          
+          // For 429 (rate limit) responses, preserve all error details including cost limit info
+          if (response.status === 429 && error.costLimitExceeded) {
+            return {
+              success: false,
+              error: error.error || 'Cost limit exceeded',
+              costLimitExceeded: true,
+              monthlyLimitExceeded: error.monthlyLimitExceeded || false,
+              monthlyCost: error.monthlyCost,
+              monthlyLimit: error.monthlyLimit,
+              monthlyRemaining: error.monthlyRemaining
+            };
+          }
+          
+          // For other errors, create an Error but preserve the full error object
+          const errorObj = new Error(error.error || 'Analysis failed');
+          errorObj.status = response.status;
+          errorObj.originalError = error;
+          throw errorObj;
         }
-  
+
         return await response.json();
       } catch (err) {
         console.error('❌ API error:', err);
+        // If it's already a structured error (from 429), return it as-is
+        if (err.costLimitExceeded !== undefined) {
+          return err;
+        }
         return { success: false, error: err.message };
       }
     },

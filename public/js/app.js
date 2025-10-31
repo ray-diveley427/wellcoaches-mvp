@@ -254,8 +254,50 @@ async function sendMessage() {
       await loadHistory();
       
     } else {
-      addMessage('assistant', `Error: ${result.error || 'Unknown error occurred'}`);
-      showToast('Analysis failed', 'error');
+      // Check if this is a cost limit error
+      if (result.costLimitExceeded) {
+        if (result.monthlyLimitExceeded) {
+          // Monthly limit exceeded - show detailed message
+          const monthlyMessage = `
+<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+  <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem; font-size: 16px;">
+    ⚠️ Monthly Spending Limit Reached
+  </div>
+  <div style="color: #1f2937; line-height: 1.6;">
+    <p style="margin: 0.5rem 0;">
+      You've used <strong>$${(result.monthlyCost || 0).toFixed(2)}</strong> of your <strong>$${(result.monthlyLimit || 0).toFixed(2)}</strong> monthly limit.
+    </p>
+    <p style="margin: 0.5rem 0; font-size: 14px; color: #6b7280;">
+      Your limit will reset at the start of next month. To continue using the service, please contact support to increase your monthly limit.
+    </p>
+  </div>
+</div>`;
+          addMessage('assistant', monthlyMessage);
+          showToast('Monthly spending limit reached', 'error');
+        } else {
+          // Other cost limit exceeded (daily, per-request, etc.)
+          const limitMessage = `
+<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+  <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem; font-size: 16px;">
+    ⚠️ Cost Limit Exceeded
+  </div>
+  <div style="color: #1f2937; line-height: 1.6;">
+    <p style="margin: 0.5rem 0;">
+      ${result.error || 'Your request exceeds the current cost limits.'}
+    </p>
+    <p style="margin: 0.5rem 0; font-size: 14px; color: #6b7280;">
+      Please try again later or contact support for assistance.
+    </p>
+  </div>
+</div>`;
+          addMessage('assistant', limitMessage);
+          showToast('Cost limit exceeded', 'error');
+        }
+      } else {
+        // Generic error
+        addMessage('assistant', `Error: ${result.error || 'Unknown error occurred'}`);
+        showToast('Analysis failed', 'error');
+      }
     }
   } catch (err) {
     removeLoadingMessage(loadingId);
