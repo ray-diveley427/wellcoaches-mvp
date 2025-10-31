@@ -11,24 +11,51 @@
   </div>
 
   <script>
+    // --- Detect environment and set base URL ---
+    function getBaseUrl() {
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol;
+      
+      if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+        // Local development
+        return "http://localhost:3000";
+      } else if (hostname.includes("multi-perspective.dev.wellcoachesschool.com")) {
+        // Testing/staging environment
+        return "https://multi-perspective.dev.wellcoachesschool.com";
+      } else if (hostname.includes("multi-perspective.ai")) {
+        // Production environment
+        return "https://multi-perspective.ai";
+      } else {
+        // Fallback: use current origin
+        return `${protocol}//${hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+      }
+    }
+    
+    const baseUrl = getBaseUrl();
+    const redirectUri = `${baseUrl}/callback.html`;
+    const cognitoDomain = "https://us-east-1eucicqax3.auth.us-east-1.amazoncognito.com";
+    const clientId = "7m3hp4bdldr9642grf15rhhp24";
+    
     console.log("🔹 Callback URL:", window.location.href);
+    console.log("🔹 Base URL:", baseUrl);
+    console.log("🔹 Redirect URI:", redirectUri);
     
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     
     if (!code) {
-      document.body.innerHTML = '<p style="color:red;">No code. <a href="http://localhost:3000/">Try again</a></p>';
+      document.body.innerHTML = `<p style="color:red;">No code. <a href="${baseUrl}/">Try again</a></p>`;
     } else {
       console.log("✅ Code received");
       
-      fetch("https://us-east-1eucicqax3.auth.us-east-1.amazoncognito.com/oauth2/token", {
+      fetch(`${cognitoDomain}/oauth2/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           grant_type: 'authorization_code',
-          client_id: '7m3hp4bdldr9642grf15rhhp24',
+          client_id: clientId,
           code: code,
-          redirect_uri: 'http://localhost:3000/callback.html'
+          redirect_uri: redirectUri
         })
       })
       .then(async r => {
@@ -44,11 +71,11 @@
         if (tokens.refresh_token) localStorage.setItem("refresh_token", tokens.refresh_token);
         
         document.body.innerHTML = '<h2 style="color:green; text-align:center;">✅ Success! Redirecting...</h2>';
-        setTimeout(() => window.location.href = "http://localhost:3000/", 1000);
+        setTimeout(() => window.location.href = `${baseUrl}/`, 1000);
       })
       .catch(e => {
         console.error("❌ Error:", e);
-        document.body.innerHTML = `<div style="padding:20px;"><h2>Failed</h2><p style="color:red;">${e.message}</p><a href="http://localhost:3000/">Try again</a></div>`;
+        document.body.innerHTML = `<div style="padding:20px;"><h2>Failed</h2><p style="color:red;">${e.message}</p><a href="${baseUrl}/">Try again</a></div>`;
       });
     }
   </script>

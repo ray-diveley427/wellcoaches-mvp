@@ -1,10 +1,26 @@
-// --- Detect environment ---
-const isLocal =
-  window.location.hostname.includes("localhost") ||
-  window.location.hostname.includes("127.0.0.1");
+// --- Detect environment and set base URL ---
+function getBaseUrl() {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
+  if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+    // Local development
+    return "http://localhost:3000";
+  } else if (hostname.includes("multi-perspective.dev.wellcoachesschool.com")) {
+    // Testing/staging environment
+    return "https://multi-perspective.dev.wellcoachesschool.com";
+  } else if (hostname.includes("multi-perspective.ai")) {
+    // Production environment
+    return "https://multi-perspective.ai";
+  } else {
+    // Fallback: use current origin
+    return `${protocol}//${hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+  }
+}
 
-const redirectUri = "http://localhost:3000/callback.html";
-const logoutUri = "http://localhost:3000/"; // ✅ Added trailing slash to match AWS config
+const baseUrl = getBaseUrl();
+const redirectUri = `${baseUrl}/callback.html`;
+const logoutUri = `${baseUrl}/`;
 
 // --- Cognito configuration ---
 const cognitoDomain = "https://us-east-1eucicqax3.auth.us-east-1.amazoncognito.com";

@@ -43,10 +43,36 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Allow CORS for dev
+// CORS configuration based on environment
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  const origin = req.headers.origin;
+  
+  // Allowed origins for production/staging
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://multi-perspective.dev.wellcoachesschool.com',
+    'https://multi-perspective.ai'
+  ];
+  
+  // For development (localhost), allow all origins for flexibility
+  // For production/staging, only allow specific origins
+  if (process.env.NODE_ENV === 'production') {
+    if (origin && allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+    }
+  } else {
+    // Development: allow all origins
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+  
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
   next();
 });
 
