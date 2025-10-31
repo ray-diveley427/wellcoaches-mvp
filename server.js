@@ -300,14 +300,26 @@ function resetDailyCostsIfNeeded() {
 }
 
 
-app.listen(PORT, () => {
+// Only start listening if not running under iisnode (IIS)
+// iisnode manages the HTTP server automatically
+if (!process.env.IISNODE_VERSION) {
+  app.listen(PORT, () => {
+    console.log(`\n${'='.repeat(60)}`);
+    console.log('🚀 Multi-Perspective AI Server');
+    console.log(`🌐 Running at http://localhost:${PORT}`);
+    console.log(`💾 DynamoDB Table: ${TABLE_NAME}`);
+    console.log(`💬 Max history: ${MAX_HISTORY_MESSAGES} exchanges`);
+    console.log(`${'='.repeat(60)}\n`);
+  });
+} else {
+  // Running under iisnode - just log startup info
   console.log(`\n${'='.repeat(60)}`);
   console.log('🚀 Multi-Perspective AI Server');
-  console.log(`🌐 Running at http://localhost:${PORT}`);
+  console.log('🌐 Running under IIS/iisnode');
   console.log(`💾 DynamoDB Table: ${TABLE_NAME}`);
   console.log(`💬 Max history: ${MAX_HISTORY_MESSAGES} exchanges`);
   console.log(`${'='.repeat(60)}\n`);
-});
+}
 
 // Graceful shutdown
 process.on('SIGINT', () => {
