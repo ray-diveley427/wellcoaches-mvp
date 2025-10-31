@@ -527,19 +527,32 @@ function renderHistory(sessions) {
   elements.historyContent.innerHTML = html;
 }
 
-async function deleteSession(sessionId, event) {
-  event.stopPropagation();
-  
-  // ✅ Add validation
-  if (!sessionId) {
-    console.error("❌ deleteSession called with undefined sessionId");
-    showToast('Invalid session ID', 'error');
-    return;
+// Store sessionId to delete when user confirms
+let pendingDeleteSessionId = null;
+
+function showDeleteModal(sessionId) {
+  pendingDeleteSessionId = sessionId;
+  const deleteModal = document.getElementById('deleteModal');
+  if (deleteModal) {
+    deleteModal.classList.remove('hidden');
+    document.body.classList.add('modal-open');
   }
+}
+
+function hideDeleteModal() {
+  const deleteModal = document.getElementById('deleteModal');
+  if (deleteModal) {
+    deleteModal.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    pendingDeleteSessionId = null;
+  }
+}
+
+async function confirmDeleteSession() {
+  if (!pendingDeleteSessionId) return;
   
-  // Deleting session
-  
-  if (!confirm('Delete this conversation? This cannot be undone.')) return;
+  const sessionId = pendingDeleteSessionId;
+  hideDeleteModal();
   
   try {
     const userId = getCurrentUserId();
@@ -573,6 +586,20 @@ async function deleteSession(sessionId, event) {
     console.error('Delete error:', err);
     showToast('Failed to delete conversation', 'error');
   }
+}
+
+function deleteSession(sessionId, event) {
+  event.stopPropagation();
+  
+  // ✅ Add validation
+  if (!sessionId) {
+    console.error("❌ deleteSession called with undefined sessionId");
+    showToast('Invalid session ID', 'error');
+    return;
+  }
+  
+  // Show modal instead of confirm
+  showDeleteModal(sessionId);
 }
 
 // Delete a specific analysis (not the whole session)
@@ -855,6 +882,47 @@ async function handleLogout() {
 document.addEventListener('DOMContentLoaded', async () => {
   renderMethodsDropdown('all');
   setupEventListeners();
+  
+  // Setup delete modal event listeners
+  const deleteModal = document.getElementById('deleteModal');
+  const cancelDeleteBtn = document.getElementById('cancelDelete');
+  const confirmDeleteBtn = document.getElementById('confirmDelete');
+  const closeDeleteModalBtn = document.getElementById('closeDeleteModal');
+  
+  if (cancelDeleteBtn) {
+    cancelDeleteBtn.addEventListener('click', hideDeleteModal);
+  }
+  if (closeDeleteModalBtn) {
+    closeDeleteModalBtn.addEventListener('click', hideDeleteModal);
+  }
+  if (confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener('click', confirmDeleteSession);
+  }
+  
+  // Close modal when clicking outside (on overlay/backdrop)
+  if (deleteModal) {
+    deleteModal.addEventListener('click', (e) => {
+      // Close if clicking on the backdrop (the modal itself, not its children)
+      if (e.target === deleteModal) {
+        hideDeleteModal();
+      }
+    });
+    
+    // Prevent clicks inside modal container from closing the modal
+    const modalContainer = deleteModal.querySelector('.modal-container');
+    if (modalContainer) {
+      modalContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+  }
+  
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !deleteModal?.classList.contains('hidden')) {
+      hideDeleteModal();
+    }
+  });
 
   try {
     const health = await mpaiAPI.health();
