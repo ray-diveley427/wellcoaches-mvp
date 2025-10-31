@@ -28,3 +28,7 @@ logs/
 # Build
 dist/
 build/
+
+# IIS / iisnode
+iisnode/
+*.log
