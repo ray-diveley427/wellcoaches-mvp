@@ -30,9 +30,15 @@ const mpaiAPI = {
           console.log(`📤 Creating new session (no sessionId provided)`);
         }
   
+        const headers = { 'Content-Type': 'application/json' };
+        const idToken = localStorage.getItem('id_token');
+        if (idToken) {
+          headers['Authorization'] = `Bearer ${idToken}`;
+        }
+        
         const response = await fetch('/api/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(payload),
         });
   

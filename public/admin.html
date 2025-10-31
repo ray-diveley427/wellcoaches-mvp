@@ -141,6 +141,150 @@
         .progress-fill.danger {
             background: #ef4444;
         }
+        .btn-edit-limit {
+            background: #14b8a6;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        .btn-edit-limit:hover {
+            background: #0d9488;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h2 {
+            margin: 0 0 0.5rem 0;
+            color: #1e0a29;
+        }
+        .modal-header p {
+            margin: 0;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20,184,166,0.1);
+        }
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        .btn-primary {
+            background: #14b8a6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background: #0d9488;
+        }
+        .btn-remove-limit {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        .btn-remove-limit:hover {
+            background: #dc2626;
+        }
+        .current-limit-info {
+            background: #f3f4f6;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .current-limit-info strong {
+            color: #1e0a29;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrapper table {
+            min-width: 1200px;
+        }
+        .table-wrapper table th,
+        .table-wrapper table td {
+            white-space: nowrap;
+        }
+        .table-wrapper table th:first-child,
+        .table-wrapper table td:first-child {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 10;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+        }
+        .table-wrapper table th:last-child,
+        .table-wrapper table td:last-child {
+            position: sticky;
+            right: 0;
+            background: white;
+            z-index: 10;
+            box-shadow: -2px 0 4px rgba(0,0,0,0.05);
+        }
     </style>
 </head>
 <body>
@@ -202,12 +346,17 @@
                         <p class="value" id="limitsEnabled">Disabled</p>
                         <div class="subvalue">Set COST_LIMITS_ENABLED=true to enable</div>
                     </div>
+                    <div class="stat-card">
+                        <h3>Default Monthly Limit</h3>
+                        <p class="value">$<span id="defaultMonthlyLimit">5.00</span></p>
+                        <div class="subvalue">Per user per month</div>
+                    </div>
                 </div>
             </div>
 
             <div class="section">
                 <h2>User Breakdown (Today)</h2>
-                <p style="color: #6b7280; margin-bottom: 1rem;">Cost tracking for today's session</p>
+                <p style="color: #6b7280; margin-bottom: 1rem;">Cost tracking for today's session with monthly usage</p>
                 <ul class="user-list" id="userList">
                     <li class="user-item">
                         <div class="user-info">
@@ -224,23 +373,56 @@
                 </p>
                 <div id="detailedUsersLoading" class="loading">Loading detailed user stats...</div>
                 <div id="detailedUsers" style="display: none;">
+                    <div class="table-wrapper">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="border-bottom: 2px solid #e5e7eb;">
                                 <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">User ID</th>
+                                <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">Email</th>
+                                <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Monthly Cost</th>
+                                <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Monthly Limit</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Total Cost</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Analyses</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Sessions</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Avg Cost</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Total Tokens</th>
                                 <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">Last Activity</th>
+                                <th style="text-align: center; padding: 1rem; color: #6b7280; font-weight: 600;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="detailedUsersBody">
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal for editing monthly limit -->
+    <div id="limitModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Monthly Limit</h2>
+                <p id="modalUserInfo"></p>
+            </div>
+            <div class="current-limit-info" id="currentLimitInfo"></div>
+            <form id="limitForm">
+                <div class="form-group">
+                    <label for="monthlyLimitInput">Monthly Limit ($)</label>
+                    <input type="number" id="monthlyLimitInput" step="0.01" min="0" required>
+                    <small style="color: #6b7280; font-size: 0.875rem; display: block; margin-top: 0.5rem;">
+                        Set a custom limit for this user, or leave empty to use the default ($<span id="defaultLimitValue">5.00</span>)
+                    </small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeLimitModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Limit</button>
+                </div>
+                <button type="button" class="btn-remove-limit" id="removeLimitBtn" onclick="removeLimit()" style="display: none;">
+                    Remove Custom Limit (Use Default)
+                </button>
+            </form>
         </div>
     </div>
 
@@ -299,6 +481,7 @@
                 document.getElementById('maxPerRequest').textContent = data.limits.maxPerRequest.toFixed(2);
                 document.getElementById('maxPerUser').textContent = data.limits.maxPerUserPerDay.toFixed(2);
                 document.getElementById('maxTotal').textContent = data.limits.maxTotalPerDay.toFixed(2);
+                document.getElementById('defaultMonthlyLimit').textContent = data.limits.defaultMonthlyPerUser?.toFixed(2) || '5.00';
 
                 // Calculate average cost
                 const totalCost = parseFloat(data.totalDailyCost);
@@ -329,15 +512,25 @@
                 if (data.userCosts.length === 0) {
                     userList.innerHTML = '<li class="user-item"><div class="user-info">No users today</div></li>';
                 } else {
-                    userList.innerHTML = data.userCosts.map(user => `
+                    userList.innerHTML = data.userCosts.map(user => {
+                        const monthlyPercent = parseFloat(user.monthlyLimit) > 0 
+                            ? (parseFloat(user.monthlyCost) / parseFloat(user.monthlyLimit) * 100).toFixed(1)
+                            : '0.0';
+                        const isOverLimit = parseFloat(user.monthlyCost) >= parseFloat(user.monthlyLimit);
+                        return `
                         <li class="user-item">
                             <div class="user-info">
-                                <div class="user-id">${user.userId}</div>
-                                <div class="user-cost">Date: ${user.date}</div>
+                                <div class="user-id">${user.userId} ${user.email !== 'N/A' ? `<span style="color: #6b7280; font-weight: 400;">(${user.email})</span>` : ''}</div>
+                                <div class="user-cost">Date: ${user.date} | Today: $${parseFloat(user.cost).toFixed(4)}</div>
+                                <div class="user-cost" style="margin-top: 0.25rem; ${isOverLimit ? 'color: #ef4444; font-weight: 600;' : parseFloat(monthlyPercent) > 80 ? 'color: #f59e0b;' : ''}">
+                                    Monthly: $${parseFloat(user.monthlyCost).toFixed(2)} / $${parseFloat(user.monthlyLimit).toFixed(2)} (${monthlyPercent}%) 
+                                    ${parseFloat(user.monthlyRemaining) > 0 ? `| Remaining: $${parseFloat(user.monthlyRemaining).toFixed(2)}` : '| ⚠️ Limit Exceeded'}
+                                </div>
                             </div>
                             <div class="user-cost">$${parseFloat(user.cost).toFixed(4)}</div>
                         </li>
-                    `).join('');
+                    `;
+                    }).join('');
                 }
 
                 document.getElementById('loading').style.display = 'none';
@@ -374,19 +567,44 @@
                 const tbody = document.getElementById('detailedUsersBody');
                 
                 if (data.users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #6b7280;">No user data found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 2rem; color: #6b7280;">No user data found</td></tr>';
                 } else {
-                    tbody.innerHTML = data.users.map(user => `
+                    tbody.innerHTML = data.users.map(user => {
+                        const monthlyPercent = parseFloat(user.monthlyUsagePercent);
+                        const isOverLimit = parseFloat(user.monthlyCost) >= parseFloat(user.monthlyLimit);
+                        const monthlyColor = isOverLimit ? '#ef4444' : monthlyPercent > 80 ? '#f59e0b' : '#14b8a6';
+                        const defaultLimit = parseFloat(data.limits?.defaultMonthlyPerUser || 5.00);
+                        const hasCustomLimit = parseFloat(user.monthlyLimit) !== defaultLimit;
+                        
+                        return `
                         <tr style="border-bottom: 1px solid #e5e7eb;">
                             <td style="padding: 1rem; font-weight: 600;">${user.userId}</td>
+                            <td style="padding: 1rem; color: #6b7280;">${user.email}</td>
+                            <td style="padding: 1rem; text-align: right; color: ${monthlyColor}; font-weight: 600;">
+                                $${parseFloat(user.monthlyCost).toFixed(2)}
+                                ${isOverLimit ? ' ⚠️' : ''}
+                            </td>
+                            <td style="padding: 1rem; text-align: right; color: #6b7280;">
+                                $${parseFloat(user.monthlyLimit).toFixed(2)}
+                                ${hasCustomLimit ? ' <span style="font-size: 0.75rem; color: #14b8a6;">(custom)</span>' : ' <span style="font-size: 0.75rem; color: #9ca3af;">(default)</span>'}
+                                <div style="font-size: 0.75rem; color: ${monthlyColor}; margin-top: 0.25rem;">
+                                    (${monthlyPercent}% used)
+                                </div>
+                            </td>
                             <td style="padding: 1rem; text-align: right; color: #14b8a6; font-weight: 600;">$${parseFloat(user.totalCost).toFixed(2)}</td>
                             <td style="padding: 1rem; text-align: right;">${user.totalAnalyses}</td>
                             <td style="padding: 1rem; text-align: right;">${user.totalSessions}</td>
                             <td style="padding: 1rem; text-align: right; color: #6b7280;">$${user.avgCostPerAnalysis}</td>
                             <td style="padding: 1rem; text-align: right; color: #6b7280;">${user.totalTokens}</td>
                             <td style="padding: 1rem; color: #6b7280; font-size: 0.875rem;">${new Date(user.lastActivity).toLocaleString()}</td>
+                            <td style="padding: 1rem; text-align: center;">
+                                <button class="btn-edit-limit" onclick="openLimitModal('${user.userId}', '${user.email}', ${parseFloat(user.monthlyLimit).toFixed(2)}, ${defaultLimit.toFixed(2)}, ${hasCustomLimit})">
+                                    Edit
+                                </button>
+                            </td>
                         </tr>
-                    `).join('');
+                    `;
+                    }).join('');
                 }
                 
                 document.getElementById('detailedUsersLoading').style.display = 'none';
@@ -407,6 +625,110 @@
                 window.location.href = '/';
             }
         });
+
+        // Modal functions for editing monthly limits
+        let currentEditingUser = null;
+        let currentDefaultLimit = 5.00;
+
+        window.openLimitModal = function(userId, email, currentLimit, defaultLimit, hasCustomLimit) {
+            currentEditingUser = userId;
+            currentDefaultLimit = defaultLimit;
+            
+            document.getElementById('modalUserInfo').textContent = `User: ${userId} (${email})`;
+            document.getElementById('monthlyLimitInput').value = currentLimit.toFixed(2);
+            document.getElementById('defaultLimitValue').textContent = defaultLimit.toFixed(2);
+            
+            const currentLimitInfo = document.getElementById('currentLimitInfo');
+            if (hasCustomLimit) {
+                currentLimitInfo.innerHTML = `<strong>Current Limit:</strong> $${currentLimit.toFixed(2)} (Custom) | <strong>Default:</strong> $${defaultLimit.toFixed(2)}`;
+                document.getElementById('removeLimitBtn').style.display = 'block';
+            } else {
+                currentLimitInfo.innerHTML = `<strong>Current Limit:</strong> $${defaultLimit.toFixed(2)} (Using Default)`;
+                document.getElementById('removeLimitBtn').style.display = 'none';
+            }
+            
+            document.getElementById('limitModal').style.display = 'block';
+        };
+
+        window.closeLimitModal = function() {
+            document.getElementById('limitModal').style.display = 'none';
+            currentEditingUser = null;
+            document.getElementById('limitForm').reset();
+        };
+
+        window.removeLimit = async function() {
+            if (!currentEditingUser || !confirm('Remove custom limit and revert to default?')) {
+                return;
+            }
+
+            try {
+                const idToken = localStorage.getItem('id_token');
+                const response = await fetch(`/api/admin/users/${currentEditingUser}/monthly-limit`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to remove limit');
+                }
+
+                const result = await response.json();
+                alert(result.message || 'Limit removed successfully');
+                closeLimitModal();
+                refreshAll(); // Reload data
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+            }
+        };
+
+        // Handle form submission
+        document.getElementById('limitForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!currentEditingUser) return;
+
+            const monthlyLimit = parseFloat(document.getElementById('monthlyLimitInput').value);
+            
+            if (isNaN(monthlyLimit) || monthlyLimit < 0) {
+                alert('Please enter a valid positive number');
+                return;
+            }
+
+            try {
+                const idToken = localStorage.getItem('id_token');
+                const response = await fetch(`/api/admin/users/${currentEditingUser}/monthly-limit`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ monthlyLimit })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to update limit');
+                }
+
+                const result = await response.json();
+                alert(result.message || 'Limit updated successfully');
+                closeLimitModal();
+                refreshAll(); // Reload data
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+            }
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('limitModal');
+            if (event.target === modal) {
+                closeLimitModal();
+            }
+        };
     </script>
 </body>
 </html>
