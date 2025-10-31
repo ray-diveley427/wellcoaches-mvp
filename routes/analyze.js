@@ -291,10 +291,23 @@ router.post('/', async (req, res) => {
       console.warn('⚠️ Failed to load prior messages:', err);
     }
 
-    const outputStyle = providedOutputStyle || detectOutputStyle(userQuery);
+    let method = providedMethod || suggestMethod(userQuery);
+    
+    // Some methods require specific output styles - override auto-detection
+    const methodsRequiringStructured = [
+      'COACHING_PLAN', 
+      'SKILLS', 
+      'SYNTHESIS',
+      'SIMPLE_SYNTHESIS',
+      'SYNTHESIS_ALL',
+      'INNER_PEACE_SYNTHESIS',
+      'HUMAN_HARM_CHECK'
+    ];
+    const shouldForceStructured = methodsRequiringStructured.includes(method);
+    
+    const outputStyle = providedOutputStyle || (shouldForceStructured ? 'structured' : detectOutputStyle(userQuery));
     const roleContext = providedRoleContext || detectRoleContext(userQuery);
     const bandwidth = detectBandwidth(userQuery);
-    let method = providedMethod || suggestMethod(userQuery);
     
     if (!providedMethod) {
       console.log(`💡 Auto-selected method: ${method} (bandwidth: ${bandwidth})`);

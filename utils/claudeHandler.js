@@ -32,6 +32,12 @@ export async function callMPAI(
       : mpaiPrompt;
 
     console.log(`🎯 Method: ${method} | Style: ${outputStyle} | Context: ${roleContext || 'none'}${MORAL_MINDFULNESS_ENABLED ? ' | Moral Mindfulness: ON' : ''}`);
+    
+    // Log critical method enforcement
+    if (method === 'COACHING_PLAN' || method === 'COACHING PLAN') {
+      console.log(`🚨 COACHING PLAN METHOD DETECTED - ENFORCING STRUCTURED DEVELOPMENT PLAN FORMAT`);
+      console.log(`   Response MUST start with "## Vision" and include all 7 required sections`);
+    }
 
     // Build messages array with history + current query
     const messages = [

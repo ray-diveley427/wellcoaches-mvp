@@ -724,7 +724,7 @@ When a query activates multiple methods simultaneously, use this hierarchy:
 
 ✓ Reveals hidden patterns  
 
-✓ Shows how opposing truths coexist  
+✓ Shows how opposing truths coexist
 
 ✓ Uses tentative language  
 
@@ -806,182 +806,398 @@ export function getMethodPrompt(method, userQuery) {
 
   const methodPrompts = {
     QUICK: `
-The user wants QUICK analysis (200-400 words).
-Focus on 1-2 core tensions and provide immediate clarity.
-Show only the most relevant 2-3 perspectives (80%+ threshold).
-Vision: Skip unless it naturally emerges.
+**METHOD: QUICK ANALYSIS** ⚡
 
-REMEMBER: Always honor legitimate first, then reveal pattern.
-Apply Step 3: Root Cause Check (legitimate constraints first).
-Complete Step 6: Synthesis (what does this MEAN?).
+**MANDATORY FORMAT:**
+- Length: 200-400 words (brief, focused response)
+- Focus on 1-2 core tensions ONLY
+- Show only the most relevant 2-3 perspectives (80%+ relevance threshold)
+- Front-load key insights in first paragraph
+- Vision: Skip unless it naturally emerges
+
+**Output Style:** NATURAL (integrated narrative, no explicit perspective labels)
+
+**STRUCTURE:**
+1. Immediate clarity - core insight in first 1-2 sentences
+2. 1-2 core tensions with relevant perspectives woven in
+3. Brief synthesis (what this means)
+4. Quick path forward (if appropriate)
+
+**VALIDATION:** Is this under 400 words? Does it provide immediate clarity? Is it concise?
+
+**REMEMBER:**
+- Always honor legitimate first, then reveal pattern
+- Apply Step 3: Root Cause Check (legitimate constraints first)
+- Complete Step 6: Synthesis (what does this MEAN?)
+- Be concise - every word counts
 `,
 
     STANDARD: `
-The user wants comprehensive STANDARD analysis (600-800 words).
-Include 3-4 perspectives showing key tensions and strategic options (60%+ threshold).
-Show how they interplay and create natural tensions.
-Vision: Optional - include if it clarifies the situation.
+**METHOD: STANDARD COMPREHENSIVE ANALYSIS** 📊
 
-REMEMBER: Honor legitimate concerns first, then reveal deeper patterns.
-Apply Step 3: Root Cause Check - look 1-2 levels deeper.
-Complete Step 6: Synthesis - what's the story these perspectives tell together?
+**MANDATORY FORMAT:**
+- Length: 600-800 words
+- Include 3-4 perspectives showing key tensions and strategic options (60%+ relevance threshold)
+- Show how perspectives interplay and create natural tensions
+- Vision: Optional - include if it clarifies the situation
+
+**Output Style:** NATURAL (integrated narrative, perspectives weave naturally without explicit labels)
+
+**STRUCTURE:**
+1. Opening insight - key understanding
+2. Core tensions - how perspectives interact
+3. Deeper patterns - root causes revealed
+4. Strategic options - paths forward
+5. Synthesis - what this means together
+6. Optional vision - if it clarifies
+
+**VALIDATION:** Are 3-4 perspectives woven throughout? Is synthesis clear? Is depth balanced with clarity?
+
+**REMEMBER:**
+- Honor legitimate concerns first, then reveal deeper patterns
+- Apply Step 3: Root Cause Check - look 1-2 levels deeper
+- Complete Step 6: Synthesis - what's the story these perspectives tell together?
+- Balance depth with clarity
 `,
 
     CONFLICT: `
-The user is experiencing conflict or feels stuck between approaches (600-800 words).
-Provide 2-4 perspectives that are in genuine tension (70%+ threshold).
-Show how both sides hold truth and what each perspective protects.
-Help them see what each perspective values most.
-Vision: Optional - helpful if it clarifies integration path.
+**METHOD: CONFLICT RESOLUTION** ⚖️
 
-REMEMBER: Are both sides of the conflict LEGITIMATE given their context?
-Then check: Is the conflict itself avoiding a deeper root cause?
-Name the tension clearly, show validity of both sides, identify deeper need.
-Complete Step 6: Synthesis - how do these opposing truths coexist?
+**MANDATORY FORMAT:**
+- Length: 600-800 words
+- Provide 2-4 perspectives that are in genuine tension (70%+ relevance threshold)
+- Show how BOTH sides hold truth and what each perspective protects
+- Name the tension clearly
+- Vision: Optional - helpful if it clarifies integration path
+
+**Output Style:** NATURAL or STRUCTURED (defaults to natural, but structure helps with conflicts)
+
+**REQUIRED STRUCTURE:**
+1. **Name the conflict/tension clearly** - what's the specific tension?
+2. **Side A: Legitimacy and values** - what does this perspective protect?
+3. **Side B: Legitimacy and values** - what does this perspective protect?
+4. **Deeper need** - what's really being protected or avoided?
+5. **Integration path** - how to honor both perspectives (not choose one)
+6. Optional vision - what integration looks like
+
+**VALIDATION:** Are BOTH sides shown as legitimate? Is integration path clear (not just choosing one)? Is tension named specifically?
+
+**REMEMBER:**
+- Are both sides of the conflict LEGITIMATE given their context? (Check this FIRST)
+- Is the conflict itself avoiding a deeper root cause? (Check this SECOND)
+- Complete Step 6: Synthesis - how do these opposing truths coexist?
+- This is about integration, not choosing one side
 `,
 
     STAKEHOLDER: `
-Multiple people/groups are involved with different agendas (600-800 words).
-Map stakeholders to relevant perspectives (60%+ threshold).
-Show how each stakeholder's perspective shapes their priorities.
-Identify where perspectives align and where they conflict.
-Vision: Optional - useful for communication strategy.
+**METHOD: STAKEHOLDER ANALYSIS** 👥
 
-REMEMBER: Stakeholders OPERATE from perspectives, not just "have" them.
-Each stakeholder likely has legitimate concerns from their vantage point.
-Complete Step 6: Synthesis - what integration path honors multiple viewpoints?
+**MANDATORY FORMAT:**
+- Length: 600-800 words
+- Map stakeholders to relevant perspectives (60%+ relevance threshold)
+- Show how each stakeholder's perspective shapes their priorities
+- Identify where perspectives align and where they conflict
+- Vision: Optional - useful for communication strategy
+
+**Output Style:** STRUCTURED recommended (stakeholder mapping benefits from structure)
+
+**REQUIRED STRUCTURE:**
+1. **Key stakeholders identified** - who are the main players?
+2. **Stakeholder mapping** - what perspectives does each operate from?
+3. **Underlying needs** - what each stakeholder really needs (beyond positions)
+4. **Alignment points** - where do perspectives converge?
+5. **Conflict points** - where do perspectives diverge?
+6. **Integration path** - how to honor multiple viewpoints
+7. Optional vision - communication strategy
+
+**VALIDATION:** Are stakeholders mapped to perspectives? Are needs identified (not just positions)? Is integration path clear?
+
+**REMEMBER:**
+- Stakeholders OPERATE from perspectives, not just "have" them
+- Each stakeholder likely has legitimate concerns from their vantage point
+- Complete Step 6: Synthesis - what integration path honors multiple viewpoints?
+- Focus on needs, not just positions
 `,
 
     PATTERN: `
-The user faces a recurring problem or pattern (600-800 words).
-Focus on 3-4 avoided or underdeveloped perspectives (60%+ threshold).
-Identify blind spots and root causes of recurring dynamics.
-Show how this pattern shows up across contexts.
-Vision: Optional - what does healed pattern look like?
+**METHOD: PATTERN RECOGNITION** 🔁
 
-CRITICAL: Is the "pattern" actually appropriate responses to genuinely difficult recurring situations?
-Then check: What perspectives are being avoided that keep the pattern repeating?
-Complete Step 6: Synthesis - what core tension is being avoided?
+**MANDATORY FORMAT:**
+- Length: 600-800 words
+- Focus on 3-4 avoided or underdeveloped perspectives (60%+ relevance threshold)
+- Identify blind spots and root causes of recurring dynamics
+- Show how this pattern shows up across contexts
+- Vision: Optional - what does healed pattern look like?
+
+**Output Style:** STRUCTURED recommended (pattern analysis benefits from structure)
+
+**REQUIRED STRUCTURE:**
+1. **Pattern identification** - what keeps recurring? How does it show up?
+2. **Legitimacy check FIRST** - is this actually appropriate responses to genuinely difficult situations?
+3. **Avoided perspectives** - which perspectives are being avoided that keep pattern repeating?
+4. **Context manifestations** - how pattern shows up across different contexts
+5. **Core tension** - what core tension is being avoided?
+6. **Developmental path** - how to break the cycle (missing perspective that would help)
+7. Optional vision - what healed pattern looks like
+
+**VALIDATION:** Did you check legitimacy FIRST? Are avoided perspectives identified? Is core tension named? Is developmental path clear?
+
+**REMEMBER:**
+- CRITICAL: Is the "pattern" actually appropriate responses to genuinely difficult recurring situations? (Check this FIRST)
+- What perspectives are being avoided that keep the pattern repeating? (Check this SECOND)
+- Complete Step 6: Synthesis - what core tension is being avoided?
+- Look for missing perspective that would break the cycle
 `,
 
     'SCENARIO TEST': `
-The user is comparing specific options or evaluating alternatives (600-800 words).
-Use 4-5 perspectives to differentiate between options (60%+ threshold).
-Show tradeoffs and what each perspective values most.
-Help them see which option serves which needs.
-Vision: Optional - what does optimal choice look like?
+**METHOD: SCENARIO TEST / OPTION COMPARISON** 🎯
 
-REMEMBER: Both options likely have genuine merit and real trade-offs (legitimate first).
-Then check: Are they stuck in this choice because of an avoided deeper question?
-Complete Step 6: Synthesis - what matters most in this decision?
+**MANDATORY FORMAT:**
+- Length: 600-800 words
+- Use 4-5 perspectives to differentiate between options (60%+ relevance threshold)
+- Show tradeoffs and what each perspective values most
+- Help them see which option serves which needs
+- Vision: Optional - what does optimal choice look like?
+
+**Output Style:** STRUCTURED (required for clear comparison)
+
+**REQUIRED STRUCTURE:**
+1. **Options identified** - what choices are being considered?
+2. **Option A through perspectives** - how does each perspective evaluate this option?
+3. **Option B (etc.) through perspectives** - how does each perspective evaluate other options?
+4. **Tradeoffs analysis** - what needs does each option meet/miss?
+5. **Integration quality** - which option best integrates multiple perspectives?
+6. **Recommendation** (if appropriate) - which option serves what matters most?
+7. Optional vision - what optimal choice looks like
+
+**VALIDATION:** Are options tested through 4-5 perspectives? Are tradeoffs clear? Is integration quality assessed?
+
+**REMEMBER:**
+- Both options likely have genuine merit and real trade-offs (legitimate first)
+- Are they stuck in this choice because of an avoided deeper question? (Check this)
+- Complete Step 6: Synthesis - what matters most in this decision?
+- Can use comparison table if helpful
 `,
 
     'TIME HORIZON': `
-The user faces short-term vs long-term tradeoffs (600-800 words).
-Show how different perspectives prioritize different timeframes (60%+ threshold).
-Reveal temporal tensions and what needs balancing.
-Vision: Optional - what does temporal balance look like?
+**METHOD: TIME HORIZON ANALYSIS** ⏰
 
-REMEMBER: Temporal tensions are often REAL constraints, not avoidance (legitimate first).
-Then check: Is time pressure masking something else?
-Complete Step 6: Synthesis - how to honor both urgent and important?
+**MANDATORY FORMAT:**
+- Length: 600-800 words
+- Show how different perspectives prioritize different timeframes (60%+ relevance threshold)
+- Reveal temporal tensions and what needs balancing
+- Vision: Optional - what does temporal balance look like?
+
+**Output Style:** NATURAL or STRUCTURED (structured helps show NOW vs LATER clearly)
+
+**REQUIRED STRUCTURE:**
+1. **NOW perspectives** - which perspectives prioritize immediate/urgent (ACHIEVER/ADVENTURER)
+2. **LATER perspectives** - which perspectives prioritize long-term/important (REGULATOR/MEANING-MAKER)
+3. **Temporal tension** - what's the specific tension between timeframes?
+4. **Legitimacy check** - are temporal tensions REAL constraints (honor first)?
+5. **Integration strategy** - how to honor both urgent and important
+6. Optional vision - what temporal balance looks like
+
+**VALIDATION:** Are NOW vs LATER perspectives identified? Is temporal tension clear? Is integration strategy practical?
+
+**REMEMBER:**
+- Temporal tensions are often REAL constraints, not avoidance (legitimate first)
+- Is time pressure masking something else? (Check this)
+- Complete Step 6: Synthesis - how to honor both urgent and important?
+- Balance immediate needs with long-term wellbeing
 `,
 
     'HUMAN HARM CHECK': `
-This is a risk assessment for potential negative impacts (600-800 words).
-Use REGULATOR (what could go wrong), RELATIONAL (who could be hurt), 
-AUTONOMY (what's ethically right), MEANING-MAKER (long-term wellbeing).
-VISION REQUIRED: What does safe, ethical implementation look like?
-This method prioritizes safety - thorough risk analysis before action.
+**METHOD: HUMAN HARM CHECK / RISK ASSESSMENT** ⚠️
 
-REMEMBER: Risk concerns are almost always legitimate - honor them first.
-Then check: Are they avoiding certain risk perspectives?
-Complete Step 6: Synthesis - what integration ensures safety and ethics?
+**MANDATORY FORMAT:**
+- Length: 600-800 words
+- **VISION REQUIRED** - cannot be skipped
+- This is a risk assessment for potential negative impacts
+- This method prioritizes safety - thorough risk analysis before action
+
+**Output Style:** STRUCTURED (required for clarity in risk assessment)
+
+**REQUIRED STRUCTURE:**
+1. **REGULATOR assessment** - what could go wrong? Physical/security risks
+2. **RELATIONAL assessment** - who could be hurt? Relationship/social harm
+3. **AUTONOMY assessment** - what's ethically right? Values/integrity violations
+4. **MEANING-MAKER assessment** - long-term wellbeing implications
+5. **Red flags** - flag any serious concerns explicitly (don't soften warnings)
+6. **VISION REQUIRED:** What safe, ethical implementation looks like
+7. **Professional help** - recommend when appropriate
+
+**VALIDATION:** Did you assess through all 4 harm-relevant perspectives? Are red flags flagged explicitly? Is VISION included? Are warnings direct (not softened)?
+
+**REMEMBER:**
+- Risk concerns are almost always legitimate - honor them first
+- Are they avoiding certain risk perspectives? (Check this)
+- Complete Step 6: Synthesis - what integration ensures safety and ethics?
+- **Don't soften warnings** - be direct about serious concerns
+- **VISION is REQUIRED, not optional**
 `,
 
     SYNTHESIS: `
-This is integrative analysis (800-1000 words for single, 600-1500 for multiple conversations).
-Structure:
-1. Scan for perspectives present (single conversation) OR themes across conversations (multiple)
-2. Identify which are competing/conflicting OR development/persistence patterns
-3. Show underlying pattern or core tension
-4. VISION REQUIRED: What optimal integration looks like
-5. Concrete next steps
+**METHOD: SYNTHESIS / INTEGRATIVE ANALYSIS** 🔗
 
-Show perspective expression levels explicitly.
-Use STRUCTURED output style with perspective names shown.
+**MANDATORY FORMAT:**
+- Length: 800-1000 words (single conversation) OR 600-1500 words (multiple conversations)
+- **VISION REQUIRED** - cannot be skipped
+- Show perspective expression levels explicitly
+- Concrete next steps required
 
-CRITICAL: Honor what's legitimate and real across all conversations first.
-Complete Step 6: Synthesis deeply - what's the meta-pattern that MEANS?
+**Output Style:** STRUCTURED (required - show perspective names explicitly as headers)
+
+**REQUIRED STRUCTURE:**
+1. **Perspectives/themes identified** - what perspectives are present? (single) OR what themes across conversations? (multiple)
+2. **Competing/conflicting patterns** - which perspectives are in tension? What development patterns emerge?
+3. **Underlying pattern/core tension** - what's the meta-pattern that means?
+4. **VISION REQUIRED:** What optimal integration looks like - detailed picture
+5. **Concrete next steps** - actionable integration path
+
+**VALIDATION:** Is VISION included and detailed? Are perspective expression levels shown? Are next steps concrete? Is this integration (not just summary)?
+
+**REMEMBER:**
+- Honor what's legitimate and real across all conversations first
+- Complete Step 6: Synthesis deeply - what's the meta-pattern that MEANS?
+- This is synthesized understanding, not just summary
+- Show how perspectives integrate, not just coexist
+- **VISION is REQUIRED, not optional**
 `,
 
     'INNER PEACE': `
-This addresses internal conflict about what to do (600-1200 words, adjust for capacity).
-Structure:
-1. Name competing inner voices (perspectives in conflict)
-2. Honor the wisdom in EACH perspective
-3. Identify which deeper need each serves
-4. Show they're NOT enemies—they're protective systems
-5. VISION REQUIRED: What internal harmony feels like
-6. Integration path that keeps both perspectives but changes relationship
+**METHOD: INNER PEACE SYNTHESIS** 🕊️
 
-Show expression levels: which perspectives are in conflict?
-Use STRUCTURED output style with perspective names shown.
-Tone: Especially gentle, no pathologizing.
+**MANDATORY FORMAT:**
+- Length: 600-1200 words (adjust for capacity)
+- **VISION REQUIRED** - cannot be skipped
+- Show expression levels: which perspectives are in conflict?
+- Tone: Especially gentle, no pathologizing (critical)
 
-CRITICAL: Both sides of internal conflict are often LEGITIMATE responses to real complexity.
-Then check: What's really being protected or avoided?
-Complete Step 6: Synthesis - how do these protective systems work together?
+**Output Style:** STRUCTURED (required - show perspective names explicitly as headers)
+
+**REQUIRED STRUCTURE:**
+1. **Competing inner voices** - name the perspectives in conflict explicitly
+2. **Side A: Legitimacy and wisdom** - what does this perspective protect? (honor first)
+3. **Side B: Legitimacy and wisdom** - what does this perspective protect? (honor first)
+4. **Deeper needs** - which deeper need does each serve?
+5. **Protective systems** - show they're NOT enemies, they're protective
+6. **VISION REQUIRED:** What internal harmony feels like - detailed, felt sense
+7. **Integration path** - how to keep both perspectives but change relationship
+
+**VALIDATION:** Are BOTH sides honored as legitimate? Is VISION included and detailed? Is tone gentle (no pathologizing)? Is integration path clear (not eliminating one)?
+
+**REMEMBER:**
+- CRITICAL: Both sides of internal conflict are often LEGITIMATE responses to real complexity (honor first)
+- What's really being protected or avoided? (Check this)
+- Complete Step 6: Synthesis - how do these protective systems work together?
+- This is about integration of competing parts, not eliminating one
+- Be especially gentle - no pathologizing
+- **VISION is REQUIRED, not optional**
 `,
 
     'COACHING PLAN': `
-Create a structured development plan (varies by capacity).
-Include:
-- Vision REQUIRED (what success looks like)
-- High Quality Motivators (compelling reasons why)
-- Strengths (assets to leverage)
-- Challenges (obstacles to address)
-- Strategies (approaches to try)
-- Concrete actions (specific next steps)
+🚨 **CRITICAL METHOD REQUIREMENT: COACHING PLAN** 🚨
 
-Use STRUCTURED output style.
-Reference relevant perspectives as development areas where helpful.
+**YOU MUST CREATE A STRUCTURED DEVELOPMENT PLAN - THIS IS NOT OPTIONAL**
 
-REMEMBER: Identify root developmental edges, not just surface skills.
-Many "challenges" are legitimate responses to real constraints (honor first).
-Complete Step 6: Synthesis - what integrated development path honors all perspectives?
+This method REQUIRES a specific structure. You MUST format your response with these exact section headings:
+
+## Vision
+[REQUIRED SECTION] What success looks like - a clear picture of developed capacity. Describe the ideal state.
+
+## High Quality Motivators
+[REQUIRED SECTION] Compelling reasons why this development matters - what will motivate sustained effort. Make these concrete and personal.
+
+## Current State Assessment
+[REQUIRED SECTION] Which perspectives are strong/weak? What's working well and what needs development? Be specific about perspective expression levels.
+
+## Strengths
+[REQUIRED SECTION] Assets to leverage - existing capabilities and resources. What can they build upon?
+
+## Challenges
+[REQUIRED SECTION] Obstacles to address - both legitimate constraints (honor these first) and developmental edges. Name specific challenges.
+
+## Strategies
+[REQUIRED SECTION] Approaches to try - broad methodologies and paths forward. Provide multiple strategic options.
+
+## Concrete Actions
+[REQUIRED SECTION] Specific next steps - actionable items with clear direction. These must be concrete and doable.
+
+**MANDATORY OUTPUT FORMAT:**
+- You MUST use the section headings above exactly as written (## Vision, ## High Quality Motivators, etc.)
+- You MUST use STRUCTURED output style with perspective names shown explicitly (THINKER, RELATIONAL, etc.) as headers where relevant
+- Your response MUST be organized systematically with distinct, labeled sections
+- Do NOT write a conversational or narrative response - it must follow this structure
+- Do NOT combine sections - each section must be clearly separated with its heading
+
+**VALIDATION CHECK BEFORE RESPONDING:**
+✓ Does your response start with "## Vision"?
+✓ Do you have all 7 required sections with clear headings?
+✓ Are perspective names shown explicitly (THINKER, RELATIONAL, etc.)?
+✓ Is this a DEVELOPMENT PLAN, not a general analysis?
+
+**REMEMBER:** 
+- Identify root developmental edges, not just surface skills
+- Many "challenges" are legitimate responses to real constraints (honor first)
+- This is a DEVELOPMENT PLAN, not a general analysis - it must be actionable and structured
+- Complete Step 6: Synthesis within the relevant sections
 `,
 
     SKILLS: `
-Provide perspective skill development guidance (varies by capacity).
-Include:
-- Identification of underdeveloped perspective(s)
-- Why this perspective matters for their situation
-- Observable behaviors when well-developed
-- Specific practices to develop the perspective
-- Integration strategies with existing strengths
+**METHOD: SKILLS DEVELOPMENT** 🎓
 
-Use STRUCTURED output style.
-Focus on actionable, skill-based development.
+**MANDATORY FORMAT:**
+- Length: Varies by capacity
+- Focus on actionable, skill-based development
+- Based on "The Science of Leadership" principles
 
-REMEMBER: Why is this perspective underdeveloped? What root pattern explains it?
-Sometimes "underdevelopment" is appropriate given their actual context (check legitimacy first).
-Complete Step 6: Synthesis - how does this perspective fit their overall development?
+**Output Style:** STRUCTURED (required - show perspective names explicitly as headers)
+
+**REQUIRED STRUCTURE:**
+1. **Underdeveloped perspective(s) identified** - which perspective(s) need development?
+2. **Why it matters** - why does this perspective matter for their specific situation?
+3. **Observable behaviors** - what will they do/see when this perspective is well-developed?
+4. **Specific practices** - concrete, actionable practices to develop the perspective
+5. **Integration strategies** - how to integrate with existing strengths
+6. **Root pattern** - why is this perspective underdeveloped? (legitimacy check first)
+
+**VALIDATION:** Is underdeveloped perspective identified? Are practices concrete and actionable? Is integration with strengths shown? Did you check legitimacy first?
+
+**REMEMBER:**
+- Focus on skill development, not just analysis
+- Provide concrete, actionable practices
+- Show how to integrate with existing strengths
+- Reference "The Science of Leadership" principles where relevant
+- Why is this perspective underdeveloped? What root pattern explains it?
+- Sometimes "underdevelopment" is appropriate given their actual context (check legitimacy first)
+- Complete Step 6: Synthesis - how does this perspective fit their overall development?
 `,
 
     'NOTES SUMMARY': `
-Organize provided content through relevant perspectives (600-1000 words).
-Process:
-1. Identify 3-5 most relevant perspectives from the content
-2. Structure summary showing what each perspective reveals
-3. Maintain original information while adding multi-perspective insight
-4. Brief integration
+**METHOD: NOTES SUMMARY** 📝
 
-Match user's role context - use STRUCTURED for professionals, NATURAL for personal.
+**MANDATORY FORMAT:**
+- Length: 600-1000 words
+- Organize provided content through relevant perspectives
+- Maintain original information while adding perspective insights
 
-REMEMBER: What perspectives are notably absent from the content? Why?
-Content likely reflects legitimate prioritization, not just bias (honor first).
-Complete Step 6: Synthesis - what pattern does this content reveal?
+**Output Style:** STRUCTURED (recommended - show perspective names explicitly) OR NATURAL for personal context
+
+**REQUIRED STRUCTURE:**
+1. **Perspectives identified** - identify 3-5 most relevant perspectives from the content
+2. **Perspective-based organization** - structure summary showing what each perspective reveals
+3. **Original + insight** - maintain original information while adding multi-perspective insight
+4. **Absent perspectives** - what perspectives are notably absent? Why? (legitimacy check)
+5. **Brief integration** - what pattern does this content reveal?
+
+**VALIDATION:** Are perspectives identified from content? Is original information preserved? Are absent perspectives noted? Is integration included?
+
+**REMEMBER:**
+- Match user's role context - use STRUCTURED for professionals, NATURAL for personal
+- What perspectives are notably absent from the content? Why?
+- Content likely reflects legitimate prioritization, not just bias (honor first)
+- Complete Step 6: Synthesis - what pattern does this content reveal?
 `,
   };
 
@@ -1005,6 +1221,81 @@ export function buildMPAIPrompt(method, userQuery, outputStyle = 'natural', role
     personal: '\nROLE CONTEXT: User is in a personal/emotional context. Use accessible language. Prioritize compassion and clarity. Avoid jargon.',
   };
 
+  // Special reinforcement for methods that require specific structures
+  let methodReinforcement = '';
+  
+  if (method === 'COACHING_PLAN' || method === 'COACHING PLAN') {
+    methodReinforcement = `
+🚨🚨🚨 **CRITICAL ENFORCEMENT: COACHING PLAN METHOD** 🚨🚨🚨
+
+**YOUR RESPONSE MUST FOLLOW THIS EXACT STRUCTURE - NO EXCEPTIONS:**
+
+You MUST format your entire response with these section headings in this exact order:
+
+## Vision
+[REQUIRED - Start here] Describe what success/developed capacity looks like
+
+## High Quality Motivators
+[REQUIRED] Compelling reasons why this matters
+
+## Current State Assessment
+[REQUIRED] Which perspectives are strong/weak? What's working and what needs development?
+
+## Strengths
+[REQUIRED] Assets to leverage
+
+## Challenges
+[REQUIRED] Obstacles to address (honor legitimate constraints first)
+
+## Strategies
+[REQUIRED] Approaches to try
+
+## Concrete Actions
+[REQUIRED] Specific next steps
+
+**DO NOT:**
+- Write a conversational or narrative response
+- Skip any of these sections
+- Combine sections without clear headings
+- Give general advice instead of a structured plan
+
+**YOU MUST:**
+- Start your response with "## Vision"
+- Include ALL 7 sections with clear ## headings
+- Use STRUCTURED format with perspective names (THINKER, RELATIONAL, etc.) shown explicitly
+- Make this a DEVELOPMENT PLAN, not general analysis
+
+If you don't follow this structure exactly, you are not following the COACHING PLAN method.
+`;
+  } else if (method === 'INNER_PEACE_SYNTHESIS' || method === 'INNER PEACE') {
+    methodReinforcement = `
+**⚠️ CRITICAL METHOD REQUIREMENT: INNER PEACE SYNTHESIS**
+This MUST address internal conflict. You MUST include: competing inner voices, honoring both sides, VISION REQUIRED for internal harmony.
+Use STRUCTURED output style. Tone must be especially gentle - no pathologizing.
+`;
+  } else if (method === 'SYNTHESIS' || method === 'SIMPLE_SYNTHESIS' || method === 'SYNTHESIS_ALL') {
+    methodReinforcement = `
+**⚠️ CRITICAL METHOD REQUIREMENT: SYNTHESIS**
+This MUST be integrative analysis, not just summary. VISION REQUIRED for optimal integration.
+Use STRUCTURED output style with perspective names shown explicitly.
+Show how perspectives integrate, not just coexist.
+`;
+  } else if (method === 'HUMAN_HARM_CHECK' || method === 'HUMAN HARM CHECK') {
+    methodReinforcement = `
+**⚠️ CRITICAL METHOD REQUIREMENT: HUMAN HARM CHECK**
+This is a RISK ASSESSMENT. You MUST assess through REGULATOR, RELATIONAL, AUTONOMY, and MEANING-MAKER perspectives.
+VISION REQUIRED for safe, ethical implementation. Flag red flags explicitly - don't soften warnings.
+Use STRUCTURED output style for clarity.
+`;
+  } else if (method === 'SKILLS') {
+    methodReinforcement = `
+**⚠️ CRITICAL METHOD REQUIREMENT: SKILLS DEVELOPMENT**
+This MUST focus on actionable skill development, not just analysis.
+You MUST include: underdeveloped perspective identification, observable behaviors when developed, specific practices, integration strategies.
+Use STRUCTURED output style.
+`;
+  }
+
   return `${mpaiSystemInstructions}
 
 ---
@@ -1016,6 +1307,7 @@ export function buildMPAIPrompt(method, userQuery, outputStyle = 'natural', role
 **User Query:** "${userQuery}"
 
 ${methodPrompt}
+${methodReinforcement}
 
 ${styleGuidance[outputStyle] || styleGuidance.natural}
 
@@ -1031,5 +1323,50 @@ ${roleContextGuidance[roleContext] || roleContextGuidance.personal}
 - Use tentative, collaborative language throughout
 - Check the Pre-Response Quality Checklist before finalizing your response
 - Remember the formula: "[This makes sense because X]. And [here's the pattern beneath it]."
+
+**METHOD-SPECIFIC FORMAT ENFORCEMENT:**
+${method === 'COACHING_PLAN' || method === 'COACHING PLAN' ? `
+⚠️ COACHING PLAN METHOD DETECTED ⚠️
+Before responding, verify: Does your response start with "## Vision" and include all 7 required sections (Vision, High Quality Motivators, Current State Assessment, Strengths, Challenges, Strategies, Concrete Actions)?
+If not, you are NOT following the COACHING PLAN method correctly. Restructure your response now.` : ''}
+${method === 'SYNTHESIS' || method === 'SIMPLE_SYNTHESIS' || method === 'SYNTHESIS_ALL' ? `
+⚠️ SYNTHESIS METHOD DETECTED ⚠️
+Your response must be INTEGRATIVE ANALYSIS (not summary) with VISION REQUIRED. Use STRUCTURED format with perspective names shown explicitly as headers.` : ''}
+${method === 'INNER_PEACE_SYNTHESIS' || method === 'INNER PEACE' ? `
+⚠️ INNER PEACE METHOD DETECTED ⚠️
+You MUST address internal conflict with competing perspectives explicitly named, honor both sides as legitimate, include VISION REQUIRED for internal harmony. Use STRUCTURED format. Tone must be gentle - no pathologizing.` : ''}
+${method === 'HUMAN_HARM_CHECK' || method === 'HUMAN HARM CHECK' ? `
+⚠️ HUMAN HARM CHECK METHOD DETECTED ⚠️
+This is a RISK ASSESSMENT. You MUST assess through REGULATOR, RELATIONAL, AUTONOMY, and MEANING-MAKER perspectives. VISION REQUIRED. Flag red flags explicitly - don't soften warnings. Use STRUCTURED format.` : ''}
+${method === 'SKILLS' ? `
+⚠️ SKILLS METHOD DETECTED ⚠️
+This is SKILL DEVELOPMENT, not general analysis. You MUST include: underdeveloped perspective identification, observable behaviors, specific practices, integration strategies. Use STRUCTURED format with perspective names shown explicitly.` : ''}
+${method === 'CONFLICT_RESOLUTION' || method === 'CONFLICT' ? `
+⚠️ CONFLICT RESOLUTION METHOD DETECTED ⚠️
+You MUST show BOTH sides as legitimate, name the tension clearly, and provide integration path (not choosing one side). Structure helps with conflicts.` : ''}
+${method === 'STAKEHOLDER_ANALYSIS' || method === 'STAKEHOLDER' ? `
+⚠️ STAKEHOLDER METHOD DETECTED ⚠️
+You MUST map stakeholders to their operating perspectives, identify underlying needs (not just positions), show alignment and conflict points, provide integration path. STRUCTURED format recommended.` : ''}
+${method === 'PATTERN_RECOGNITION' || method === 'PATTERN' ? `
+⚠️ PATTERN RECOGNITION METHOD DETECTED ⚠️
+CRITICAL: Check legitimacy FIRST - is this actually appropriate responses? Then identify avoided perspectives. Name core tension being avoided. STRUCTURED format recommended.` : ''}
+${method === 'SCENARIO_TEST' || method === 'SCENARIO TEST' ? `
+⚠️ SCENARIO TEST METHOD DETECTED ⚠️
+You MUST test each option through 4-5 perspectives, show tradeoffs clearly, assess integration quality. Use STRUCTURED format for comparison clarity.` : ''}
+${method === 'TIME_HORIZON' || method === 'TIME HORIZON' ? `
+⚠️ TIME HORIZON METHOD DETECTED ⚠️
+You MUST identify NOW vs LATER perspectives, show temporal tension, check legitimacy (real constraints first), provide integration strategy.` : ''}
+${method === 'QUICK' ? `
+⚠️ QUICK METHOD DETECTED ⚠️
+Response must be 200-400 words, focus on 1-2 core tensions, front-load key insights, provide immediate clarity. Be concise.` : ''}
+${method === 'STANDARD' || method === 'FULL' ? `
+⚠️ STANDARD METHOD DETECTED ⚠️
+Response must be 600-800 words, include 3-4 perspectives (60%+ threshold), show how perspectives interplay, provide synthesis.` : ''}
+${method === 'NOTES_SUMMARY' || method === 'NOTES SUMMARY' ? `
+⚠️ NOTES SUMMARY METHOD DETECTED ⚠️
+You MUST organize content through 3-5 relevant perspectives, maintain original information, note absent perspectives, provide brief integration. STRUCTURED recommended.` : ''}
+
+**CONTEXT AWARENESS:**
+If the user's query is a clarifying question (e.g., "can you explain that?" "what do you mean?" "tell me more about..."), you may adapt the format appropriately while still honoring the method's core principles. However, if they're asking a new substantive question, you MUST follow the method structure above.
 `;
 }
