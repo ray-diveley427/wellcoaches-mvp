@@ -47,6 +47,61 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Add additional endpoints as needed (delete, etc.)
+// Delete a session (deletes all analyses in that session)
+router.delete('/:userId/:sessionId', async (req, res) => {
+  const { userId, sessionId } = req.params;
+  
+  try {
+    const pk = userId.startsWith("USER#") ? userId : `USER#${userId}`;
+    const sessionPrefix = `SESSION#${sessionId}`;
+    
+    // Query all items for this session
+    const queryResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": pk,
+          ":sk": sessionPrefix,
+        },
+      })
+    );
+    
+    if (!queryResult.Items || queryResult.Items.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Session not found" 
+      });
+    }
+    
+    // Delete all items in this session
+    const deletePromises = queryResult.Items.map(item => 
+      docClient.send(
+        new DeleteCommand({
+          TableName: TABLE_NAME,
+          Key: {
+            PK: item.PK,
+            SK: item.SK,
+          },
+        })
+      )
+    );
+    
+    await Promise.all(deletePromises);
+    
+    console.log(`✅ Deleted ${queryResult.Items.length} items for session ${sessionId}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Deleted ${queryResult.Items.length} exchange(s)` 
+    });
+  } catch (err) {
+    console.error("❌ Error deleting session:", err);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to delete session" 
+    });
+  }
+});
 
 export default router;

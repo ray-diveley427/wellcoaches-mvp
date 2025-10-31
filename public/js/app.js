@@ -550,11 +550,14 @@ async function deleteSession(sessionId, event) {
     }
     
     // Deleting session
-    
     const res = await fetch(`/api/history/${userId}/${sessionId}`, { method: 'DELETE' });
-    const data = await res.json();
     
-    // Delete response received
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Network error' }));
+      throw new Error(errorData.error || `HTTP ${res.status}`);
+    }
+    
+    const data = await res.json();
     
     if (data.success) {
       showToast('Conversation deleted', 'success');
@@ -564,7 +567,7 @@ async function deleteSession(sessionId, event) {
         clearChat();
       }
     } else {
-      showToast('Failed to delete conversation', 'error');
+      showToast(data.error || 'Failed to delete conversation', 'error');
     }
   } catch (err) {
     console.error('Delete error:', err);
