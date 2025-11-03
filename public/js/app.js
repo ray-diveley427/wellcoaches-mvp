@@ -71,7 +71,21 @@ function getCurrentUserId() {
 // =====================================================================
 // MARKDOWN TO HTML CONVERTER
 // =====================================================================
+// Using marked library for proper markdown parsing
+// CDN loaded in index.html: https://cdn.jsdelivr.net/npm/marked/marked.min.js
 function convertMarkdownToHTML(markdown) {
+  if (typeof marked !== 'undefined') {
+    // Configure marked for better formatting
+    marked.setOptions({
+      breaks: true,        // Convert \n to <br>
+      gfm: true,          // GitHub Flavored Markdown
+      headerIds: false,    // Don't add IDs to headers
+      mangle: false       // Don't escape autolinked email addresses
+    });
+    return marked.parse(markdown);
+  }
+
+  // Fallback to basic regex if marked isn't loaded
   let html = markdown;
   html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
