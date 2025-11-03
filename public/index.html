@@ -150,8 +150,8 @@
   
                 
 
-                <!-- Account Dropdown -->
-                <div class="dropdown account-dropdown" id="accountDropdown">
+                <!-- Account Dropdown (only shown when logged in) -->
+                <div class="dropdown account-dropdown hidden" id="accountDropdown">
                     <div class="account-icon-button">
                     <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
@@ -159,20 +159,8 @@
                     </div>
                     <div class="dropdown-menu">
                     <div class="dropdown-section">
-                
-                        <!-- Login -->
-                        <div class="dropdown-item" id="loginBtn">
-                        <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M3 10a1 1 0 011-1h9a1 1 0 110 2H4a1 1 0 01-1-1zm12-5a1 1 0 10-2 0v1h2V5zm-2 10v1a1 1 0 102 0v-1h-2z"/>
-                        </svg>
-                        <div class="dropdown-item-content">
-                            <div class="dropdown-item-title">Login</div>
-                            <div class="dropdown-item-desc">Sign in to load your history</div>
-                        </div>
-                        </div>
-                
                         <!-- Logout -->
-                        <div class="dropdown-item hidden" id="logoutBtn">
+                        <div class="dropdown-item" id="logoutBtn">
                         <svg class="dropdown-item-icon" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M17 10a1 1 0 00-1-1H7a1 1 0 100 2h9a1 1 0 001-1z"/>
                         </svg>
@@ -181,7 +169,6 @@
                             <div class="dropdown-item-desc">Sign out of your account</div>
                         </div>
                         </div>
-                
                     </div>
                     </div>
                 </div>
@@ -571,20 +558,22 @@
     <script type="module">
         import { signIn, signOut, isAuthenticated, getUser } from "./js/auth.js";
       
-        const loginBtn = document.getElementById("loginBtn");
+        const accountDropdown = document.getElementById("accountDropdown");
         const logoutBtn = document.getElementById("logoutBtn");
+        const splashPage = document.getElementById("splashPage");
+        const splashLoginBtn = document.getElementById("splashLoginBtn");
       
         // Check if user is logged in on page load
         async function updateAuthUI() {
           const loggedIn = await isAuthenticated();
-          const splashPage = document.getElementById("splashPage");
-          const splashLoginBtn = document.getElementById("splashLoginBtn");
           
           if (loggedIn) {
             const user = await getUser();
             console.log("User is logged in:", user.profile?.email || user.profile?.sub);
-            loginBtn.classList.add("hidden");
-            logoutBtn.classList.remove("hidden");
+            // Show account dropdown when logged in
+            if (accountDropdown) {
+              accountDropdown.classList.remove("hidden");
+            }
             // Hide splash page when logged in
             if (splashPage) {
               splashPage.classList.add("hidden");
@@ -592,8 +581,10 @@
             document.body.classList.remove("showing-splash");
           } else {
             console.log("User is not logged in");
-            logoutBtn.classList.add("hidden");
-            loginBtn.classList.remove("hidden");
+            // Hide account dropdown when not logged in (splash page handles login)
+            if (accountDropdown) {
+              accountDropdown.classList.add("hidden");
+            }
             // Show splash page when not logged in
             if (splashPage) {
               splashPage.classList.remove("hidden");
@@ -607,22 +598,18 @@
               await signIn();
             });
           }
+          
+          // Setup logout button
+          if (logoutBtn) {
+            logoutBtn.addEventListener("click", async () => {
+              console.log("Logout button clicked");
+              await signOut();
+            });
+          }
         }
         
         // Update UI on page load
         updateAuthUI();
-      
-        // Login button click
-        loginBtn.addEventListener("click", async () => {
-          console.log("Login button clicked");
-          await signIn();
-        });
-      
-        // Logout button click
-        logoutBtn.addEventListener("click", async () => {
-          console.log("Logout button clicked");
-          await signOut();
-        });
       </script>
 
 </body>
