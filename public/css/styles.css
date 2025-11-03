@@ -535,6 +535,8 @@ body {
 .history-pin .pin-emoji {
     font-size: 18px;
     transition: all 0.2s;
+    /* Default: black/gray appearance */
+    filter: grayscale(100%) brightness(0.3);
 }
 
 .history-close:hover {
@@ -546,12 +548,15 @@ body {
     background: var(--bg-secondary);
 }
 
-.history-pin:hover .pin-emoji {
+.history-pin:hover:not(.active) .pin-emoji {
     transform: scale(1.1);
+    filter: grayscale(100%) brightness(0.4);
 }
 
 .history-pin.active .pin-emoji {
-    filter: hue-rotate(135deg) saturate(1.8) brightness(1.1);
+    /* Pinned state: teal color and rotated to look like it's pushed in */
+    filter: grayscale(0%) hue-rotate(135deg) saturate(1.8) brightness(1.1);
+    transform: rotate(-15deg) translateY(2px);
 }
 
 .history-search {
