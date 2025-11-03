@@ -145,6 +145,8 @@ function selectMethod(methodKey) {
   closeDropdowns();
   const method = methods.find(m => m.key === methodKey);
   if (method) {
+    // Clear the input field when selecting a method (in case Pro Tool text was there)
+    elements.chatInput.value = '';
     elements.chatInput.placeholder = `Describe your situation for ${method.name} analysis...`;
     showToast(`Method selected: ${method.name}`);
   }

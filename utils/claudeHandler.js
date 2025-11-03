@@ -33,10 +33,44 @@ export async function callMPAI(
 
     console.log(`🎯 Method: ${method} | Style: ${outputStyle} | Context: ${roleContext || 'none'}${MORAL_MINDFULNESS_ENABLED ? ' | Moral Mindfulness: ON' : ''}`);
     
-    // Log critical method enforcement
-    if (method === 'COACHING_PLAN' || method === 'COACHING PLAN') {
-      console.log(`🚨 COACHING PLAN METHOD DETECTED - ENFORCING STRUCTURED DEVELOPMENT PLAN FORMAT`);
-      console.log(`   Response MUST start with "## Vision" and include all 7 required sections`);
+    // Normalize method name (handle both underscore and space variants)
+    // This matches the normalization done in mpaiInstructions.js
+    const normalizeMethod = (m) => {
+      if (m === 'COACHING_PLAN' || m === 'COACHING PLAN') return 'COACHING PLAN';
+      if (m === 'INNER_PEACE_SYNTHESIS' || m === 'INNER PEACE') return 'INNER PEACE';
+      if (m === 'HUMAN_HARM_CHECK' || m === 'HUMAN HARM CHECK') return 'HUMAN HARM CHECK';
+      if (m === 'SIMPLE_SYNTHESIS' || m === 'SYNTHESIS_ALL' || m === 'SYNTHESIS') return 'SYNTHESIS';
+      if (m === 'CONFLICT_RESOLUTION' || m === 'CONFLICT') return 'CONFLICT';
+      if (m === 'STAKEHOLDER_ANALYSIS' || m === 'STAKEHOLDER') return 'STAKEHOLDER';
+      if (m === 'PATTERN_RECOGNITION' || m === 'PATTERN') return 'PATTERN';
+      if (m === 'SCENARIO_TEST' || m === 'SCENARIO TEST') return 'SCENARIO TEST';
+      if (m === 'TIME_HORIZON' || m === 'TIME HORIZON') return 'TIME HORIZON';
+      if (m === 'NOTES_SUMMARY' || m === 'NOTES SUMMARY') return 'NOTES SUMMARY';
+      if (m === 'FULL') return 'STANDARD';
+      return m;
+    };
+    
+    const normalizedMethod = normalizeMethod(method);
+    
+    // Log critical method enforcement for all methods (using normalized keys only)
+    const methodLogs = {
+      'COACHING PLAN': `🚨 COACHING PLAN METHOD DETECTED - ENFORCING STRUCTURED DEVELOPMENT PLAN FORMAT\n   Response MUST start with "## Vision" and include all 7 required sections`,
+      'SYNTHESIS': `🔗 SYNTHESIS METHOD DETECTED - ENFORCING INTEGRATIVE ANALYSIS WITH VISION\n   Response MUST be structured with perspective names and include VISION REQUIRED`,
+      'INNER PEACE': `🕊️ INNER PEACE METHOD DETECTED - ENFORCING INTERNAL CONFLICT RESOLUTION\n   Response MUST honor both sides, include VISION REQUIRED, use STRUCTURED format`,
+      'HUMAN HARM CHECK': `⚠️ HUMAN HARM CHECK METHOD DETECTED - ENFORCING RISK ASSESSMENT\n   Response MUST assess through 4 perspectives (REGULATOR, RELATIONAL, AUTONOMY, MEANING-MAKER), include VISION REQUIRED`,
+      'SKILLS': `🎓 SKILLS METHOD DETECTED - ENFORCING SKILL DEVELOPMENT\n   Response MUST include: underdeveloped perspective, observable behaviors, specific practices, integration strategies`,
+      'CONFLICT': `⚖️ CONFLICT METHOD DETECTED - ENFORCING CONFLICT RESOLUTION\n   Response MUST show BOTH sides as legitimate, name tension clearly, provide integration path`,
+      'STAKEHOLDER': `👥 STAKEHOLDER METHOD DETECTED - ENFORCING STAKEHOLDER ANALYSIS\n   Response MUST map stakeholders to perspectives, identify needs (not positions), show alignment/conflict`,
+      'PATTERN': `🔁 PATTERN METHOD DETECTED - ENFORCING PATTERN RECOGNITION\n   Response MUST check legitimacy FIRST, identify avoided perspectives, name core tension`,
+      'SCENARIO TEST': `🎯 SCENARIO TEST METHOD DETECTED - ENFORCING OPTION COMPARISON\n   Response MUST test each option through 4-5 perspectives, show tradeoffs, assess integration quality`,
+      'TIME HORIZON': `⏰ TIME HORIZON METHOD DETECTED - ENFORCING TEMPORAL ANALYSIS\n   Response MUST identify NOW vs LATER perspectives, show temporal tension, provide integration strategy`,
+      'QUICK': `⚡ QUICK METHOD DETECTED - ENFORCING CONCISE ANALYSIS\n   Response MUST be 200-400 words, focus on 1-2 core tensions, front-load key insights`,
+      'STANDARD': `📊 STANDARD METHOD DETECTED - ENFORCING COMPREHENSIVE ANALYSIS\n   Response MUST be 600-800 words, include 3-4 perspectives, show interplay, provide synthesis`,
+      'NOTES SUMMARY': `📝 NOTES SUMMARY METHOD DETECTED - ENFORCING CONTENT ORGANIZATION\n   Response MUST organize through 3-5 perspectives, maintain original info, note absent perspectives`
+    };
+    
+    if (methodLogs[normalizedMethod]) {
+      console.log(methodLogs[normalizedMethod]);
     }
 
     // Build messages array with history + current query
