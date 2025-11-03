@@ -539,6 +539,11 @@ function renderHistory(sessions) {
         loadSession(sessionId);
       }
     });
+
+    // Re-apply active state if this card matches current session
+    if (currentSessionId && card.dataset.sessionId === currentSessionId) {
+      card.classList.add('active');
+    }
   });
 }
 
