@@ -507,26 +507,39 @@ function renderHistory(sessions) {
     const exchangeText = `${exchangeCount} exchange${exchangeCount !== 1 ? 's' : ''}`;
     
     html += `
-      <div class="history-item" data-session-id="${session.session_id}">
+      <div class="history-item" data-session-id="${session.session_id}" style="cursor: pointer;">
         <div class="history-item-header">
           <div class="history-item-title">${escapeHtml(title)}</div>
         </div>
-        
+
         <div class="history-item-preview">${escapeHtml(preview)}</div>
-        
+
         <div class="history-item-meta">
           <span>${exchangeText}</span> • <span>${timeAgo}</span>
         </div>
-        
+
         <div class="history-item-actions">
-          <button class="btn-small" onclick="window.loadSession('${session.session_id}')">Resume</button>
-          <button class="btn-small" onclick="window.shareSession('${session.session_id}', event)">Share</button>
-          <button class="btn-small" onclick="window.deleteSession('${session.session_id}', event)">Delete</button>
+          <button class="btn-small" onclick="event.stopPropagation(); window.shareSession('${session.session_id}', event)">Share</button>
+          <button class="btn-small" onclick="event.stopPropagation(); window.deleteSession('${session.session_id}', event)">Delete</button>
         </div>
       </div>`;
   });
-  
+
   elements.historyContent.innerHTML = html;
+
+  // Add click event listeners to make cards clickable
+  document.querySelectorAll('.history-item').forEach(card => {
+    card.addEventListener('click', (e) => {
+      // Don't trigger if clicking on a button
+      if (e.target.closest('.history-item-actions')) {
+        return;
+      }
+      const sessionId = card.dataset.sessionId;
+      if (sessionId) {
+        loadSession(sessionId);
+      }
+    });
+  });
 }
 
 // Store sessionId to delete when user confirms

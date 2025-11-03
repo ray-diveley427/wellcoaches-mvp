@@ -900,6 +900,7 @@ body.showing-splash .history-sidebar {
     border-color: var(--teal);
     box-shadow: 0 2px 8px rgba(20, 184, 166, 0.15);
     transform: translateY(-1px);
+    background: var(--bg-secondary);
 }
 
 .history-item-title {
@@ -1439,13 +1440,10 @@ body.showing-splash .history-sidebar {
 .history-item-actions button.btn-small.btn-delete:disabled { background: #ef4444 !important; color: #ffffff !important; opacity: 1 !important; }
   
 /* Fallback: color history buttons by order if classes/attributes are missing */
-.history-item-actions .btn-small:nth-child(1) { background: #14b8a6; color: #ffffff; }
-.history-item-actions .btn-small:nth-child(1):hover { background: #0d9488; }
+.history-item-actions .btn-small:nth-child(1) { background: #fbbf24; color: #1f2937; }
+.history-item-actions .btn-small:nth-child(1):hover { background: #f59e0b; }
 
-.history-item-actions .btn-small:nth-child(2) { background: #fbbf24; color: #1f2937; }
-.history-item-actions .btn-small:nth-child(2):hover { background: #f59e0b; }
-
-.history-item-actions .btn-small:nth-child(3) { background: #ef4444; color: #ffffff; }
-.history-item-actions .btn-small:nth-child(3):hover { background: #dc2626; }
+.history-item-actions .btn-small:nth-child(2) { background: #ef4444; color: #ffffff; }
+.history-item-actions .btn-small:nth-child(2):hover { background: #dc2626; }
   
   
