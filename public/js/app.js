@@ -1026,9 +1026,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 const faqMappings = {
   "What is Multi-Perspective AI?": "overview",
   "The Nine Perspectives": "dimensions",
-  "Who is this for?": "leadership",
-  "Which method should I use?": "map",
-  "Privacy & data security": "science"
+  "Who is this for?": "applications",
+  "Which method should I use?": "methods",
+  "Privacy & data security": "privacy"
 };
 
 // =====================================================================

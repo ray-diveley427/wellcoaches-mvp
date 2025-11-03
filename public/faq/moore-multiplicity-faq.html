@@ -156,20 +156,41 @@
     </div>
   </section>
 
-  <!-- LEADERSHIP -->
-  <section id="leadership">
-    <h2>Leadership Applications</h2>
-    <p>Each dimension also reflects a leadership capacity — how we express influence, purpose, and presence.</p>
+  <!-- APPLICATIONS -->
+  <section id="applications">
+    <h2>Who Is This For?</h2>
+    <p>Multi-Perspective AI is designed for anyone seeking deeper insight and balanced decision-making across multiple contexts:</p>
+
+    <h3>Personal Use</h3>
     <ul>
-      <li><strong>Autonomy (Authentic)</strong> — Leads from integrity and personal conviction.</li>
-      <li><strong>Relational (Relational)</strong> — Builds trust through empathy and connection.</li>
-      <li><strong>Regulator (Servant)</strong> — Creates stability, order, and safety for others.</li>
-      <li><strong>Adventurer (Agile)</strong> — Adapts quickly, leads through experimentation.</li>
-      <li><strong>Thinker (Conscious)</strong> — Clarifies complexity, enables collective sense-making.</li>
-      <li><strong>Achiever (Shared)</strong> — Motivates through goals, communication, and results.</li>
-      <li><strong>Meaning-Maker (Compassion)</strong> — Inspires purpose and reflection.</li>
-      <li><strong>Creative (Transformation)</strong> — Catalyzes innovation and change.</li>
-      <li><strong>Confidence (Positive)</strong> — Builds strength and optimism in teams.</li>
+      <li><strong>Self-reflection & growth</strong> — Understand your patterns, values, and motivations</li>
+      <li><strong>Decision-making</strong> — See situations from multiple angles before acting</li>
+      <li><strong>Life transitions</strong> — Navigate change with clarity and balance</li>
+      <li><strong>Relationships</strong> — Understand yourself and others more deeply</li>
+    </ul>
+
+    <h3>Professional Coaches</h3>
+    <ul>
+      <li><strong>Client insights</strong> — Help clients see blind spots and new possibilities</li>
+      <li><strong>ICF & NBHWC alignment</strong> — Maps to core coaching competencies</li>
+      <li><strong>Session preparation</strong> — Organize notes and identify key patterns</li>
+      <li><strong>Coaching plans</strong> — Transform analysis into actionable development</li>
+    </ul>
+
+    <h3>Healthcare Professionals</h3>
+    <ul>
+      <li><strong>Patient-centered care</strong> — Understand whole-person health factors</li>
+      <li><strong>Behavior change</strong> — Address motivations beyond clinical symptoms</li>
+      <li><strong>Team collaboration</strong> — Navigate stakeholder perspectives</li>
+      <li><strong>Harm prevention</strong> — Comprehensive risk assessment</li>
+    </ul>
+
+    <h3>Leaders & Organizations</h3>
+    <ul>
+      <li><strong>Strategic decisions</strong> — Balance short-term and long-term impacts</li>
+      <li><strong>Team dynamics</strong> — Understand and resolve conflicts</li>
+      <li><strong>Change management</strong> — Address multiple stakeholder needs</li>
+      <li><strong>Leadership development</strong> — Develop all nine leadership capacities</li>
     </ul>
   </section>
 
@@ -192,16 +213,82 @@
     </div>
   </section>
 
-  <!-- MAP -->
-  <section id="map">
-    <h2>Complete Map</h2>
-    <p>
-      The Moore Multiplicity Model aligns traits, values, cognitive processes, and motivations across nine perspectives, forming a map of whole-person development and integrative leadership.
-    </p>
-    <p>
-      Each perspective contributes distinct insight — logic, empathy, creativity, discipline, purpose — but wholeness comes from <strong>balance</strong>.  
-      The aim is not perfection in one dimension but integration of all nine.
-    </p>
+  <!-- METHODS -->
+  <section id="methods">
+    <h2>Which Method Should I Use?</h2>
+    <p>Choose your method based on your available time, complexity of the situation, and depth of analysis needed:</p>
+
+    <h3>Beginner Methods (Quick & Accessible)</h3>
+    <ul>
+      <li><strong>QUICK</strong> — Fast insights for daily decisions (200-400 words, 2-5 min)</li>
+      <li><strong>CONFLICT</strong> — Resolve gridlock between two approaches</li>
+      <li><strong>STAKEHOLDER</strong> — Understand multiple people's perspectives</li>
+      <li><strong>NOTES SUMMARY</strong> — Organize documents through relevant perspectives</li>
+    </ul>
+
+    <h3>Intermediate Methods (More Thorough)</h3>
+    <ul>
+      <li><strong>PATTERN</strong> — Identify root causes of recurring problems</li>
+      <li><strong>SCENARIO TEST</strong> — Compare 2-3 options thoroughly</li>
+      <li><strong>TIME HORIZON</strong> — Balance immediate vs. long-term impact</li>
+    </ul>
+
+    <h3>Advanced Methods (Comprehensive)</h3>
+    <ul>
+      <li><strong>FULL</strong> — Complete 9-perspective analysis (800-1200 words)</li>
+      <li><strong>SYNTHESIS</strong> — Integrate multiple analyses or levels</li>
+      <li><strong>SYNTHESIS (ALL)</strong> — Deep integration across all levels</li>
+      <li><strong>INNER PEACE SYNTHESIS</strong> — Resolve internal conflicts</li>
+      <li><strong>COACHING PLAN</strong> — Transform analysis into action steps</li>
+      <li><strong>SKILLS</strong> — Develop perspective application skills</li>
+      <li><strong>HUMAN HARM CHECK</strong> — Comprehensive risk assessment</li>
+    </ul>
+
+    <div class="highlight">
+      <strong>Tip:</strong> If you're unsure, start with <strong>QUICK</strong> or <strong>CONFLICT</strong>. The AI will auto-detect which perspectives are most relevant to your situation.
+    </div>
+  </section>
+
+  <!-- PRIVACY -->
+  <section id="privacy">
+    <h2>Privacy & Data Security</h2>
+    <p>Your privacy and data security are our top priorities:</p>
+
+    <h3>Data Storage & Retention</h3>
+    <ul>
+      <li><strong>Encrypted storage</strong> — All conversations stored in AWS DynamoDB with encryption at rest</li>
+      <li><strong>30-day auto-delete</strong> — Conversation history automatically expires after 30 days</li>
+      <li><strong>User isolation</strong> — Your data is separated by unique user ID; no cross-user access</li>
+      <li><strong>Manual deletion</strong> — Delete any conversation at any time via the Delete button</li>
+    </ul>
+
+    <h3>Authentication & Access</h3>
+    <ul>
+      <li><strong>AWS Cognito</strong> — Industry-standard authentication with OAuth 2.0</li>
+      <li><strong>Secure tokens</strong> — JWT tokens with expiration for session management</li>
+      <li><strong>No password storage</strong> — Authentication handled entirely by AWS</li>
+      <li><strong>HTTPS only</strong> — All communication encrypted in transit</li>
+    </ul>
+
+    <h3>AI Processing</h3>
+    <ul>
+      <li><strong>Anthropic Claude</strong> — Powered by Claude API with enterprise security</li>
+      <li><strong>No AI training</strong> — Your conversations are NOT used to train AI models</li>
+      <li><strong>Temporary processing</strong> — Data sent to Claude only during active analysis</li>
+      <li><strong>Context isolation</strong> — Each session is independent; no cross-session learning</li>
+    </ul>
+
+    <h3>Data Sharing</h3>
+    <ul>
+      <li><strong>No third-party sales</strong> — We never sell or share your conversation data</li>
+      <li><strong>Export control</strong> — Only you can export via the Share button</li>
+      <li><strong>Admin access</strong> — Limited to aggregate usage metrics only (cost tracking, method usage)</li>
+      <li><strong>HIPAA consideration</strong> — While secure, this is not a HIPAA-compliant tool; avoid PHI/PII</li>
+    </ul>
+
+    <div class="highlight">
+      <strong>Best Practice:</strong> Avoid entering personally identifiable information (names, addresses, SSN, medical record numbers) or protected health information. Use general descriptions instead.
+    </div>
   </section>
 
   <div class="footer">
