@@ -903,6 +903,16 @@ body.showing-splash .history-sidebar {
     background: var(--bg-secondary);
 }
 
+.history-item.active {
+    border-color: var(--teal);
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.08) 0%, rgba(20, 184, 166, 0.04) 100%);
+    box-shadow: 0 2px 8px rgba(20, 184, 166, 0.2);
+}
+
+.history-item.active .history-item-title {
+    color: var(--teal-dark);
+}
+
 .history-item-title {
     font-size: 14px;
     font-weight: 600;

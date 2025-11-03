@@ -730,7 +730,16 @@ async function loadSession(sessionId) {
 
   elements.chatInput.placeholder = 'Continue your conversation...';
   elements.chatInput.focus();
-  
+
+  // Highlight the active card in history
+  document.querySelectorAll('.history-item').forEach(card => {
+    if (card.dataset.sessionId === sessionId) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+
   // Only close history if not pinned (pinned sidebar should stay open)
   const isPinned = elements.historySidebar.classList.contains('pinned');
   if (!isPinned) {
@@ -871,6 +880,10 @@ function setupEventListeners() {
   document.getElementById('newSessionBtn')?.addEventListener('click', () => {
     currentSessionId = null;
     clearChat();
+    // Clear active state from all history cards
+    document.querySelectorAll('.history-item').forEach(card => {
+      card.classList.remove('active');
+    });
     showToast('🆕 Started a new conversation');
   });
   
