@@ -882,6 +882,15 @@ async function handleLogout() {
 // INITIALIZATION
 // =====================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+  // Check for logout success and show toast
+  if (sessionStorage.getItem('logout_success') === 'true') {
+    sessionStorage.removeItem('logout_success');
+    // Small delay to ensure UI is ready
+    setTimeout(() => {
+      showToast('✅ Successfully logged out', 'success');
+    }, 500);
+  }
+  
   renderMethodsDropdown('all');
   setupEventListeners();
   

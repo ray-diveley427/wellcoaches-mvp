@@ -190,6 +190,76 @@
         </div>
     </header>
 
+    <!-- Splash/Login Page (shown when not authenticated) -->
+    <div class="splash-page hidden" id="splashPage">
+      <div class="splash-container">
+        <div class="splash-content">
+          <div class="splash-logo">
+            <div class="logo-text splash-logo-text">Multi<span class="logo-dash">—</span>Perspective <span class="logo-ai">AI</span></div>
+          </div>
+          
+          <h1 class="splash-title">More Angles. New Vision. Better Strategy. Exhale.</h1>
+          
+          <p class="splash-subtitle">
+            A thinking partner that reveals insights through nine cognitive perspectives. 
+            See situations from angles you might miss—and find clarity when you're stuck.
+          </p>
+          
+          <div class="splash-features">
+            <div class="splash-feature">
+              <div class="splash-feature-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="splash-feature-title">Multiple Perspectives</div>
+                <div class="splash-feature-desc">See your situation through nine distinct cognitive lenses</div>
+              </div>
+            </div>
+            
+            <div class="splash-feature">
+              <div class="splash-feature-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="splash-feature-title">Smart Analysis</div>
+                <div class="splash-feature-desc">AI-powered insights tailored to your specific situation</div>
+              </div>
+            </div>
+            
+            <div class="splash-feature">
+              <div class="splash-feature-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="splash-feature-title">Actionable Insights</div>
+                <div class="splash-feature-desc">Move from insight to strategy with concrete next steps</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="splash-cta">
+            <button class="splash-login-btn" id="splashLoginBtn">
+              <span>Get Started</span>
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+              </svg>
+            </button>
+            <p class="splash-login-hint">Sign in to save your conversations and access your history</p>
+          </div>
+        </div>
+        
+        <div class="splash-visual">
+          <div class="splash-gradient-orb"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- History Sidebar -->
     <div class="history-sidebar" id="historySidebar">
         <div class="history-header">
@@ -507,16 +577,35 @@
         // Check if user is logged in on page load
         async function updateAuthUI() {
           const loggedIn = await isAuthenticated();
+          const splashPage = document.getElementById("splashPage");
+          const splashLoginBtn = document.getElementById("splashLoginBtn");
           
           if (loggedIn) {
             const user = await getUser();
             console.log("User is logged in:", user.profile?.email || user.profile?.sub);
             loginBtn.classList.add("hidden");
             logoutBtn.classList.remove("hidden");
+            // Hide splash page when logged in
+            if (splashPage) {
+              splashPage.classList.add("hidden");
+            }
+            document.body.classList.remove("showing-splash");
           } else {
             console.log("User is not logged in");
             logoutBtn.classList.add("hidden");
             loginBtn.classList.remove("hidden");
+            // Show splash page when not logged in
+            if (splashPage) {
+              splashPage.classList.remove("hidden");
+            }
+            document.body.classList.add("showing-splash");
+          }
+          
+          // Setup splash login button
+          if (splashLoginBtn) {
+            splashLoginBtn.addEventListener("click", async () => {
+              await signIn();
+            });
           }
         }
         

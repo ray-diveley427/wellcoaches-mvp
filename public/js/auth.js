@@ -52,7 +52,14 @@ export async function signOut() {
   localStorage.removeItem("id_token");
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  
+  // Set a flag that logout was initiated (before clearing sessionStorage)
+  // Also clear login prompt dismissal so it shows again after logout
+  localStorage.removeItem('loginPromptDismissed');
+  
+  // Clear sessionStorage but preserve logout flag
   sessionStorage.clear();
+  sessionStorage.setItem('logout_success', 'true');
   
   console.log("✅ Tokens cleared from localStorage");
   
