@@ -876,6 +876,9 @@ function setupEventListeners() {
   document.getElementById('newSessionBtn')?.addEventListener('click', () => {
     currentSessionId = null;
     clearChat();
+    // Clear the text input for a fresh start
+    elements.chatInput.value = '';
+    elements.chatInput.placeholder = 'Describe your situation or ask a question...';
     // Clear active state from all history cards
     document.querySelectorAll('.history-item').forEach(card => {
       card.classList.remove('active');
