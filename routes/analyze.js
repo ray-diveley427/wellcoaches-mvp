@@ -258,11 +258,13 @@ router.post('/', async (req, res) => {
     console.log(`\n🔵 New request | Session: ${sessionId.substring(0, 8)}... | Query: "${userQuery.substring(0, 50)}..."`);
 
     // Load recent messages for context
+    // Limit: Last 10 exchanges (20 messages) to control costs and stay within token limits
+    const MAX_CONTEXT_EXCHANGES = 10;
+    const MAX_CONTEXT_MESSAGES = MAX_CONTEXT_EXCHANGES * 2; // user + assistant per exchange
+
     let priorMessages = [];
-    let contextInfo = { messageCount: 0, estimatedTokens: 0 };
+    let contextInfo = { messageCount: 0, estimatedTokens: 0, totalMessages: 0 };
     try {
-      // Load ALL messages for the session to preserve full context
-      // DynamoDB will respect its 1MB response limit, but most sessions won't hit that
       const data = await docClient.send(new QueryCommand({
         TableName: TABLE_NAME,
         KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
@@ -270,22 +272,29 @@ router.post('/', async (req, res) => {
           ':pk': `USER#${userId}`,
           ':sk': `SESSION#${sessionId}`,
         },
-        // No limit - load all messages to preserve context from beginning of conversation
-        ScanIndexForward: true, // Oldest first (chronological order for Claude)
+        ScanIndexForward: false, // Get most recent first
       }));
-      priorMessages = (data.Items || [])
+
+      // Get all messages and store total count
+      const allMessages = (data.Items || [])
         .flatMap(i => [
           i.user_query ? { role: 'user', content: i.user_query } : null,
           i.response ? { role: 'assistant', content: i.response } : null
         ])
         .filter(Boolean);
+
+      contextInfo.totalMessages = allMessages.length;
+
+      // Take only the last N messages (most recent exchanges)
+      priorMessages = allMessages.slice(0, MAX_CONTEXT_MESSAGES).reverse(); // Reverse to chronological order
+
       contextInfo.messageCount = priorMessages.length;
       if (contextInfo.messageCount > 0) {
-        console.log(`📚 Loading context: ${contextInfo.messageCount} prior messages from session ${sessionId}`);
-        console.log(`   First message: ${priorMessages[0]?.content?.substring(0, 80)}...`);
-        console.log(`   Last message: ${priorMessages[priorMessages.length - 1]?.content?.substring(0, 80)}...`);
+        console.log(`📚 Loading context: ${contextInfo.messageCount} of ${contextInfo.totalMessages} messages (last ${MAX_CONTEXT_EXCHANGES} exchanges)`);
+        console.log(`   First in context: ${priorMessages[0]?.content?.substring(0, 80)}...`);
+        console.log(`   Last in context: ${priorMessages[priorMessages.length - 1]?.content?.substring(0, 80)}...`);
       } else {
-        console.log(`📭 No prior messages found for session ${sessionId} (new session or no history)`);
+        console.log(`📭 No prior messages found for session ${sessionId} (new session)`);
       }
     } catch (err) {
       console.warn('⚠️ Failed to load prior messages:', err);

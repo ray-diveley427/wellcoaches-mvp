@@ -17,8 +17,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Configuration
-const MAX_HISTORY_MESSAGES = 15; // Keep last 15 exchanges (30 messages total)
-const WARN_THRESHOLD = 20; // Warn user after 20 messages
+// Note: Context window limits are enforced in routes/analyze.js
+// - MAX_CONTEXT_EXCHANGES = 10 (20 messages total) per conversation
+// - History TTL = 30 days (auto-deletion from DynamoDB)
+// - History display limit = 50 most recent items
 const DEFAULT_USER_ID = 'user-1'; // TODO: Replace with auth-based user ID
 
 // Cost limits (internal monitoring) - DISABLED for now, ready to enable later
@@ -562,7 +564,8 @@ if (!process.env.IISNODE_VERSION) {
     console.log('🚀 Multi-Perspective AI Server');
     console.log(`🌐 Running at http://localhost:${PORT}`);
     console.log(`💾 DynamoDB Table: ${TABLE_NAME}`);
-    console.log(`💬 Max history: ${MAX_HISTORY_MESSAGES} exchanges`);
+    console.log(`💬 Context window: 10 exchanges (20 messages)`);
+    console.log(`📅 Session TTL: 30 days`);
     console.log(`${'='.repeat(60)}\n`);
   });
 } else {
@@ -571,7 +574,8 @@ if (!process.env.IISNODE_VERSION) {
   console.log('🚀 Multi-Perspective AI Server');
   console.log('🌐 Running under IIS/iisnode');
   console.log(`💾 DynamoDB Table: ${TABLE_NAME}`);
-  console.log(`💬 Max history: ${MAX_HISTORY_MESSAGES} exchanges`);
+  console.log(`💬 Context window: 10 exchanges (20 messages)`);
+  console.log(`📅 Session TTL: 30 days`);
   console.log(`${'='.repeat(60)}\n`);
 }
 
