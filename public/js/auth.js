@@ -2,19 +2,16 @@
 function getBaseUrl() {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
-  
+  const port = window.location.port;
+
+  // Build URL using current protocol (HTTP or HTTPS) to avoid mixed content errors
   if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
     // Local development
     return "http://localhost:3000";
-  } else if (hostname.includes("multi-perspective.dev.wellcoachesschool.com")) {
-    // Testing/staging environment
-    return "https://multi-perspective.dev.wellcoachesschool.com";
-  } else if (hostname.includes("multi-perspective.ai")) {
-    // Production environment
-    return "https://multi-perspective.ai";
   } else {
-    // Fallback: use current origin
-    return `${protocol}//${hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+    // Use whatever protocol the page was loaded with (HTTP or HTTPS)
+    // This prevents mixed content errors when testing without SSL
+    return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
   }
 }
 
