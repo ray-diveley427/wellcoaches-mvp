@@ -1,9 +1,13 @@
 // =====================================================================
 // Multi-Perspective AI - Main Application
 // =====================================================================
-// Note: This version expects auth.js, config.js, and utils.js to be loaded first
-// Dependencies: METHODS, FAQ_MAPPINGS, PRO_TOOLS (from config.js)
-//               escapeHtml, formatTimeAgo, handleError (from utils.js)
+// Note: This version expects auth.js, config.js, utils.js, and modules to be loaded first
+// Dependencies:
+//   - config.js: METHODS, FAQ_MAPPINGS, PRO_TOOLS
+//   - utils.js: escapeHtml, formatTimeAgo, handleError, etc.
+//   - modules/ui.js: showToast, scrollToBottom, autoResize, clearChat, etc.
+//   - modules/methods.js: renderMethodsDropdown, selectMethod, etc.
+//   - modules/chat.js: addMessage, sendMessage, etc. (supplementary)
 
 // Use config constants (loaded from config.js)
 const methods = window.METHODS;
