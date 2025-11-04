@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Test Page</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        h1 { color: #1e293b; }
+        h2 { color: #475569; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <h1>Multi-Perspective AI - Server Diagnostics</h1>
+
+    <div class="box">
+        <h2>✅ Server Status</h2>
+        <p class="success">If you can see this page, the IIS server is running correctly!</p>
+    </div>
+
+    <div class="box">
+        <h2>🌐 Connection Info</h2>
+        <p><strong>Current URL:</strong> <code id="currentUrl"></code></p>
+        <p><strong>Protocol:</strong> <code id="protocol"></code></p>
+        <p><strong>Hostname:</strong> <code id="hostname"></code></p>
+        <p><strong>Port:</strong> <code id="port"></code></p>
+    </div>
+
+    <div class="box">
+        <h2>🔧 Expected Configuration</h2>
+        <p><strong>Dev Environment:</strong> <code>http://multi-perspective.dev.wellcoachesschool.com</code></p>
+        <p><strong>Cognito Callback:</strong> <code>http://multi-perspective.dev.wellcoachesschool.com/callback.html</code></p>
+    </div>
+
+    <div class="box">
+        <h2>📋 Next Steps</h2>
+        <ol>
+            <li>Verify you're accessing via HTTP (not HTTPS)</li>
+            <li>Clear browser cache (Ctrl+Shift+Delete)</li>
+            <li>Ensure latest code is pulled: <code>git pull origin main</code></li>
+            <li>Restart IIS App Pool</li>
+            <li>Check Cognito has HTTP callback URL configured</li>
+        </ol>
+    </div>
+
+    <div class="box">
+        <h2>🚀 Ready to Test?</h2>
+        <p><a href="/" style="color: #0ea5e9; text-decoration: none; font-weight: 600;">→ Go to Main Application</a></p>
+    </div>
+
+    <script>
+        // Display current connection info
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('protocol').textContent = window.location.protocol;
+        document.getElementById('hostname').textContent = window.location.hostname;
+        document.getElementById('port').textContent = window.location.port || '(default)';
+    </script>
+</body>
+</html>
