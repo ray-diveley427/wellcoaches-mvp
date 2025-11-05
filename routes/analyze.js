@@ -219,25 +219,27 @@ async function checkCostLimits(userId, estimatedCost) {
 
 async function recordCost(userId, cost) {
   resetDailyCostsIfNeeded();
-  
+
   const today = new Date().toISOString().split('T')[0];
   const userKey = `${userId}_${today}`;
-  
+
   if (!costTracking.userDaily[userKey]) {
     costTracking.userDaily[userKey] = { date: today, cost: 0 };
   }
-  
+
   costTracking.userDaily[userKey].cost += cost;
   costTracking.dailyTotal += cost;
-  
-  // Also track monthly cost in DynamoDB
-  await incrementUserMonthlyCost(userId, cost);
-  
+
+  // Also track monthly cost in DynamoDB (only if cost limits are enabled)
+  if (COST_LIMITS_ENABLED) {
+    await incrementUserMonthlyCost(userId, cost);
+  }
+
   // Export to global for access from server.js
   global.costTracking = costTracking;
-  
-  // Log high-cost requests for monitoring (only if > $0.05)
-  if (cost > 0.05) {
+
+  // Log high-cost requests for monitoring (only if > $0.05 and cost limits enabled)
+  if (COST_LIMITS_ENABLED && cost > 0.05) {
     const monthlyCost = await getUserMonthlyCost(userId);
     const monthlyLimit = await getUserMonthlyLimit(userId);
     console.log(`💰 High-cost request: $${cost.toFixed(4)} | User: ${userId} | Daily: $${costTracking.userDaily[userKey].cost.toFixed(2)} | Monthly: $${monthlyCost.toFixed(2)}/${monthlyLimit.toFixed(2)}`);

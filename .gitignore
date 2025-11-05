@@ -33,3 +33,6 @@ build/
 # IIS / iisnode
 iisnode/
 *.log
+
+# Temp files
+nul
