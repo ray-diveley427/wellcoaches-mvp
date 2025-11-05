@@ -191,25 +191,39 @@ async function sendMessage() {
   if (isLoading) return;
   const query = elements.chatInput.value.trim();
   if (!query) return;
-  
+
   // ✅ Check if user is logged in
   const userId = getCurrentUserId();
   if (!userId) {
     showToast('Please log in to use the chat', 'error');
     return;
   }
-  
-  addMessage('user', query);
+
+  // Get attached file if any
+  const fileInput = document.getElementById('fileInput');
+  const attachedFile = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
+
+  // Display user message with file indicator
+  const displayMessage = attachedFile
+    ? `${query}\n\n📎 ${attachedFile.name} (${(attachedFile.size / 1024).toFixed(2)} KB)`
+    : query;
+
+  addMessage('user', displayMessage);
   elements.chatInput.value = '';
   autoResize();
   elements.sendButton.disabled = true;
   isLoading = true;
   const loadingId = addLoadingMessage();
-  
+
   try {
-    // Sending message
-    const result = await mpaiAPI.analyze(query, selectedMethod, perspectiveVisibility, currentSessionId);
+    // Sending message with optional file
+    const result = await mpaiAPI.analyze(query, selectedMethod, perspectiveVisibility, currentSessionId, attachedFile);
     removeLoadingMessage(loadingId);
+
+    // Clear file input and hide badge after sending
+    if (fileInput) fileInput.value = '';
+    const badge = document.getElementById('fileAttachmentBadge');
+    if (badge) badge.classList.add('hidden');
     
     if (result.success) {
       addMessage('assistant', result.response);
@@ -866,9 +880,39 @@ function setupEventListeners() {
   });
   
   document.getElementById('uploadButton')?.addEventListener('click', () => document.getElementById('fileInput').click());
+
   document.getElementById('fileInput')?.addEventListener('change', e => {
     const files = e.target.files;
-    if (files.length > 0) showToast(`${files.length} file(s) selected (upload feature coming soon)`);
+    const badge = document.getElementById('fileAttachmentBadge');
+    const fileName = document.getElementById('fileAttachmentName');
+    const fileSize = document.getElementById('fileAttachmentSize');
+
+    if (files.length > 0) {
+      const file = files[0];
+      const sizeKB = (file.size / 1024).toFixed(2);
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      const displaySize = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+
+      // Show the badge with file info
+      if (fileName) fileName.textContent = file.name;
+      if (fileSize) fileSize.textContent = displaySize;
+      if (badge) badge.classList.remove('hidden');
+
+      showToast(`📎 ${file.name} attached`, 'success');
+    } else {
+      // Hide badge if no file
+      if (badge) badge.classList.add('hidden');
+    }
+  });
+
+  // Handle remove file button
+  document.getElementById('fileAttachmentRemove')?.addEventListener('click', () => {
+    const fileInput = document.getElementById('fileInput');
+    const badge = document.getElementById('fileAttachmentBadge');
+
+    if (fileInput) fileInput.value = '';
+    if (badge) badge.classList.add('hidden');
+    showToast('Attachment removed', 'info');
   });
   
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);

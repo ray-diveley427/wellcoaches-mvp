@@ -17,29 +17,51 @@ function getEffectiveUserId() {
 const mpaiAPI = {
     /**
      * Call the main analyze endpoint
+     * @param {File} file - Optional file to upload with the query
      */
-    async analyze(userQuery, method = null, perspectiveVisibility = 'visible', sessionId = null) {
+    async analyze(userQuery, method = null, perspectiveVisibility = 'visible', sessionId = null, file = null) {
       try {
         const userId = getEffectiveUserId();
-        const payload = { userQuery, perspectiveVisibility, userId };
-        if (method) payload.method = method;
-        if (sessionId) {
-          payload.sessionId = sessionId;
-          console.log(`📤 Sending with sessionId: ${sessionId.substring(0, 8)}...`);
-        } else {
-          console.log(`📤 Creating new session (no sessionId provided)`);
-        }
-  
-        const headers = { 'Content-Type': 'application/json' };
+
+        // Use FormData if file is present, otherwise use JSON
+        let body;
+        const headers = {};
         const idToken = localStorage.getItem('id_token');
         if (idToken) {
           headers['Authorization'] = `Bearer ${idToken}`;
         }
-        
+
+        if (file) {
+          // Use FormData for file upload
+          const formData = new FormData();
+          formData.append('userQuery', userQuery);
+          formData.append('perspectiveVisibility', perspectiveVisibility);
+          formData.append('userId', userId);
+          if (method) formData.append('method', method);
+          if (sessionId) formData.append('sessionId', sessionId);
+          formData.append('file', file);
+
+          body = formData;
+          console.log(`📤 Sending with file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+        } else {
+          // Use JSON for text-only
+          headers['Content-Type'] = 'application/json';
+          const payload = { userQuery, perspectiveVisibility, userId };
+          if (method) payload.method = method;
+          if (sessionId) payload.sessionId = sessionId;
+          body = JSON.stringify(payload);
+        }
+
+        if (sessionId) {
+          console.log(`📤 Sending with sessionId: ${sessionId.substring(0, 8)}...`);
+        } else {
+          console.log(`📤 Creating new session (no sessionId provided)`);
+        }
+
         const response = await fetch('/api/analyze', {
           method: 'POST',
           headers,
-          body: JSON.stringify(payload),
+          body,
         });
   
         if (!response.ok) {

@@ -1,4 +1,5 @@
 import express from 'express';
+import multer from 'multer';
 import { docClient, TABLE_NAME } from '../db/dynamoClient.js';
 import { QueryCommand, PutCommand, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +20,48 @@ let costTracking = global.costTracking || {
 };
 
 const router = express.Router();
+
+// Configure multer for file uploads (memory storage - files not persisted)
+// For production: consider S3 storage for document history
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit per file
+    files: 1 // Only 1 file at a time
+  },
+  fileFilter: (req, file, cb) => {
+    // Security: Block dangerous file types
+    const dangerous = /\.(exe|bat|cmd|sh|ps1|msi|app|deb|rpm|dmg|pkg|scr|vbs|js|jar|com|pif)$/i;
+    if (dangerous.test(file.originalname)) {
+      return cb(new Error('Executable and script files are not allowed for security reasons'));
+    }
+
+    // Allow only safe document types
+    const allowedExtensions = /\.(txt|pdf|doc|docx|md|markdown|csv|json|xml|rtf|odt)$/i;
+    const allowedMimetypes = [
+      'text/plain',
+      'text/markdown',
+      'text/csv',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/json',
+      'application/xml',
+      'text/xml',
+      'application/rtf',
+      'application/vnd.oasis.opendocument.text'
+    ];
+
+    const hasAllowedExtension = allowedExtensions.test(file.originalname);
+    const hasAllowedMimetype = allowedMimetypes.includes(file.mimetype) || file.mimetype === 'application/octet-stream';
+
+    if (hasAllowedExtension && hasAllowedMimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type not allowed. Allowed types: txt, pdf, doc, docx, md, csv, json, xml, rtf`));
+    }
+  }
+});
 
 // Cost limit config (from env or defaults) - DISABLED for now, ready to enable later
 const COST_LIMITS_ENABLED = process.env.COST_LIMITS_ENABLED === 'true'; // Set to 'true' in .env to enable
@@ -227,7 +270,7 @@ function getEmailFromRequest(req) {
 }
 
 // POST /api/analyze
-router.post('/', async (req, res) => {
+router.post('/', upload.single('file'), async (req, res) => {
   try {
     const {
       userQuery,
@@ -237,6 +280,23 @@ router.post('/', async (req, res) => {
       sessionId: providedSessionId,
       userId = 'user-1'
     } = req.body;
+
+    // Handle uploaded file if present
+    const uploadedFile = req.file;
+    let fileContent = '';
+    let fileInfo = null;
+
+    if (uploadedFile) {
+      fileInfo = {
+        name: uploadedFile.originalname,
+        size: uploadedFile.size,
+        type: uploadedFile.mimetype
+      };
+
+      // Convert buffer to text for text-based files
+      fileContent = uploadedFile.buffer.toString('utf-8');
+      console.log(`📎 File uploaded: ${fileInfo.name} (${(fileInfo.size / 1024).toFixed(2)} KB)`);
+    }
     
     // Extract email from token if available
     const userEmail = getEmailFromRequest(req);
@@ -354,7 +414,14 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const result = await callMPAI(userQuery, method, outputStyle, roleContext, priorMessages);
+    // Build the complete query with file content if present
+    let completeQuery = userQuery;
+    if (fileContent) {
+      completeQuery = `${userQuery}\n\n[Attached Document: ${fileInfo.name}]\n\n${fileContent}`;
+      console.log(`📄 Including file content in analysis (${fileContent.length} characters)`);
+    }
+
+    const result = await callMPAI(completeQuery, method, outputStyle, roleContext, priorMessages);
 
     if (!result.success) {
       return res.status(500).json({ success: false, error: result.error });
