@@ -9,6 +9,9 @@ function getBaseUrl() {
   } else if (hostname.includes("multi-perspective.dev.wellcoachesschool.com")) {
     // Development/testing environment - uses HTTP (no SSL cert)
     return "http://multi-perspective.dev.wellcoachesschool.com";
+  } else if (hostname.includes("elasticbeanstalk.com")) {
+    // AWS Elastic Beanstalk - will use HTTPS once SSL is configured
+    return `${protocol}//${hostname}`;
   } else if (hostname.includes("multi-perspective.ai")) {
     // Production environment - uses HTTPS
     return "https://multi-perspective.ai";
