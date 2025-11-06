@@ -13,8 +13,9 @@ function getBaseUrl() {
     // AWS Elastic Beanstalk - will use HTTPS once SSL is configured
     return `${protocol}//${hostname}`;
   } else if (hostname.includes("multi-perspective.ai")) {
-    // Production environment - uses HTTPS
-    return "https://multi-perspective.ai";
+    // Production environment - will use HTTPS once SSL is configured
+    // Temporarily using HTTP until SSL certificate validates
+    return `${protocol}//${hostname}`;
   } else {
     // Fallback: use current origin
     return `${protocol}//${hostname}${window.location.port ? `:${window.location.port}` : ''}`;
