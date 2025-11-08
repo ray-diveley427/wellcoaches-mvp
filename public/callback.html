@@ -200,57 +200,59 @@
   </div>
 
   <script>
-    // --- Detect environment and set base URL ---
-    function getBaseUrl() {
-      const hostname = window.location.hostname;
-      const protocol = window.location.protocol;
-      
-      if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
-        // Local development
-        return "http://localhost:3000";
-      } else if (hostname.includes("multi-perspective.dev.wellcoachesschool.com")) {
-        // Testing/staging environment
-        return "https://multi-perspective.dev.wellcoachesschool.com";
-      } else if (hostname.includes("multi-perspective.ai")) {
-        // Production environment
-        return "https://multi-perspective.ai";
-      } else {
-        // Fallback: use current origin
-        return `${protocol}//${hostname}${window.location.port ? `:${window.location.port}` : ''}`;
-      }
-    }
-    
-    const baseUrl = getBaseUrl();
-    const redirectUri = `${baseUrl}/callback.html`;
-    const cognitoDomain = "https://us-east-1eucicqax3.auth.us-east-1.amazoncognito.com";
-    const clientId = "7m3hp4bdldr9642grf15rhhp24";
-    
-    console.log("🔹 Callback URL:", window.location.href);
-    console.log("🔹 Base URL:", baseUrl);
-    console.log("🔹 Redirect URI:", redirectUri);
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const error = urlParams.get('error');
-    const errorDescription = urlParams.get('error_description');
+    // Wrap everything in an IIFE to allow early returns
+    (function() {
+      // --- Detect environment and set base URL ---
+      function getBaseUrl() {
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
 
-    // Check if Cognito returned an error
-    if (error) {
-      document.getElementById('processingState').classList.add('hidden');
-      document.getElementById('errorState').classList.add('visible');
-
-      let errorMsg = 'An error occurred during sign-in.';
-      if (error === 'access_denied') {
-        errorMsg = 'Sign-in was cancelled or access was denied.';
-      } else if (errorDescription) {
-        errorMsg = errorDescription;
+        if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+          // Local development
+          return "http://localhost:3000";
+        } else if (hostname.includes("multi-perspective.dev.wellcoachesschool.com")) {
+          // Testing/staging environment
+          return "https://multi-perspective.dev.wellcoachesschool.com";
+        } else if (hostname.includes("multi-perspective.ai")) {
+          // Production environment
+          return "https://multi-perspective.ai";
+        } else {
+          // Fallback: use current origin
+          return `${protocol}//${hostname}${window.location.port ? `:${window.location.port}` : ''}`;
+        }
       }
 
-      document.getElementById('errorMessage').textContent = errorMsg;
-      return;
-    }
+      const baseUrl = getBaseUrl();
+      const redirectUri = `${baseUrl}/callback.html`;
+      const cognitoDomain = "https://us-east-1eucicqax3.auth.us-east-1.amazoncognito.com";
+      const clientId = "7m3hp4bdldr9642grf15rhhp24";
 
-    if (!code) {
+      console.log("🔹 Callback URL:", window.location.href);
+      console.log("🔹 Base URL:", baseUrl);
+      console.log("🔹 Redirect URI:", redirectUri);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+
+      // Check if Cognito returned an error
+      if (error) {
+        document.getElementById('processingState').classList.add('hidden');
+        document.getElementById('errorState').classList.add('visible');
+
+        let errorMsg = 'An error occurred during sign-in.';
+        if (error === 'access_denied') {
+          errorMsg = 'Sign-in was cancelled or access was denied.';
+        } else if (errorDescription) {
+          errorMsg = errorDescription;
+        }
+
+        document.getElementById('errorMessage').textContent = errorMsg;
+        return;
+      }
+
+      if (!code) {
       // Show error state - no code received
       document.getElementById('processingState').classList.add('hidden');
       document.getElementById('errorState').classList.add('visible');
@@ -334,6 +336,7 @@
         document.getElementById('errorMessage').textContent = errorMsg;
       });
     }
+    })(); // End of IIFE
   </script>
 </body>
 </html>
