@@ -1449,7 +1449,11 @@ body.showing-splash .history-sidebar {
 
     .history-sidebar {
         width: 100%;
-        max-width: 320px;
+        max-width: 240px; /* Reduced from 320px to leave more room for chat */
+    }
+
+    .main.history-pinned {
+        margin-right: 240px; /* Match the reduced sidebar width */
     }
 
     .chat-container {
