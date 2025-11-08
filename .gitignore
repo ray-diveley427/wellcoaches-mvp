@@ -36,3 +36,7 @@ iisnode/
 
 # Temp files
 nul
+
+# AWS Elastic Beanstalk
+.elasticbeanstalk/
+*.bak
