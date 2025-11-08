@@ -148,6 +148,17 @@ function selectMethod(methodKey) {
     elements.chatInput.placeholder = `Describe your situation for ${method.name} analysis...`;
     showToast(`Method selected: ${method.name}`);
   }
+
+  // Close mobile menu when selecting a method on mobile
+  if (window.innerWidth <= 768) {
+    const nav = document.querySelector('.nav');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    if (nav && mobileMenuBtn) {
+      nav.classList.remove('mobile-open');
+      mobileMenuBtn.classList.remove('active');
+    }
+  }
+
   elements.chatInput.focus();
 }
 function togglePerspectiveVisibility() {
@@ -1147,6 +1158,16 @@ function populateProTools(category = 'coach') {
         elements.chatInput.value = activation;
         elements.chatInput.focus();
         closeDropdowns();
+
+        // Close mobile menu when selecting a pro tool on mobile
+        if (window.innerWidth <= 768) {
+          const nav = document.querySelector('.nav');
+          const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+          if (nav && mobileMenuBtn) {
+            nav.classList.remove('mobile-open');
+            mobileMenuBtn.classList.remove('active');
+          }
+        }
       }
     });
     
