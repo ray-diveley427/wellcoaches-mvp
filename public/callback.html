@@ -286,11 +286,11 @@
           const errorJson = JSON.parse(e.message);
 
           if (errorJson.error === 'unauthorized_client' && errorJson.error_description?.includes('invalid_redirect')) {
-            errorMsg = 'Sign-in configuration error. The redirect URL is not authorized. Please contact support.';
+            errorMsg = 'We're having trouble signing you in. Please contact support for assistance.';
           } else if (errorJson.error === 'invalid_grant') {
-            errorMsg = 'Invalid or expired authorization code. Please try signing in again.';
+            errorMsg = 'Your sign-in session has expired. Please try signing in again.';
           } else if (errorJson.error === 'invalid_client') {
-            errorMsg = 'Authentication service configuration error. Please contact support.';
+            errorMsg = 'We're having trouble signing you in. Please contact support for assistance.';
           } else if (errorJson.error_description) {
             errorMsg = errorJson.error_description;
           }
