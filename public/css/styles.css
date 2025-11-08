@@ -1432,16 +1432,19 @@ body.showing-splash .history-sidebar {
 
     /* Mobile dropdown adjustments */
     .nav .dropdown-menu {
+        display: none; /* Hidden by default - no space taken */
         position: static;
         box-shadow: none;
         border: none;
         border-left: 3px solid var(--teal);
         margin-left: 1rem;
-        margin-top: 0.25rem; /* Reduced from 0.5rem */
-        margin-bottom: 0.25rem; /* Add bottom margin for spacing */
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
         max-height: none;
     }
 
+    /* Only show dropdown menu when open/active */
+    .nav .dropdown.open .dropdown-menu,
     .nav .dropdown.active .dropdown-menu {
         display: block;
     }
@@ -1456,16 +1459,28 @@ body.showing-splash .history-sidebar {
 
     .history-sidebar {
         width: 100%;
-        max-width: 220px; /* Narrower to leave more chat space on mobile */
+        max-width: 280px; /* Wider for better readability since it's temporary */
     }
 
-    /* On mobile, history overlays instead of pushing content */
+    /* On mobile, history always overlays - never pinned */
     .main.history-pinned {
         margin-right: 0; /* Don't push content on mobile */
     }
 
+    /* Always show shadow on mobile when history is open */
+    .history-sidebar.open,
     .history-sidebar.pinned {
-        box-shadow: -4px 0 12px rgba(0, 0, 0, 0.3); /* Add shadow to show it's overlaying */
+        box-shadow: -4px 0 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Disable pinning on mobile - always acts as overlay */
+    .history-sidebar.pinned {
+        position: fixed; /* Always fixed, never pushes content */
+    }
+
+    /* Hide pin button on mobile - not needed */
+    .pin-btn {
+        display: none;
     }
 
     /* Reduce history padding on mobile */
@@ -1475,6 +1490,11 @@ body.showing-splash .history-sidebar {
 
     .history-content {
         padding: 0.5rem;
+    }
+
+    /* Auto-close history when selecting a conversation on mobile */
+    .history-item {
+        cursor: pointer;
     }
 
     .chat-container {

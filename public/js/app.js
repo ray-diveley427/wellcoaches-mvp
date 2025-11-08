@@ -542,6 +542,11 @@ function renderHistory(sessions) {
       const sessionId = card.dataset.sessionId;
       if (sessionId) {
         loadSession(sessionId);
+
+        // Auto-close history on mobile after selecting conversation
+        if (window.innerWidth <= 768) {
+          closeHistory();
+        }
       }
     });
 
