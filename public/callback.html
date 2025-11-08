@@ -195,7 +195,7 @@
     <div class="error-state" id="errorState">
       <h2>Authentication Failed</h2>
       <p id="errorMessage">An error occurred during sign-in.</p>
-      <a href="/" class="btn">Return to Home</a>
+      <button class="btn" onclick="window.location.href = '/';">Return to Home</button>
     </div>
   </div>
 
@@ -215,7 +215,7 @@
           return "https://multi-perspective.dev.wellcoachesschool.com";
         } else if (hostname.includes("multi-perspective.ai")) {
           // Production environment
-          return "https://multi-perspective.ai";
+          return "https://www.multi-perspective.ai";
         } else {
           // Fallback: use current origin
           return `${protocol}//${hostname}${window.location.port ? `:${window.location.port}` : ''}`;
