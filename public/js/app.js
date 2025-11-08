@@ -821,6 +821,39 @@ function closeDropdowns() {
 // EVENT LISTENERS
 // =====================================================================
 function setupEventListeners() {
+  // Mobile menu toggle
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const nav = document.querySelector('.nav');
+
+  if (mobileMenuBtn && nav) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      nav.classList.toggle('mobile-open');
+      mobileMenuBtn.classList.toggle('active');
+    });
+
+    // Close mobile menu when clicking nav items
+    nav.querySelectorAll('.dropdown-item, #historyToggle, #newSessionBtn').forEach(item => {
+      item.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+          nav.classList.remove('mobile-open');
+          mobileMenuBtn.classList.remove('active');
+        }
+      });
+    });
+
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (window.innerWidth <= 768 &&
+          nav.classList.contains('mobile-open') &&
+          !nav.contains(e.target) &&
+          !mobileMenuBtn.contains(e.target)) {
+        nav.classList.remove('mobile-open');
+        mobileMenuBtn.classList.remove('active');
+      }
+    });
+  }
+
   elements.chatInput.addEventListener('input', autoResize);
   elements.chatInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -829,7 +862,7 @@ function setupEventListeners() {
     }
   });
   elements.sendButton.addEventListener('click', sendMessage);
-  
+
   document.querySelectorAll('.dropdown').forEach(d => {
     const t = d.querySelector('.dropdown-toggle, .account-icon-button');
     if (t) {

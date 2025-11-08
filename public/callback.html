@@ -231,7 +231,25 @@
     
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    
+    const error = urlParams.get('error');
+    const errorDescription = urlParams.get('error_description');
+
+    // Check if Cognito returned an error
+    if (error) {
+      document.getElementById('processingState').classList.add('hidden');
+      document.getElementById('errorState').classList.add('visible');
+
+      let errorMsg = 'An error occurred during sign-in.';
+      if (error === 'access_denied') {
+        errorMsg = 'Sign-in was cancelled or access was denied.';
+      } else if (errorDescription) {
+        errorMsg = errorDescription;
+      }
+
+      document.getElementById('errorMessage').textContent = errorMsg;
+      return;
+    }
+
     if (!code) {
       // Show error state - no code received
       document.getElementById('processingState').classList.add('hidden');
@@ -239,7 +257,11 @@
       document.getElementById('errorMessage').textContent = 'No authorization code received. Please try signing in again.';
     } else {
       console.log("✅ Code received");
-      
+
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
       fetch(`${cognitoDomain}/oauth2/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -248,9 +270,11 @@
           client_id: clientId,
           code: code,
           redirect_uri: redirectUri
-        })
+        }),
+        signal: controller.signal
       })
       .then(async r => {
+        clearTimeout(timeoutId); // Clear timeout on success
         const text = await r.text();
         console.log("Response:", r.status, text);
         if (!r.ok) throw new Error(text);
@@ -261,17 +285,18 @@
         localStorage.setItem("id_token", tokens.id_token);
         localStorage.setItem("access_token", tokens.access_token);
         if (tokens.refresh_token) localStorage.setItem("refresh_token", tokens.refresh_token);
-        
+
         // Show success state
         document.getElementById('processingState').classList.add('hidden');
         document.getElementById('successState').classList.add('visible');
-        
+
         // Redirect after showing success message
         setTimeout(() => {
           window.location.href = `${baseUrl}/`;
         }, 1500);
       })
       .catch(e => {
+        clearTimeout(timeoutId); // Clear timeout on error
         console.error("❌ Error:", e);
 
         // Show error state
@@ -281,23 +306,28 @@
         // Parse error message for user-friendly display
         let errorMsg = 'An unexpected error occurred. Please try again.';
 
-        try {
-          // Try to parse JSON error from Cognito
-          const errorJson = JSON.parse(e.message);
+        // Handle timeout
+        if (e.name === 'AbortError') {
+          errorMsg = 'Sign-in is taking too long. Please check your connection and try again.';
+        } else {
+          try {
+            // Try to parse JSON error from Cognito
+            const errorJson = JSON.parse(e.message);
 
-          if (errorJson.error === 'unauthorized_client' && errorJson.error_description?.includes('invalid_redirect')) {
-            errorMsg = 'We're having trouble signing you in. Please contact support for assistance.';
-          } else if (errorJson.error === 'invalid_grant') {
-            errorMsg = 'Your sign-in session has expired. Please try signing in again.';
-          } else if (errorJson.error === 'invalid_client') {
-            errorMsg = 'We're having trouble signing you in. Please contact support for assistance.';
-          } else if (errorJson.error_description) {
-            errorMsg = errorJson.error_description;
-          }
-        } catch (parseError) {
-          // Not JSON or couldn't parse, use original message
-          if (e.message && !e.message.includes('{')) {
-            errorMsg = e.message;
+            if (errorJson.error === 'unauthorized_client' && errorJson.error_description?.includes('invalid_redirect')) {
+              errorMsg = 'We're having trouble signing you in. Please contact support for assistance.';
+            } else if (errorJson.error === 'invalid_grant') {
+              errorMsg = 'Your sign-in session has expired. Please try signing in again.';
+            } else if (errorJson.error === 'invalid_client') {
+              errorMsg = 'We're having trouble signing you in. Please contact support for assistance.';
+            } else if (errorJson.error_description) {
+              errorMsg = errorJson.error_description;
+            }
+          } catch (parseError) {
+            // Not JSON or couldn't parse, use original message
+            if (e.message && !e.message.includes('{')) {
+              errorMsg = e.message;
+            }
           }
         }
 

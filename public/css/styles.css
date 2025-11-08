@@ -82,6 +82,37 @@ body {
 }
 
 /* ============================================
+   Mobile Menu Button
+   ============================================ */
+
+.mobile-menu-btn {
+    display: none; /* Hidden on desktop */
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    z-index: 1100;
+}
+
+.mobile-menu-btn:hover {
+    color: var(--teal);
+}
+
+.mobile-menu-btn .close-icon {
+    display: none;
+}
+
+.mobile-menu-btn.active .hamburger-icon {
+    display: none;
+}
+
+.mobile-menu-btn.active .close-icon {
+    display: block;
+}
+
+/* ============================================
    Splash/Login Page
    ============================================ */
 
@@ -1338,8 +1369,69 @@ body.showing-splash .history-sidebar {
    ============================================ */
 
 @media (max-width: 768px) {
+    /* Show mobile menu button */
+    .mobile-menu-btn {
+        display: block;
+    }
+
+    /* Hide navigation by default on mobile */
     .nav {
         display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--bg-primary);
+        flex-direction: column;
+        padding: 1rem;
+        overflow-y: auto;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1050;
+        animation: slideDown 0.3s ease-out;
+    }
+
+    /* Show navigation when menu is open */
+    .nav.mobile-open {
+        display: flex;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Stack nav items vertically */
+    .nav .dropdown,
+    .nav .nav-item {
+        width: 100%;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav .nav-item {
+        padding: 1rem;
+        justify-content: flex-start;
+    }
+
+    /* Mobile dropdown adjustments */
+    .nav .dropdown-menu {
+        position: static;
+        box-shadow: none;
+        border: none;
+        border-left: 3px solid var(--teal);
+        margin-left: 1rem;
+        margin-top: 0.5rem;
+        max-height: none;
+    }
+
+    .nav .dropdown.active .dropdown-menu {
+        display: block;
     }
 
     .main {
@@ -1376,13 +1468,13 @@ body.showing-splash .history-sidebar {
     }
 
     .methods-dropdown .dropdown-menu {
-        min-width: 320px;
-        max-width: 90vw;
+        min-width: auto;
+        width: 100%;
     }
 
     .pro-tools-dropdown .dropdown-menu {
-        min-width: 320px;
-        max-width: 90vw;
+        min-width: auto;
+        width: 100%;
     }
 }
 
