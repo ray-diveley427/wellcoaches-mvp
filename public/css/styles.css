@@ -1479,7 +1479,7 @@ body.showing-splash .history-sidebar {
     }
 
     /* Hide pin button on mobile - not needed */
-    .pin-btn {
+    .history-pin {
         display: none;
     }
 
