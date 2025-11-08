@@ -1411,20 +1411,23 @@ body.showing-splash .history-sidebar {
     .nav .dropdown,
     .nav .nav-item {
         width: 100%;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: none; /* Remove borders for tighter spacing */
     }
 
     .nav .nav-item {
-        padding: 0.5rem 1rem; /* Further reduced for tighter spacing */
+        padding: 0.5rem 1rem; /* Compact padding */
         justify-content: flex-start;
+        margin-bottom: 0; /* Remove any margin */
     }
 
     .nav .dropdown {
         padding: 0; /* Remove extra padding from dropdown containers */
+        margin-bottom: 0; /* Remove margin between dropdowns */
     }
 
     .nav .dropdown-toggle {
         padding: 0.5rem 1rem; /* Match nav-item padding */
+        margin-bottom: 0; /* No margin */
     }
 
     /* Mobile dropdown adjustments */
@@ -1453,7 +1456,7 @@ body.showing-splash .history-sidebar {
 
     .history-sidebar {
         width: 100%;
-        max-width: 280px; /* Wider overlay for better readability */
+        max-width: 220px; /* Narrower to leave more chat space on mobile */
     }
 
     /* On mobile, history overlays instead of pushing content */
@@ -1463,6 +1466,15 @@ body.showing-splash .history-sidebar {
 
     .history-sidebar.pinned {
         box-shadow: -4px 0 12px rgba(0, 0, 0, 0.3); /* Add shadow to show it's overlaying */
+    }
+
+    /* Reduce history padding on mobile */
+    .history-header {
+        padding: 1rem;
+    }
+
+    .history-content {
+        padding: 0.5rem;
     }
 
     .chat-container {
