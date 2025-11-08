@@ -1415,8 +1415,12 @@ body.showing-splash .history-sidebar {
     }
 
     .nav .nav-item {
-        padding: 1rem;
+        padding: 0.625rem 1rem; /* Reduced from 1rem to 0.625rem top/bottom */
         justify-content: flex-start;
+    }
+
+    .nav .dropdown {
+        padding: 0; /* Remove extra padding from dropdown containers */
     }
 
     /* Mobile dropdown adjustments */
@@ -1426,7 +1430,8 @@ body.showing-splash .history-sidebar {
         border: none;
         border-left: 3px solid var(--teal);
         margin-left: 1rem;
-        margin-top: 0.5rem;
+        margin-top: 0.25rem; /* Reduced from 0.5rem */
+        margin-bottom: 0.25rem; /* Add bottom margin for spacing */
         max-height: none;
     }
 
