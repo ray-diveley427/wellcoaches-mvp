@@ -273,11 +273,34 @@
       })
       .catch(e => {
         console.error("❌ Error:", e);
-        
+
         // Show error state
         document.getElementById('processingState').classList.add('hidden');
         document.getElementById('errorState').classList.add('visible');
-        const errorMsg = e.message || 'An unexpected error occurred. Please try again.';
+
+        // Parse error message for user-friendly display
+        let errorMsg = 'An unexpected error occurred. Please try again.';
+
+        try {
+          // Try to parse JSON error from Cognito
+          const errorJson = JSON.parse(e.message);
+
+          if (errorJson.error === 'unauthorized_client' && errorJson.error_description?.includes('invalid_redirect')) {
+            errorMsg = 'Sign-in configuration error. The redirect URL is not authorized. Please contact support.';
+          } else if (errorJson.error === 'invalid_grant') {
+            errorMsg = 'Invalid or expired authorization code. Please try signing in again.';
+          } else if (errorJson.error === 'invalid_client') {
+            errorMsg = 'Authentication service configuration error. Please contact support.';
+          } else if (errorJson.error_description) {
+            errorMsg = errorJson.error_description;
+          }
+        } catch (parseError) {
+          // Not JSON or couldn't parse, use original message
+          if (e.message && !e.message.includes('{')) {
+            errorMsg = e.message;
+          }
+        }
+
         document.getElementById('errorMessage').textContent = errorMsg;
       });
     }
