@@ -26,7 +26,7 @@ const redirectUri = `${baseUrl}/callback.html`;
 const logoutUri = `${baseUrl}/`;
 
 // --- Cognito configuration ---
-const cognitoDomain = "https://us-east-1eucicqax3.auth.us-east-1.amazoncognito.com";
+const cognitoDomain = "https://auth.multi-perspective.ai";
 const clientId = "7m3hp4bdldr9642grf15rhhp24";
 
 console.log("Redirect URI:", redirectUri);
