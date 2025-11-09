@@ -319,15 +319,45 @@ async function sendMessage() {
           showToast('Cost limit exceeded', 'error');
         }
       } else {
-        // Generic error
-        addMessage('assistant', `Error: ${result.error || 'Unknown error occurred'}`);
-        showToast('Analysis failed', 'error');
+        // Generic error - show user-friendly message
+        const friendlyMessage = `
+<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+  <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem; font-size: 16px;">
+    ⚠️ We're experiencing technical difficulties
+  </div>
+  <div style="color: #1f2937; line-height: 1.6;">
+    <p style="margin: 0.5rem 0;">
+      We're sorry, but we're having trouble processing your request right now. This could be due to high demand or a temporary service interruption.
+    </p>
+    <p style="margin: 0.5rem 0; font-size: 14px; color: #6b7280;">
+      Our team has been notified and is looking into it. Please try again in a few moments.
+    </p>
+  </div>
+</div>`;
+        addMessage('assistant', friendlyMessage);
+        showToast('Request failed - please try again', 'error');
+
+        // Log error details for admin (console only, not shown to user)
+        console.error('Analysis error details:', result.error);
       }
     }
   } catch (err) {
     removeLoadingMessage(loadingId);
     console.error('Send error:', err);
-    addMessage('assistant', `Error: ${err.message}`);
+
+    // User-friendly error message
+    const friendlyMessage = `
+<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+  <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem; font-size: 16px;">
+    ⚠️ Connection Error
+  </div>
+  <div style="color: #1f2937; line-height: 1.6;">
+    <p style="margin: 0.5rem 0;">
+      We're having trouble connecting to our service. Please check your internet connection and try again.
+    </p>
+  </div>
+</div>`;
+    addMessage('assistant', friendlyMessage);
     showToast('Failed to send message', 'error');
   } finally {
     elements.sendButton.disabled = false;

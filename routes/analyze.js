@@ -10,6 +10,7 @@ import {
   detectRoleContext,
   suggestMethod
 } from '../utils/claudeHandler.js';
+import { notifyAdminOfError } from '../utils/errorNotifier.js';
 
 // Import cost tracking from server (for this MVP, we'll use a shared module)
 // In production, use Redis or DynamoDB for distributed tracking
@@ -506,7 +507,27 @@ router.post('/', upload.single('file'), async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error analyzing:', err);
-    res.status(500).json({ success: false, error: 'Failed to analyze query' });
+
+    // Send detailed error notification to admin
+    await notifyAdminOfError({
+      type: 'API_ERROR',
+      message: err.message || 'Failed to analyze query',
+      context: {
+        userId: req.body.userId || req.query.userId || 'unknown',
+        sessionId: req.body.sessionId,
+        method: req.body.method,
+        statusCode: err.status || 500,
+        errorType: err.error_type || err.type || 'unknown',
+        userQuery: req.body.userQuery?.substring(0, 200) // First 200 chars only
+      },
+      stack: err.stack
+    });
+
+    // Return user-friendly error message
+    res.status(500).json({
+      success: false,
+      error: 'We are experiencing technical difficulties. Our team has been notified and is looking into it.'
+    });
   }
 });
 
