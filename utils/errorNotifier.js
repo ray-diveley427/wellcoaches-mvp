@@ -4,7 +4,8 @@ import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 const sesClient = new SESClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 const ADMIN_EMAIL = 'ai-admin@wellcoaches.com';
-const FROM_EMAIL = process.env.ERROR_NOTIFICATION_FROM_EMAIL || 'noreply@multi-perspective.ai';
+// Use ai-admin email as sender since it's verified (domain verification pending)
+const FROM_EMAIL = process.env.ERROR_NOTIFICATION_FROM_EMAIL || 'ai-admin@wellcoaches.com';
 const ENABLED = process.env.ERROR_NOTIFICATIONS_ENABLED !== 'false'; // Enabled by default
 
 /**
