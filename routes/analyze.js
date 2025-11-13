@@ -288,6 +288,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     const uploadedFile = req.file;
     let fileContent = '';
     let fileInfo = null;
+    let uploadedFileData = null; // For PDFs and binary files
 
     if (uploadedFile) {
       fileInfo = {
@@ -296,9 +297,22 @@ router.post('/', upload.single('file'), async (req, res) => {
         type: uploadedFile.mimetype
       };
 
-      // Convert buffer to text for text-based files
-      fileContent = uploadedFile.buffer.toString('utf-8');
-      console.log(`📎 File uploaded: ${fileInfo.name} (${(fileInfo.size / 1024).toFixed(2)} KB)`);
+      // Handle PDFs differently - send as base64 to Claude API
+      if (uploadedFile.mimetype === 'application/pdf') {
+        uploadedFileData = {
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: uploadedFile.buffer.toString('base64')
+          }
+        };
+        console.log(`📎 PDF uploaded: ${fileInfo.name} (${(fileInfo.size / 1024).toFixed(2)} KB)`);
+      } else {
+        // Convert buffer to text for text-based files
+        fileContent = uploadedFile.buffer.toString('utf-8');
+        console.log(`📎 Text file uploaded: ${fileInfo.name} (${(fileInfo.size / 1024).toFixed(2)} KB)`);
+      }
     }
     
     // Extract email from token if available
@@ -417,14 +431,14 @@ router.post('/', upload.single('file'), async (req, res) => {
       }
     }
 
-    // Build the complete query with file content if present
+    // Build the complete query with file content if present (for text files)
     let completeQuery = userQuery;
     if (fileContent) {
       completeQuery = `${userQuery}\n\n[Attached Document: ${fileInfo.name}]\n\n${fileContent}`;
       console.log(`📄 Including file content in analysis (${fileContent.length} characters)`);
     }
 
-    const result = await callMPAI(completeQuery, method, outputStyle, roleContext, priorMessages, !!uploadedFile);
+    const result = await callMPAI(completeQuery, method, outputStyle, roleContext, priorMessages, !!uploadedFile, uploadedFileData);
 
     if (!result.success) {
       return res.status(500).json({ success: false, error: result.error });

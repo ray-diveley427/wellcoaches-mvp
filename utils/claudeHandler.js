@@ -20,7 +20,8 @@ export async function callMPAI(
   outputStyle = 'natural',
   roleContext = 'personal',
   conversationHistory = [],
-  hasUploads = false
+  hasUploads = false,
+  uploadedFileData = null
 ) {
   try {
     // Build the full system prompt with method-specific guidance
@@ -75,11 +76,25 @@ export async function callMPAI(
     }
 
     // Build messages array with history + current query
+    // If we have a PDF, build content as an array with document first, then text
+    let currentMessageContent;
+    if (uploadedFileData) {
+      currentMessageContent = [
+        uploadedFileData,
+        {
+          type: 'text',
+          text: userQuery
+        }
+      ];
+    } else {
+      currentMessageContent = userQuery;
+    }
+
     const messages = [
       ...conversationHistory,
       {
         role: 'user',
-        content: userQuery,
+        content: currentMessageContent,
       },
     ];
 
