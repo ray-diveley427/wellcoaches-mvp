@@ -15,15 +15,16 @@ const MORAL_MINDFULNESS_ENABLED = process.env.MORAL_MINDFULNESS_PREFIX_ENABLED !
  * Returns the full text response
  */
 export async function callMPAI(
-  userQuery, 
-  method = 'QUICK', 
-  outputStyle = 'natural', 
+  userQuery,
+  method = 'QUICK',
+  outputStyle = 'natural',
   roleContext = 'personal',
-  conversationHistory = []
+  conversationHistory = [],
+  hasUploads = false
 ) {
   try {
     // Build the full system prompt with method-specific guidance
-    const mpaiPrompt = buildMPAIPrompt(method, userQuery, outputStyle, roleContext);
+    const mpaiPrompt = buildMPAIPrompt(method, userQuery, outputStyle, roleContext, hasUploads);
     
     // Prepend moral mindfulness prefix if enabled
     const moralPrefix = getMoralMindfulnessPrefix(MORAL_MINDFULNESS_ENABLED);

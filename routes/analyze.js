@@ -424,7 +424,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       console.log(`📄 Including file content in analysis (${fileContent.length} characters)`);
     }
 
-    const result = await callMPAI(completeQuery, method, outputStyle, roleContext, priorMessages);
+    const result = await callMPAI(completeQuery, method, outputStyle, roleContext, priorMessages, !!uploadedFile);
 
     if (!result.success) {
       return res.status(500).json({ success: false, error: result.error });
