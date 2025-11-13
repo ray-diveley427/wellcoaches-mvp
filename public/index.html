@@ -309,31 +309,28 @@
             </div>
             <div class="chat-input-area">
                 <!-- Upload Zone -->
-                <div class="upload-zone" id="uploadZone">
+                <div class="upload-zone" id="uploadZone" role="button" tabindex="0" aria-label="Attach files, click or drop files here" aria-describedby="attachmentStatus">
                     <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
                     <div class="upload-text">Click to upload or drag and drop</div>
-                    <div class="upload-hint">Documents, images, PDFs, and more</div>
-                </div>
+          <div class="upload-hint">Documents, images, PDFs, and more</div>
+        </div>
+
+        <!-- Live region for attachment status (accessibility) -->
+        <div id="attachmentStatus" class="sr-only" aria-live="polite"></div>
 
                 <!-- Input Container -->
                 <div class="input-container">
                     <!-- File attachment badge (shown when file is selected) -->
-                    <div class="file-attachment-badge hidden" id="fileAttachmentBadge">
-                        <div class="file-attachment-info">
-                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="flex-shrink: 0;">
-                                <path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="file-attachment-name" id="fileAttachmentName">document.pdf</span>
-                            <span class="file-attachment-size" id="fileAttachmentSize">1.2 MB</span>
-                        </div>
-                        <button class="file-attachment-remove" id="fileAttachmentRemove" title="Remove attachment">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                            </svg>
-                        </button>
-                    </div>
+          <div class="file-attachment-badge hidden" id="fileAttachmentBadge" aria-live="polite">
+            <div class="file-attachment-list" id="fileAttachmentList" role="list"></div>
+            <button class="file-attachment-remove" id="fileAttachmentRemove" title="Remove all attachments">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+          </div>
 
                     <div class="input-wrapper-container">
                         <div class="input-wrapper">
@@ -348,7 +345,7 @@
                                     <path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd"/>
                                 </svg>
                             </button>
-                            <input type="file" id="fileInput" hidden>
+                            <input type="file" id="fileInput" hidden multiple aria-label="Attach files">
                         </div>
                         <button class="send-button" id="sendButton">
                             <span>Send</span>

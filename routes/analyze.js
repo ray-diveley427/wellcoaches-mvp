@@ -28,7 +28,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit per file
-    files: 1 // Only 1 file at a time
+    files: 5 // Allow up to 5 files at a time
   },
   fileFilter: (req, file, cb) => {
     // Security: Block dangerous file types
@@ -273,7 +273,8 @@ function getEmailFromRequest(req) {
 }
 
 // POST /api/analyze
-router.post('/', upload.single('file'), async (req, res) => {
+// Accept multiple files under the 'files' field (up to limits.files)
+router.post('/', upload.array('files', 5), async (req, res) => {
   try {
     const {
       userQuery,
@@ -284,34 +285,30 @@ router.post('/', upload.single('file'), async (req, res) => {
       userId = 'user-1'
     } = req.body;
 
-    // Handle uploaded file if present
-    const uploadedFile = req.file;
-    let fileContent = '';
-    let fileInfo = null;
-    let uploadedFileData = null; // For PDFs and binary files
+    // Handle uploaded files if present (support multiple)
+    const uploadedFiles = req.files || [];
+    let combinedTextContent = ''; // For concatenating text-based files
+    const uploadedFileData = []; // For PDFs and binary files to send to Claude
 
-    if (uploadedFile) {
-      fileInfo = {
-        name: uploadedFile.originalname,
-        size: uploadedFile.size,
-        type: uploadedFile.mimetype
-      };
-
-      // Handle PDFs differently - send as base64 to Claude API
-      if (uploadedFile.mimetype === 'application/pdf') {
-        uploadedFileData = {
-          type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: uploadedFile.buffer.toString('base64')
-          }
-        };
-        console.log(`📎 PDF uploaded: ${fileInfo.name} (${(fileInfo.size / 1024).toFixed(2)} KB)`);
-      } else {
-        // Convert buffer to text for text-based files
-        fileContent = uploadedFile.buffer.toString('utf-8');
-        console.log(`📎 Text file uploaded: ${fileInfo.name} (${(fileInfo.size / 1024).toFixed(2)} KB)`);
+    if (uploadedFiles.length > 0) {
+      for (const f of uploadedFiles) {
+        const info = { name: f.originalname, size: f.size, type: f.mimetype };
+        if (f.mimetype === 'application/pdf') {
+          uploadedFileData.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: f.buffer.toString('base64')
+            }
+          });
+          console.log(`📎 PDF uploaded: ${info.name} (${(info.size / 1024).toFixed(2)} KB)`);
+        } else {
+          // Convert buffer to text for text-based files and append to combinedTextContent
+          const text = f.buffer.toString('utf-8');
+          combinedTextContent += `\n\n[Attached Document: ${info.name}]\n\n${text}`;
+          console.log(`📎 Text file uploaded: ${info.name} (${(info.size / 1024).toFixed(2)} KB)`);
+        }
       }
     }
     
@@ -431,14 +428,15 @@ router.post('/', upload.single('file'), async (req, res) => {
       }
     }
 
-    // Build the complete query with file content if present (for text files)
+    // Build the complete query with combined text file contents if present
     let completeQuery = userQuery;
-    if (fileContent) {
-      completeQuery = `${userQuery}\n\n[Attached Document: ${fileInfo.name}]\n\n${fileContent}`;
-      console.log(`📄 Including file content in analysis (${fileContent.length} characters)`);
+    if (combinedTextContent && combinedTextContent.trim().length > 0) {
+      completeQuery = `${userQuery}${combinedTextContent}`;
+      console.log(`📄 Including attached text content in analysis (${combinedTextContent.length} characters)`);
     }
 
-    const result = await callMPAI(completeQuery, method, outputStyle, roleContext, priorMessages, !!uploadedFile, uploadedFileData);
+    const hasUploads = (uploadedFiles.length > 0);
+    const result = await callMPAI(completeQuery, method, outputStyle, roleContext, priorMessages, hasUploads, uploadedFileData.length > 0 ? uploadedFileData : null);
 
     if (!result.success) {
       return res.status(500).json({ success: false, error: result.error });

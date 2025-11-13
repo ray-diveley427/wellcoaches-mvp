@@ -76,9 +76,18 @@ export async function callMPAI(
     }
 
     // Build messages array with history + current query
-    // If we have a PDF, build content as an array with document first, then text
+    // If we have uploaded files (PDFs/documents), build content as an array with documents first, then text
     let currentMessageContent;
-    if (uploadedFileData) {
+    if (Array.isArray(uploadedFileData) && uploadedFileData.length > 0) {
+      currentMessageContent = [
+        ...uploadedFileData,
+        {
+          type: 'text',
+          text: userQuery
+        }
+      ];
+    } else if (uploadedFileData) {
+      // Single uploaded file object
       currentMessageContent = [
         uploadedFileData,
         {

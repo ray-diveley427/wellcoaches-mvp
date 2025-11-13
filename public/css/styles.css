@@ -398,6 +398,58 @@ body.showing-splash .history-sidebar {
     gap: 0.5rem;
 }
 
+/* Upload zone drag-over highlight (added for better UX) */
+.upload-zone {
+    border: 2px dashed var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,250,0.6));
+    padding: 1.25rem 1rem;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, transform 0.08s ease, border-color 0.12s ease;
+}
+
+.upload-zone .upload-icon {
+    width: 36px;
+    height: 36px;
+    color: var(--text-secondary);
+}
+
+.upload-zone.drag-over {
+    box-shadow: 0 8px 30px rgba(20, 184, 166, 0.12);
+    transform: translateY(-3px);
+    border-color: var(--teal-dark);
+    background: linear-gradient(180deg, rgba(94,234,212,0.06), rgba(20,184,166,0.03));
+}
+
+/* Fallback highlight for textarea when dragging files over it */
+.chat-input.drag-over {
+    outline: 3px solid rgba(20,184,166,0.12);
+    box-shadow: 0 6px 18px rgba(2,6,23,0.04) inset;
+}
+
+/* Small accessibility focus state for upload zone */
+.upload-zone:focus {
+    outline: 3px solid rgba(20,184,166,0.12);
+}
+
+/* Visually hidden (screen-reader only) helper */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
 .dropdown-toggle svg {
     width: 16px;
     height: 16px;

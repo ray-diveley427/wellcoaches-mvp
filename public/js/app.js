@@ -210,13 +210,13 @@ async function sendMessage() {
     return;
   }
 
-  // Get attached file if any
+  // Get attached files if any
   const fileInput = document.getElementById('fileInput');
-  const attachedFile = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
+  const attachedFiles = fileInput && fileInput.files.length > 0 ? Array.from(fileInput.files) : [];
 
-  // Display user message with file indicator
-  const displayMessage = attachedFile
-    ? `${query}\n\n📎 ${attachedFile.name} (${(attachedFile.size / 1024).toFixed(2)} KB)`
+  // Display user message with file indicator(s)
+  const displayMessage = attachedFiles && attachedFiles.length > 0
+    ? `${query}\n\n📎 ${attachedFiles.map(f => `${f.name} (${(f.size / 1024).toFixed(2)} KB)`).join(', ')}`
     : query;
 
   addMessage('user', displayMessage);
@@ -227,8 +227,9 @@ async function sendMessage() {
   const loadingId = addLoadingMessage();
 
   try {
-    // Sending message with optional file
-    const result = await mpaiAPI.analyze(query, selectedMethod, perspectiveVisibility, currentSessionId, attachedFile);
+  // Sending message with optional files
+  const filesToSend = attachedFiles.length > 0 ? attachedFiles : null;
+  const result = await mpaiAPI.analyze(query, selectedMethod, perspectiveVisibility, currentSessionId, filesToSend);
     removeLoadingMessage(loadingId);
 
     // Clear file input and hide badge after sending
@@ -958,41 +959,152 @@ function setupEventListeners() {
     }
   });
   
+  // Make upload button open the hidden file picker
   document.getElementById('uploadButton')?.addEventListener('click', () => document.getElementById('fileInput').click());
 
-  document.getElementById('fileInput')?.addEventListener('change', e => {
-    const files = e.target.files;
-    const badge = document.getElementById('fileAttachmentBadge');
-    const fileName = document.getElementById('fileAttachmentName');
-    const fileSize = document.getElementById('fileAttachmentSize');
+  // Clicking or dropping on the visible upload zone should also attach files
+  const uploadZone = document.getElementById('uploadZone');
+  const fileInputEl = document.getElementById('fileInput');
+  const fileBadge = document.getElementById('fileAttachmentBadge');
+  const fileName = document.getElementById('fileAttachmentName');
+  const fileSize = document.getElementById('fileAttachmentSize');
 
+  function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+  // Helper to apply a FileList to the hidden input and trigger UI update (supports multiple files)
+  function applyFilesToInput(files) {
+    if (!fileInputEl) return;
+    const dt = new DataTransfer();
+    for (let i = 0; i < files.length; i++) {
+      dt.items.add(files[i]);
+    }
+    fileInputEl.files = dt.files;
+    // Trigger change event to update the badge/list
+    fileInputEl.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // Wire the visible upload zone to open file picker on click
+  if (uploadZone) {
+    uploadZone.addEventListener('click', () => fileInputEl && fileInputEl.click());
+
+    // Prevent default behavior for drag events on zone
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => uploadZone.addEventListener(ev, preventDefaults, false));
+
+    // Visual highlight
+    ['dragenter', 'dragover'].forEach(ev => uploadZone.addEventListener(ev, () => uploadZone.classList.add('drag-over'), false));
+    ['dragleave', 'drop'].forEach(ev => uploadZone.addEventListener(ev, () => uploadZone.classList.remove('drag-over'), false));
+
+    // Handle drop on upload zone
+    uploadZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        applyFilesToInput(dt.files);
+      }
+    }, false);
+
+    // Keyboard accessibility: open file picker on Enter/Space
+    uploadZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInputEl && fileInputEl.click();
+      }
+    });
+  }
+
+  // Hidden file input change handler (updates badge/list and shows toast)
+  const fileAttachmentList = document.getElementById('fileAttachmentList');
+  const attachmentStatus = document.getElementById('attachmentStatus');
+
+  function renderFileList() {
+    if (!fileInputEl) return;
+    const files = Array.from(fileInputEl.files || []);
+    if (!files.length) {
+      if (fileBadge) fileBadge.classList.add('hidden');
+      if (fileAttachmentList) fileAttachmentList.innerHTML = '';
+      if (attachmentStatus) attachmentStatus.textContent = '';
+      return;
+    }
+
+    if (fileBadge) fileBadge.classList.remove('hidden');
+    fileAttachmentList.innerHTML = '';
+    files.forEach((f, idx) => {
+  const li = document.createElement('div');
+  li.className = 'file-attachment-item';
+  li.setAttribute('role', 'listitem');
+      const sizeKB = (f.size / 1024).toFixed(2);
+      const sizeMB = (f.size / (1024 * 1024)).toFixed(2);
+      const displaySize = f.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+      li.innerHTML = `
+        <div class="file-attachment-item-info">📎 <span class="file-name">${escapeHtml(f.name)}</span>
+          <span class="file-size">${displaySize}</span>
+        </div>
+        <button class="file-remove-single" data-index="${idx}" title="Remove ${escapeHtml(f.name)}">✕</button>
+      `;
+      fileAttachmentList.appendChild(li);
+    });
+
+    // Update live region for screen readers
+    if (attachmentStatus) attachmentStatus.textContent = `${files.length} file${files.length !== 1 ? 's' : ''} attached: ${files.map(f => f.name).join(', ')}`;
+  }
+
+  function removeFileAtIndex(index) {
+    if (!fileInputEl) return;
+    const currentFiles = Array.from(fileInputEl.files || []);
+    if (index < 0 || index >= currentFiles.length) return;
+    const dt = new DataTransfer();
+    currentFiles.forEach((f, i) => { if (i !== index) dt.items.add(f); });
+    fileInputEl.files = dt.files;
+    fileInputEl.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  fileInputEl?.addEventListener('change', e => {
+    renderFileList();
+    const files = Array.from(e.target.files || []);
     if (files.length > 0) {
-      const file = files[0];
-      const sizeKB = (file.size / 1024).toFixed(2);
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      const displaySize = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
-
-      // Show the badge with file info
-      if (fileName) fileName.textContent = file.name;
-      if (fileSize) fileSize.textContent = displaySize;
-      if (badge) badge.classList.remove('hidden');
-
-      showToast(`📎 ${file.name} attached`, 'success');
+      showToast(`📎 ${files.length} file${files.length !== 1 ? 's' : ''} attached`, 'success');
     } else {
-      // Hide badge if no file
-      if (badge) badge.classList.add('hidden');
+      showToast('All attachments removed', 'info');
     }
   });
 
-  // Handle remove file button
-  document.getElementById('fileAttachmentRemove')?.addEventListener('click', () => {
-    const fileInput = document.getElementById('fileInput');
-    const badge = document.getElementById('fileAttachmentBadge');
-
-    if (fileInput) fileInput.value = '';
-    if (badge) badge.classList.add('hidden');
-    showToast('Attachment removed', 'info');
+  // Delegate click to remove single file buttons
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.file-remove-single');
+    if (btn) {
+      const idx = parseInt(btn.getAttribute('data-index'), 10);
+      if (!isNaN(idx)) removeFileAtIndex(idx);
+    }
   });
+
+  // Handle remove all files button
+  document.getElementById('fileAttachmentRemove')?.addEventListener('click', () => {
+    if (fileInputEl) fileInputEl.value = '';
+    renderFileList();
+    showToast('All attachments removed', 'info');
+  });
+
+  // Add drag-and-drop support to the textarea as well (fallback/extra UX)
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      chatInput.addEventListener(eventName, preventDefaults, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      chatInput.addEventListener(eventName, () => chatInput.classList.add('drag-over'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      chatInput.addEventListener(eventName, () => chatInput.classList.remove('drag-over'), false);
+    });
+
+    chatInput.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        applyFilesToInput(dt.files);
+      }
+    }, false);
+  }
   
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
   

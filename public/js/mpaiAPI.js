@@ -15,11 +15,11 @@ function getEffectiveUserId() {
 }
 
 const mpaiAPI = {
-    /**
-     * Call the main analyze endpoint
-     * @param {File} file - Optional file to upload with the query
-     */
-    async analyze(userQuery, method = null, perspectiveVisibility = 'visible', sessionId = null, file = null) {
+  /**
+   * Call the main analyze endpoint
+   * @param {File|File[]} files - Optional file or array of files to upload with the query
+   */
+  async analyze(userQuery, method = null, perspectiveVisibility = 'visible', sessionId = null, files = null) {
       try {
         const userId = getEffectiveUserId();
 
@@ -31,18 +31,21 @@ const mpaiAPI = {
           headers['Authorization'] = `Bearer ${idToken}`;
         }
 
-        if (file) {
-          // Use FormData for file upload
+        if (files && (Array.isArray(files) ? files.length > 0 : true)) {
+          // Use FormData for file upload(s)
           const formData = new FormData();
           formData.append('userQuery', userQuery);
           formData.append('perspectiveVisibility', perspectiveVisibility);
           formData.append('userId', userId);
           if (method) formData.append('method', method);
           if (sessionId) formData.append('sessionId', sessionId);
-          formData.append('file', file);
+
+          // Append one or many files under the 'files' key
+          const fileList = Array.isArray(files) ? files : [files];
+          fileList.forEach(f => formData.append('files', f));
 
           body = formData;
-          console.log(`📤 Sending with file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+          console.log(`📤 Sending with ${fileList.length} file(s): ${fileList.map(f=>f.name).join(', ')}`);
         } else {
           // Use JSON for text-only
           headers['Content-Type'] = 'application/json';
