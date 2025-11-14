@@ -19,7 +19,7 @@ const METHODS = [
   { key: 'SIMPLE_SYNTHESIS', name: 'SYNTHESIS', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Integrate insights from multiple analyses or explore across personal, relational, and systemic levels.' },
   { key: 'SYNTHESIS_ALL', name: 'SYNTHESIS (ALL)', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Deep integration across individual, relational, and systemic levels. Most comprehensive analysis.' },
   { key: 'INNER_PEACE_SYNTHESIS', name: 'INNER PEACE SYNTHESIS', complexity: 5, complexityStars: '★★★★★', category: 'advanced', tag: 'ADVANCED', description: 'Resolve internal conflicts and improve well-being. Identify competing parts within yourself and find pathways to integration.' },
-  { key: 'COACHING_PLAN', name: 'COACHING PLAN', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Transform analysis into actionable development plan with vision, strategies, and concrete next steps.' },
+  { key: 'ACTION_PLAN', name: 'ACTION PLAN', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Transform analysis into actionable development plan with vision, strategies, and concrete next steps.' },
   { key: 'SKILLS', name: 'SKILLS', complexity: 4, complexityStars: '★★★★☆', category: 'advanced', tag: 'ADVANCED', description: 'Develop skills in applying any of the nine perspectives, based on the book: The Science of Leadership.' }
 ];
 

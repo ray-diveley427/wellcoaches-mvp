@@ -378,10 +378,10 @@ export function suggestMethod(userQuery) {
     return 'CONFLICT_RESOLUTION';
   }
 
-  // COACHING_PLAN: explicit coaching request
+  // ACTION_PLAN: explicit action plan request
   if (query.includes('coaching plan') || query.includes('develop me') ||
       query.includes('growth plan') || query.includes('action plan')) {
-    return 'COACHING_PLAN';
+    return 'ACTION_PLAN';
   }
 
   // SKILLS: perspective skill development
@@ -470,7 +470,7 @@ export function getMethodDescription(method) {
     SIMPLE_SYNTHESIS: 'Simple synthesis - three-level integration with vision',
     SYNTHESIS_ALL: 'Deep synthesis - integrating all prior conversations',
     INNER_PEACE_SYNTHESIS: 'Inner peace - resolving internal conflict with integration path',
-    COACHING_PLAN: 'Coaching plan - structured development roadmap',
+    ACTION_PLAN: 'Action plan - structured development roadmap',
     SKILLS: 'Skills development - strengthening specific perspectives',
     NOTES_SUMMARY: 'Notes summary - organizing content through perspectives',
   };
