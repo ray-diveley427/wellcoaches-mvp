@@ -115,28 +115,45 @@ export function canUploadFiles(subscriptionTier) {
 
 /**
  * Keap Product IDs (to be filled in after creating products in Keap)
- * You'll need to create these subscription products in Keap and add their IDs here
+ *
+ * SETUP INSTRUCTIONS:
+ * 1. Go to my982.infusionsoft.com
+ * 2. Create product: "Multi-Perspective AI Premium" - $10/month subscription
+ * 3. Get the Product ID and replace 'PLACEHOLDER' below
  */
 export const KEAP_PRODUCT_IDS = {
-  premium: null  // Set this after creating the product in Keap
+  premium: 'PLACEHOLDER'  // TODO: Replace with actual Keap product ID
 };
 
 /**
+ * Keap Order Form URL
+ *
+ * SETUP INSTRUCTIONS:
+ * 1. In Keap, create an Order Form for the Premium product
+ * 2. Get the form URL and replace below
+ */
+export const KEAP_ORDER_FORM_URL = 'https://my982.infusionsoft.com/app/orderForms/PLACEHOLDER';
+
+/**
  * Keap Tag IDs (to be filled in after creating tags in Keap)
+ *
+ * SETUP INSTRUCTIONS:
+ * 1. Go to Keap → CRM → Settings → Tags
+ * 2. Create these tags and get their IDs:
  */
 export const KEAP_TAG_IDS = {
-  free: null,       // Create "MPAI - Free User" tag
-  premium: null,    // Create "MPAI - Premium User" tag
-  canceled: null,   // Create "MPAI - Canceled" tag
-  new_signup: null  // Create "MPAI - New Signup" tag
+  free: 'PLACEHOLDER',       // TODO: Create "MPAI - Free User" tag
+  premium: 'PLACEHOLDER',    // TODO: Create "MPAI - Premium User" tag
+  canceled: 'PLACEHOLDER',   // TODO: Create "MPAI - Canceled" tag
+  new_signup: 'PLACEHOLDER'  // TODO: Create "MPAI - New Signup" tag
 };
 
 /**
  * Keap Custom Field IDs (optional - create in Keap if needed)
  */
 export const KEAP_CUSTOM_FIELDS = {
-  subscription_tier: null,
-  subscription_status: null,
-  subscription_start_date: null,
-  monthly_usage: null
+  subscription_tier: 'PLACEHOLDER',
+  subscription_status: 'PLACEHOLDER',
+  subscription_start_date: 'PLACEHOLDER',
+  monthly_usage: 'PLACEHOLDER'
 };
