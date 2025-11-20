@@ -80,6 +80,41 @@ app.use((req, res, next) => {
   next();
 });
 
+// ==================================================================
+// HIPAA Security Headers Middleware
+// ==================================================================
+app.use((req, res, next) => {
+  // Strict-Transport-Security: Force HTTPS
+  res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+
+  // Content-Security-Policy: Prevent XSS attacks
+  res.header('Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cognito-idp.us-east-1.amazonaws.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self' https://cognito-idp.us-east-1.amazonaws.com https://*.auth.us-east-1.amazoncognito.com;"
+  );
+
+  // X-Content-Type-Options: Prevent MIME sniffing
+  res.header('X-Content-Type-Options', 'nosniff');
+
+  // X-Frame-Options: Prevent clickjacking
+  res.header('X-Frame-Options', 'DENY');
+
+  // X-XSS-Protection: Enable browser XSS protection
+  res.header('X-XSS-Protection', '1; mode=block');
+
+  // Referrer-Policy: Control referrer information
+  res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Permissions-Policy: Restrict browser features
+  res.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+
+  next();
+});
+
 // Mount refactored history routes
 app.use('/api/history', historyRoutes);
 app.use('/api/analyze', analyzeRoutes);

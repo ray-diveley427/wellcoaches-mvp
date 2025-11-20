@@ -650,7 +650,15 @@
         
         // Update UI on page load
         updateAuthUI();
+
+        // Initialize session timeout (HIPAA compliance)
+        if (typeof initSessionTimeout === 'function') {
+          initSessionTimeout();
+        }
       </script>
+
+    <!-- Session Timeout Script (HIPAA Compliance) -->
+    <script src="/js/sessionTimeout.js"></script>
 
     <!-- Footer -->
     <footer style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 1.5rem 2rem; text-align: center; color: #6b7280; font-size: 0.875rem; margin-top: auto;">
