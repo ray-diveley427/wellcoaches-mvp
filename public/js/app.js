@@ -364,6 +364,8 @@ async function sendMessage() {
     elements.sendButton.disabled = false;
     isLoading = false;
     elements.chatInput.focus();
+    // Update download button visibility after message is sent
+    updateDownloadButtonVisibility();
   }
 }
 
@@ -938,6 +940,9 @@ async function loadSession(sessionId) {
     closeHistory();
   }
   // If pinned, sidebar stays open - don't do anything
+
+  // Update download button visibility
+  updateDownloadButtonVisibility();
 }
 
 function toggleHistory() {
@@ -1257,6 +1262,8 @@ function setupEventListeners() {
       card.classList.remove('active');
     });
     showToast('🆕 Started a new conversation');
+    // Update download button visibility
+    updateDownloadButtonVisibility();
   });
   
   // History filter buttons
@@ -1384,6 +1391,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         <p>Please log in to view your conversation history.</p>
       </div>`;
   }
+
+  // Initialize download button visibility on page load
+  updateDownloadButtonVisibility();
 });
 
 
