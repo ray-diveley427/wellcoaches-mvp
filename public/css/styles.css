@@ -1340,6 +1340,29 @@ body.showing-splash .history-sidebar {
     background: var(--bg-secondary);
 }
 
+.download-button {
+    padding: 0.875rem;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #1f2937;
+    border: none;
+    border-radius: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.download-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.download-button:active {
+    transform: translateY(0);
+}
+
 .send-button {
     padding: 0.875rem 1.5rem;
     background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%);
@@ -1688,17 +1711,26 @@ body.showing-splash .history-sidebar {
   .btn-small[data-action="resume"]:hover {
     background: #0d9488;
   }
-  
-  /* Share */
-  .btn-small[data-action="share"] {
+
+  /* Download - Yellow */
+  .btn-small[data-action="download"] {
     background: #fbbf24;
     color: #1f2937;
   }
-  .btn-small[data-action="share"]:hover {
+  .btn-small[data-action="download"]:hover {
     background: #f59e0b;
   }
-  
-  /* Delete */
+
+  /* Share - Green */
+  .btn-small[data-action="share"] {
+    background: #10b981;
+    color: white;
+  }
+  .btn-small[data-action="share"]:hover {
+    background: #059669;
+  }
+
+  /* Delete - Red */
   .btn-small[data-action="delete"] {
     background: #ef4444;
   }
@@ -1766,8 +1798,11 @@ body.showing-splash .history-sidebar {
 .btn-small.btn-resume { background: #14b8a6; }
 .btn-small.btn-resume:hover { background: #0d9488; }
 
-.btn-small.btn-share { background: #fbbf24; color: #1f2937; }
-.btn-small.btn-share:hover { background: #f59e0b; }
+.btn-small.btn-download { background: #fbbf24; color: #1f2937; }
+.btn-small.btn-download:hover { background: #f59e0b; }
+
+.btn-small.btn-share { background: #10b981; color: white; }
+.btn-small.btn-share:hover { background: #059669; }
 
 .btn-small.btn-delete { background: #ef4444; }
 .btn-small.btn-delete:hover { background: #dc2626; }
@@ -1776,24 +1811,30 @@ body.showing-splash .history-sidebar {
 .btn-small:disabled { opacity: 1; filter: none; cursor: not-allowed; }
 
 .btn-small.btn-resume:disabled { background: #93e2d8; color: #ffffff; }
-.btn-small.btn-share:disabled { background: #fde68a; color: #1f2937; }
+.btn-small.btn-download:disabled { background: #fde68a; color: #1f2937; }
+.btn-small.btn-share:disabled { background: #86efac; color: #ffffff; }
 .btn-small.btn-delete:disabled { background: #fca5a5; color: #ffffff; }
 
 /* Attribute-based variants as fallback */
 .btn-small[disabled][data-action="resume"] { background: #93e2d8; color: #ffffff; }
-.btn-small[disabled][data-action="share"] { background: #fde68a; color: #1f2937; }
+.btn-small[disabled][data-action="download"] { background: #fde68a; color: #1f2937; }
+.btn-small[disabled][data-action="share"] { background: #86efac; color: #ffffff; }
 .btn-small[disabled][data-action="delete"] { background: #fca5a5; color: #ffffff; }
 
 /* Stronger specificity to ensure disabled buttons keep color */
 .history-item-actions button.btn-small.btn-resume:disabled { background: #14b8a6 !important; color: #ffffff !important; opacity: 1 !important; }
-.history-item-actions button.btn-small.btn-share:disabled { background: #fbbf24 !important; color: #1f2937 !important; opacity: 1 !important; }
+.history-item-actions button.btn-small.btn-download:disabled { background: #fbbf24 !important; color: #1f2937 !important; opacity: 1 !important; }
+.history-item-actions button.btn-small.btn-share:disabled { background: #10b981 !important; color: #ffffff !important; opacity: 1 !important; }
 .history-item-actions button.btn-small.btn-delete:disabled { background: #ef4444 !important; color: #ffffff !important; opacity: 1 !important; }
-  
-/* Fallback: color history buttons by order if classes/attributes are missing */
+
+/* Fallback: color history buttons by order if classes/attributes are missing (Download, Share, Delete) */
 .history-item-actions .btn-small:nth-child(1) { background: #fbbf24; color: #1f2937; }
 .history-item-actions .btn-small:nth-child(1):hover { background: #f59e0b; }
 
-.history-item-actions .btn-small:nth-child(2) { background: #ef4444; color: #ffffff; }
-.history-item-actions .btn-small:nth-child(2):hover { background: #dc2626; }
+.history-item-actions .btn-small:nth-child(2) { background: #10b981; color: #ffffff; }
+.history-item-actions .btn-small:nth-child(2):hover { background: #059669; }
+
+.history-item-actions .btn-small:nth-child(3) { background: #ef4444; color: #ffffff; }
+.history-item-actions .btn-small:nth-child(3):hover { background: #dc2626; }
   
   
