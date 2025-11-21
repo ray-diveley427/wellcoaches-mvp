@@ -38,44 +38,7 @@ const FAQ_MAPPINGS = {
 // PRO TOOLS CONFIGURATION
 // =====================================================================
 const PRO_TOOLS = {
-  coach: [
-    {
-      name: 'Map to Competencies',
-      badge: 'ICF & NBHWC',
-      description: 'Maps the nine perspectives to both ICF Core Competencies and NBHWC Competencies for dual certification documentation.',
-      activation: 'Map to competencies'
-    },
-    {
-      name: 'Coherence Readiness Tool',
-      badge: 'Breakthrough',
-      description: 'Identifies which perspective holds the key pattern for breakthrough. Applies legitimacy-first principle.',
-      activation: 'Find the coherence point'
-    },
-    {
-      name: 'Moral Mindfulness Activation',
-      badge: 'Discovery',
-      description: 'Shifts from advice-giving to discovery-facilitation. Transforms perspectives into inquiry.',
-      activation: 'Activate moral mindfulness'
-    },
-    {
-      name: 'Future Self Exercise Tool',
-      badge: 'Evolution',
-      description: 'Projects perspectives forward to reveal potential evolution paths and future integration.',
-      activation: 'Run Future Self exercise'
-    },
-    {
-      name: 'Mentor Coaching Tool',
-      badge: 'Development',
-      description: 'Supports coaches in developing capacity to hold all nine perspectives while meeting competency requirements.',
-      activation: 'Mentor coaching mode'
-    },
-    {
-      name: 'Declipse Tool',
-      badge: 'Declipse',
-      description: 'Applies the Declipse methodology to generate powerful coaching questions aligned with ICF Core Competencies.',
-      activation: 'Apply Declipse lens'
-    }
-  ],
+  coach: [],
   healthcare: [],
   leader: []
 };

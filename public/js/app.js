@@ -1416,13 +1416,23 @@ function populateProTools(category = 'coach') {
   proToolsContent.innerHTML = '';
   
   if (proTools[category].length === 0) {
+    const categoryTitles = {
+      coach: 'Coach Professional Tools',
+      healthcare: 'Healthcare Professional Tools',
+      leader: 'Leadership Tools'
+    };
+    const categoryIcons = {
+      coach: '🎯',
+      healthcare: '🏥',
+      leader: '👔'
+    };
     proToolsContent.innerHTML = `
       <div class="pro-tools-coming-soon">
         <div class="pro-tools-coming-icon">
-          ${category === 'healthcare' ? '🏥' : '👔'}
+          ${categoryIcons[category] || '🔧'}
         </div>
         <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">
-          ${category === 'healthcare' ? 'Healthcare Professional Tools' : 'Leadership Tools'}
+          ${categoryTitles[category] || 'Professional Tools'}
         </div>
         <div style="font-size: 13px;">Coming Soon</div>
       </div>
