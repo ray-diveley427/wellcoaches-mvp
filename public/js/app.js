@@ -832,14 +832,22 @@ async function downloadSessionAsWord(sessionId, event) {
     return;
   }
 
+  // Check if docx library is loaded
+  if (typeof docx === 'undefined' || !window.docx) {
+    console.error('docx library not loaded');
+    showToast('Word document library not loaded. Please refresh the page.', 'error');
+    return;
+  }
+
   // Sort by timestamp
   const sortedData = sessionData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   const firstExchange = sortedData[0];
   const sessionTitle = firstExchange.user_query?.split(/[?.!]/)[0].slice(0, 60) || 'Multi-Perspective AI Conversation';
   const dateStr = new Date(firstExchange.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
 
-  // Import docx library
-  const { Document, Paragraph, TextRun, AlignmentType, HeadingLevel, Packer } = docx;
+  try {
+    // Import docx library
+    const { Document, Paragraph, TextRun, AlignmentType, HeadingLevel, Packer } = docx;
 
   // Create document sections
   const docSections = [];
@@ -952,10 +960,10 @@ async function downloadSessionAsWord(sessionId, event) {
     }]
   });
 
-  // Generate and download
-  const filename = `MPAI_${dateStr}_${sessionTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}.docx`;
+    // Generate and download
+    const filename = `MPAI_${dateStr}_${sessionTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}.docx`;
 
-  Packer.toBlob(doc).then(blob => {
+    const blob = await Packer.toBlob(doc);
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -963,10 +971,10 @@ async function downloadSessionAsWord(sessionId, event) {
     link.click();
     window.URL.revokeObjectURL(url);
     showToast('Conversation downloaded as Word document', 'success');
-  }).catch(err => {
+  } catch (err) {
     console.error('Error creating Word document:', err);
-    showToast('Error creating Word document', 'error');
-  });
+    showToast('Error creating Word document: ' + err.message, 'error');
+  }
 }
 
 function downloadCurrentConversation(format = 'pdf') {
