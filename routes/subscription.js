@@ -19,7 +19,7 @@ import {
   SUBSCRIPTION_TIERS,
   SUBSCRIPTION_STATUS,
   TIER_CONFIG,
-  KEAP_ORDER_FORM_URL
+  KEAP_ORDER_FORM_URLS
 } from '../utils/subscriptionConfig.js';
 
 const router = express.Router();
@@ -102,15 +102,15 @@ router.post('/upgrade', async (req, res) => {
       });
     }
 
-    // Return the Keap order form URL (will be placeholder until configured)
-    const orderFormUrl = KEAP_ORDER_FORM_URL.includes('PLACEHOLDER')
-      ? '/subscription/upgrade-placeholder'  // Show placeholder page
-      : `${KEAP_ORDER_FORM_URL}?inf_field_Email=${encodeURIComponent(userEmail)}`;
+    // Return the Keap order form URL for member subscription
+    const orderFormUrl = KEAP_ORDER_FORM_URLS.member
+      ? `${KEAP_ORDER_FORM_URLS.member}?inf_field_Email=${encodeURIComponent(userEmail)}`
+      : '/subscription/upgrade-placeholder';
 
     res.json({
       success: true,
       redirectUrl: orderFormUrl,
-      isPlaceholder: KEAP_ORDER_FORM_URL.includes('PLACEHOLDER')
+      isPlaceholder: !KEAP_ORDER_FORM_URLS.member
     });
   } catch (error) {
     console.error('❌ Error upgrading subscription:', error);

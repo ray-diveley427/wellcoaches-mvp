@@ -258,32 +258,114 @@
         .current-limit-info strong {
             color: #1e0a29;
         }
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+        /* User Cards */
+        .user-cards {
+            display: grid;
+            gap: 1rem;
         }
-        .table-wrapper table {
-            min-width: 1200px;
+        .user-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
-        .table-wrapper table th,
-        .table-wrapper table td {
+        .user-card:hover {
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .user-card.expanded {
+            background: white;
+            border-color: #14b8a6;
+        }
+        .user-card-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 1rem;
+            align-items: center;
+        }
+        .user-card-email {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .user-card-email a {
+            color: #14b8a6;
+            text-decoration: none;
+        }
+        .user-card-email a:hover {
+            text-decoration: underline;
+        }
+        .user-card-tier {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
             white-space: nowrap;
         }
-        .table-wrapper table th:first-child,
-        .table-wrapper table td:first-child {
-            position: sticky;
-            left: 0;
-            background: white;
-            z-index: 10;
-            box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+        .user-card-metric {
+            text-align: right;
         }
-        .table-wrapper table th:last-child,
-        .table-wrapper table td:last-child {
-            position: sticky;
-            right: 0;
-            background: white;
-            z-index: 10;
-            box-shadow: -2px 0 4px rgba(0,0,0,0.05);
+        .user-card-metric-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.125rem;
+        }
+        .user-card-metric-value {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .user-card-expand {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 1.25rem;
+            transition: transform 0.2s ease;
+        }
+        .user-card.expanded .user-card-expand {
+            transform: rotate(180deg);
+        }
+        .user-card-details {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .user-card.expanded .user-card-details {
+            display: grid;
+        }
+        .user-detail-item {
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 6px;
+        }
+        .user-detail-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        .user-detail-value {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 0.875rem;
+        }
+        .user-card-actions {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        .user-card.expanded .user-card-actions {
+            display: block;
+        }
+        .table-wrapper {
+            display: none; /* Hide old table view */
         }
     </style>
 </head>
@@ -368,17 +450,68 @@
 
             <div class="section">
                 <h2>Detailed User Stats (Last 30 Days)</h2>
-                <p style="color: #6b7280; margin-bottom: 1rem;">
+                <p style="color: #6b7280; margin-bottom: 0.5rem;">
                     Complete breakdown by user including total costs, sessions, and activity
                 </p>
+
+                <!-- Search and Filter -->
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center;">
+                    <input
+                        type="text"
+                        id="userSearch"
+                        placeholder="Search by email or user ID..."
+                        style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;"
+                        onkeyup="filterUsers()"
+                    >
+                    <select
+                        id="tierFilter"
+                        style="padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;"
+                        onchange="filterUsers()"
+                    >
+                        <option value="">All Tiers</option>
+                        <option value="staff_complimentary">Staff</option>
+                        <option value="student">Student</option>
+                        <option value="member">Member</option>
+                        <option value="non_member">Non-Member</option>
+                        <option value="free">Free</option>
+                    </select>
+                    <button onclick="clearFilters()" class="btn-secondary" style="padding: 0.75rem 1.5rem; font-size: 0.875rem;">
+                        Clear
+                    </button>
+                </div>
+
                 <div id="detailedUsersLoading" class="loading">Loading detailed user stats...</div>
                 <div id="detailedUsers" style="display: none;">
+                    <!-- Info bar with counters and export -->
+                    <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div style="color: #6b7280; font-size: 0.875rem;">
+                            Showing <span id="pageStart">0</span>-<span id="pageEnd">0</span> of <span id="totalUsers">0</span> users
+                            (<span id="visibleUsers">0</span> after filters)
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <select id="pageSize" onchange="changePageSize()" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;">
+                                <option value="10">10 per page</option>
+                                <option value="25" selected>25 per page</option>
+                                <option value="50">50 per page</option>
+                                <option value="100">100 per page</option>
+                            </select>
+                            <button onclick="exportToCSV()" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                📥 Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- NEW: Card-based layout -->
+                    <div id="userCardsContainer" class="user-cards"></div>
+
+                    <!-- OLD: Table layout (hidden) -->
                     <div class="table-wrapper">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="border-bottom: 2px solid #e5e7eb;">
                                 <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">Email</th>
                                 <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">User ID</th>
+                                <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600;">Subscription</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Monthly Cost</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Monthly Limit</th>
                                 <th style="text-align: right; padding: 1rem; color: #6b7280; font-weight: 600;">Total Cost</th>
@@ -393,6 +526,25 @@
                         <tbody id="detailedUsersBody">
                         </tbody>
                     </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div id="paginationControls" style="margin-top: 1.5rem; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                        <button onclick="goToPage(1)" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                            ⏮ First
+                        </button>
+                        <button onclick="goToPage(currentPage - 1)" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                            ← Prev
+                        </button>
+                        <span id="pageInfo" style="padding: 0 1rem; color: #6b7280; font-size: 0.875rem; font-weight: 500;">
+                            Page 1 of 1
+                        </span>
+                        <button onclick="goToPage(currentPage + 1)" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                            Next →
+                        </button>
+                        <button onclick="goToPage(totalPages)" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                            Last ⏭
+                        </button>
                     </div>
                 </div>
             </div>
@@ -564,10 +716,21 @@
                 }
                 
                 const data = await response.json();
+
+                // Add default monthly limit to each user for pagination rendering
+                const usersWithDefaults = data.users.map(user => ({
+                    ...user,
+                    defaultMonthlyLimit: data.limits?.defaultMonthlyPerUser || 5.00
+                }));
+
+                // Store data and trigger pagination
+                storeUserData(usersWithDefaults);
+
+                /* OLD CODE - Keeping for reference but commented out
                 const tbody = document.getElementById('detailedUsersBody');
-                
+
                 if (data.users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 2rem; color: #6b7280;">No user data found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 2rem; color: #6b7280;">No user data found</td></tr>';
                 } else {
                     tbody.innerHTML = data.users.map(user => {
                         const monthlyPercent = parseFloat(user.monthlyUsagePercent);
@@ -575,11 +738,39 @@
                         const monthlyColor = isOverLimit ? '#ef4444' : monthlyPercent > 80 ? '#f59e0b' : '#14b8a6';
                         const defaultLimit = parseFloat(data.limits?.defaultMonthlyPerUser || 5.00);
                         const hasCustomLimit = parseFloat(user.monthlyLimit) !== defaultLimit;
-                        
+
+                        // Format subscription tier
+                        const tierColors = {
+                            'staff_complimentary': '#8b5cf6',
+                            'student': '#3b82f6',
+                            'member': '#10b981',
+                            'non_member': '#f59e0b',
+                            'free': '#6b7280'
+                        };
+                        const tierNames = {
+                            'staff_complimentary': 'Staff',
+                            'student': 'Student',
+                            'member': 'Member',
+                            'non_member': 'Non-Member',
+                            'free': 'Free'
+                        };
+                        const tierColor = tierColors[user.subscriptionTier] || '#6b7280';
+                        const tierName = tierNames[user.subscriptionTier] || 'Free';
+
                         return `
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 1rem; color: #6b7280;">${user.email}</td>
+                        <tr class="user-row" data-email="${user.email.toLowerCase()}" data-userid="${user.userId.toLowerCase()}" data-tier="${user.subscriptionTier}" style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 1rem; color: #6b7280;">
+                                <a href="mailto:${user.email}" style="color: #14b8a6; text-decoration: none; font-weight: 500;">
+                                    ${user.email}
+                                </a>
+                            </td>
                             <td style="padding: 1rem; font-weight: 600;">${user.userId}</td>
+                            <td style="padding: 1rem;">
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: ${tierColor}15; color: ${tierColor}; border: 1px solid ${tierColor}40; border-radius: 12px; font-size: 0.875rem; font-weight: 600;">
+                                    ${tierName}
+                                </span>
+                                ${user.keapTags && user.keapTags.length > 0 ? `<div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">${user.keapTags.length} tag(s)</div>` : ''}
+                            </td>
                             <td style="padding: 1rem; text-align: right; color: ${monthlyColor}; font-weight: 600;">
                                 $${parseFloat(user.monthlyCost).toFixed(2)}
                                 ${isOverLimit ? ' ⚠️' : ''}
@@ -605,13 +796,269 @@
                         </tr>
                     `;
                     }).join('');
+
+                    // Update counters
+                    document.getElementById('totalUsers').textContent = data.users.length;
+                    document.getElementById('visibleUsers').textContent = data.users.length;
                 }
-                
+                */
+
                 document.getElementById('detailedUsersLoading').style.display = 'none';
                 document.getElementById('detailedUsers').style.display = 'block';
             } catch (err) {
                 document.getElementById('detailedUsersLoading').textContent = `Error: ${err.message}`;
             }
+        };
+
+        // Pagination variables
+        let currentPage = 1;
+        let pageSize = 25;
+        let totalPages = 1;
+        let allUserData = [];
+
+        // Store user data globally for filtering/pagination
+        window.storeUserData = function(users) {
+            allUserData = users;
+            filterAndPaginate();
+        };
+
+        // Filter users by search text and tier, then paginate
+        window.filterUsers = function() {
+            currentPage = 1; // Reset to page 1 when filtering
+            filterAndPaginate();
+        };
+
+        // Combined filter and pagination
+        function filterAndPaginate() {
+            const searchText = document.getElementById('userSearch').value.toLowerCase();
+            const tierFilter = document.getElementById('tierFilter').value;
+
+            // Filter users
+            const filteredUsers = allUserData.filter(user => {
+                const email = (user.email || '').toLowerCase();
+                const userId = (user.userId || '').toLowerCase();
+                const tier = user.subscriptionTier || 'free'; // Default to 'free' to match server default
+
+                const matchesSearch = email.includes(searchText) || userId.includes(searchText);
+                const matchesTier = !tierFilter || tier === tierFilter;
+
+                return matchesSearch && matchesTier;
+            });
+
+            // Calculate pagination
+            const totalFiltered = filteredUsers.length;
+            totalPages = Math.ceil(totalFiltered / pageSize) || 1;
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalFiltered);
+            const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+            // Update display
+            renderUserRows(paginatedUsers);
+            updatePaginationControls(startIndex, endIndex, totalFiltered, allUserData.length);
+        }
+
+        // Render user cards (NEW card-based layout)
+        function renderUserRows(users) {
+            const container = document.getElementById('userCardsContainer');
+
+            if (users.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No users found</div>';
+                return;
+            }
+
+            container.innerHTML = users.map((user, index) => {
+                const monthlyPercent = parseFloat(user.monthlyUsagePercent);
+                const isOverLimit = parseFloat(user.monthlyCost) >= parseFloat(user.monthlyLimit);
+                const monthlyColor = isOverLimit ? '#ef4444' : monthlyPercent > 80 ? '#f59e0b' : '#14b8a6';
+                const hasCustomLimit = parseFloat(user.monthlyLimit) !== parseFloat(user.defaultMonthlyLimit || 5.00);
+
+                const tierColors = {
+                    'staff_complimentary': '#8b5cf6',
+                    'student': '#3b82f6',
+                    'member': '#10b981',
+                    'non_member': '#f59e0b',
+                    'free': '#6b7280'
+                };
+                const tierNames = {
+                    'staff_complimentary': 'Staff',
+                    'student': 'Student',
+                    'member': 'Member',
+                    'non_member': 'Non-Member',
+                    'free': 'Free'
+                };
+                const tierColor = tierColors[user.subscriptionTier] || '#6b7280';
+                const tierName = tierNames[user.subscriptionTier] || 'Free';
+
+                return `
+                <div class="user-card" id="userCard${index}" onclick="toggleCard(${index})">
+                    <div class="user-card-header">
+                        <div class="user-card-email">
+                            <a href="mailto:${user.email}" onclick="event.stopPropagation()">
+                                ${user.email}
+                            </a>
+                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">${user.userId}</div>
+                        </div>
+                        <div>
+                            <span class="user-card-tier" style="background: ${tierColor}15; color: ${tierColor}; border: 1px solid ${tierColor}40;">
+                                ${tierName}
+                            </span>
+                        </div>
+                        <div class="user-card-metric">
+                            <div class="user-card-metric-label">Monthly Usage</div>
+                            <div class="user-card-metric-value" style="color: ${monthlyColor};">
+                                $${parseFloat(user.monthlyCost).toFixed(2)} / $${parseFloat(user.monthlyLimit).toFixed(2)}
+                                ${isOverLimit ? ' ⚠️' : ''}
+                            </div>
+                        </div>
+                        <div class="user-card-metric">
+                            <div class="user-card-metric-label">Total Cost</div>
+                            <div class="user-card-metric-value" style="color: #14b8a6;">
+                                $${parseFloat(user.totalCost).toFixed(2)}
+                            </div>
+                        </div>
+                        <button class="user-card-expand">▼</button>
+                    </div>
+
+                    <div class="user-card-details">
+                        <div class="user-detail-item">
+                            <div class="user-detail-label">Usage %</div>
+                            <div class="user-detail-value" style="color: ${monthlyColor};">
+                                ${monthlyPercent}%
+                            </div>
+                        </div>
+                        <div class="user-detail-item">
+                            <div class="user-detail-label">Analyses</div>
+                            <div class="user-detail-value">${user.totalAnalyses}</div>
+                        </div>
+                        <div class="user-detail-item">
+                            <div class="user-detail-label">Sessions</div>
+                            <div class="user-detail-value">${user.totalSessions}</div>
+                        </div>
+                        <div class="user-detail-item">
+                            <div class="user-detail-label">Avg Cost</div>
+                            <div class="user-detail-value">$${user.avgCostPerAnalysis}</div>
+                        </div>
+                        <div class="user-detail-item">
+                            <div class="user-detail-label">Total Tokens</div>
+                            <div class="user-detail-value">${user.totalTokens}</div>
+                        </div>
+                        <div class="user-detail-item">
+                            <div class="user-detail-label">Last Activity</div>
+                            <div class="user-detail-value" style="font-size: 0.75rem;">
+                                ${new Date(user.lastActivity).toLocaleDateString()}
+                            </div>
+                        </div>
+                        ${user.keapTags && user.keapTags.length > 0 ? `
+                        <div class="user-detail-item">
+                            <div class="user-detail-label">Keap Tags</div>
+                            <div class="user-detail-value">${user.keapTags.length} tag(s)</div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="user-card-actions">
+                        <button class="btn-edit-limit" onclick="event.stopPropagation(); openLimitModal('${user.userId}', '${user.email}', ${parseFloat(user.monthlyLimit).toFixed(2)}, ${parseFloat(user.defaultMonthlyLimit || 5.00).toFixed(2)}, ${hasCustomLimit})">
+                            Edit Monthly Limit
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle card expansion
+        window.toggleCard = function(index) {
+            const card = document.getElementById(`userCard${index}`);
+            card.classList.toggle('expanded');
+        };
+
+        // Update pagination controls
+        function updatePaginationControls(startIndex, endIndex, filteredCount, totalCount) {
+            document.getElementById('pageStart').textContent = filteredCount > 0 ? startIndex + 1 : 0;
+            document.getElementById('pageEnd').textContent = endIndex;
+            document.getElementById('totalUsers').textContent = totalCount;
+            document.getElementById('visibleUsers').textContent = filteredCount;
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+        }
+
+        // Pagination controls
+        window.goToPage = function(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            filterAndPaginate();
+        };
+
+        window.changePageSize = function() {
+            pageSize = parseInt(document.getElementById('pageSize').value);
+            currentPage = 1;
+            filterAndPaginate();
+        };
+
+        // Clear all filters
+        window.clearFilters = function() {
+            document.getElementById('userSearch').value = '';
+            document.getElementById('tierFilter').value = '';
+            filterUsers();
+        };
+
+        // Export to CSV
+        window.exportToCSV = function() {
+            // Get filtered users
+            const searchText = document.getElementById('userSearch').value.toLowerCase();
+            const tierFilter = document.getElementById('tierFilter').value;
+
+            const filteredUsers = allUserData.filter(user => {
+                const email = (user.email || '').toLowerCase();
+                const userId = (user.userId || '').toLowerCase();
+                const tier = user.subscriptionTier || 'free'; // Default to 'free' to match server default
+
+                const matchesSearch = email.includes(searchText) || userId.includes(searchText);
+                const matchesTier = !tierFilter || tier === tierFilter;
+
+                return matchesSearch && matchesTier;
+            });
+
+            // CSV headers
+            const headers = [
+                'Email', 'User ID', 'Subscription Tier', 'Monthly Cost', 'Monthly Limit',
+                'Monthly Usage %', 'Total Cost', 'Analyses', 'Sessions', 'Avg Cost',
+                'Total Tokens', 'Last Activity', 'Keap Tags'
+            ];
+
+            // Convert to CSV
+            const csvRows = [];
+            csvRows.push(headers.join(','));
+
+            filteredUsers.forEach(user => {
+                const row = [
+                    `"${user.email}"`,
+                    `"${user.userId}"`,
+                    `"${user.subscriptionTier}"`,
+                    user.monthlyCost,
+                    user.monthlyLimit,
+                    user.monthlyUsagePercent,
+                    user.totalCost,
+                    user.totalAnalyses,
+                    user.totalSessions,
+                    user.avgCostPerAnalysis,
+                    `"${user.totalTokens}"`,
+                    `"${new Date(user.lastActivity).toISOString()}"`,
+                    `"${(user.keapTags || []).join(';')}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            // Download
+            const csvContent = csvRows.join('\\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `mpai-users-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         };
 
         // Check auth and load data on page load

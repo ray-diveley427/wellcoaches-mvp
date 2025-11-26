@@ -13,6 +13,7 @@ import {
 import { notifyAdminOfError } from '../utils/errorNotifier.js';
 import { getOrCreateUser, updateUsageCosts } from '../utils/userManager.js';
 import { getCostLimits, canUseMethod, canUploadFiles } from '../utils/subscriptionConfig.js';
+import { getCurrentBillingPeriod, shouldResetMonthlyCosts } from '../utils/billingCycleManager.js';
 
 // Import cost tracking from server (for this MVP, we'll use a shared module)
 // In production, use Redis or DynamoDB for distributed tracking
@@ -85,13 +86,38 @@ function resetDailyCostsIfNeeded() {
 }
 
 /**
- * Get current month string (YYYY-MM)
+ * Get current month string (YYYY-MM) - DEPRECATED
+ * Use getUserBillingPeriodKey() instead for per-user billing cycles
  */
 function getCurrentMonth() {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
+}
+
+/**
+ * Get user's billing period key based on their billing cycle start date
+ * Falls back to calendar month if no billing cycle is set
+ */
+async function getUserBillingPeriodKey(userId) {
+  try {
+    // Get user's billing cycle start date
+    const userResult = await docClient.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: `USER#${userId}`,
+        SK: 'PROFILE'
+      }
+    }));
+
+    const billingCycleStartDate = userResult.Item?.billing_cycle_start_date;
+    const { periodKey } = getCurrentBillingPeriod(billingCycleStartDate);
+    return periodKey;
+  } catch (err) {
+    console.warn(`⚠️ Could not get billing period for ${userId}, using calendar month:`, err.message);
+    return getCurrentMonth();
+  }
 }
 
 /**
@@ -108,7 +134,7 @@ async function getUserMonthlyLimit(userId) {
         SK: `MONTHLY_LIMIT`
       }
     }));
-    
+
     if (result.Item && result.Item.monthly_limit !== undefined) {
       return parseFloat(result.Item.monthly_limit);
     }
@@ -116,54 +142,55 @@ async function getUserMonthlyLimit(userId) {
     // If user limit doesn't exist, that's fine - use default
     console.warn(`⚠️ Could not fetch monthly limit for ${userId}, using default:`, err.message);
   }
-  
+
   return DEFAULT_MONTHLY_LIMIT_PER_USER;
 }
 
 /**
- * Get user's current monthly cost from DynamoDB
+ * Get user's current monthly cost from DynamoDB based on their billing cycle
  */
 async function getUserMonthlyCost(userId) {
-  const currentMonth = getCurrentMonth();
-  
+  const billingPeriodKey = await getUserBillingPeriodKey(userId);
+
   try {
     const result = await docClient.send(new GetCommand({
       TableName: TABLE_NAME,
       Key: {
         PK: `USER#${userId}`,
-        SK: `MONTHLY_COST#${currentMonth}`
+        SK: `MONTHLY_COST#${billingPeriodKey}`
       }
     }));
-    
+
     if (result.Item && result.Item.cost !== undefined) {
       return parseFloat(result.Item.cost);
     }
   } catch (err) {
-    // If no monthly cost record exists, user hasn't spent anything this month
+    // If no monthly cost record exists, user hasn't spent anything this billing period
     console.warn(`⚠️ Could not fetch monthly cost for ${userId}:`, err.message);
   }
-  
+
   return 0;
 }
 
 /**
  * Increment user's monthly cost in DynamoDB (atomic operation)
+ * Uses user's billing cycle period, not calendar month
  */
 async function incrementUserMonthlyCost(userId, cost) {
-  const currentMonth = getCurrentMonth();
-  
+  const billingPeriodKey = await getUserBillingPeriodKey(userId);
+
   try {
     // Use atomic update to increment monthly cost
     await docClient.send(new UpdateCommand({
       TableName: TABLE_NAME,
       Key: {
         PK: `USER#${userId}`,
-        SK: `MONTHLY_COST#${currentMonth}`
+        SK: `MONTHLY_COST#${billingPeriodKey}`
       },
-      UpdateExpression: 'ADD cost :cost SET month = :month, updated_at = :updated_at',
+      UpdateExpression: 'ADD cost :cost SET period = :period, updated_at = :updated_at',
       ExpressionAttributeValues: {
         ':cost': cost,
-        ':month': currentMonth,
+        ':period': billingPeriodKey,
         ':updated_at': new Date().toISOString()
       }
     }));

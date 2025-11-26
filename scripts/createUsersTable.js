@@ -78,10 +78,14 @@ Table Structure:
   - subscription_status
   - subscription_id
   - keap_contact_id
-  - monthly_cost
+  - billing_cycle_start_date (YYYY-MM-DD - when user's billing cycle starts each month)
+  - current_period_start (ISO timestamp - start of current billing period)
+  - current_period_end (ISO timestamp - end of current billing period)
+  - monthly_cost (cost for current billing period)
   - daily_cost
   - last_reset_date
   - last_daily_reset
+  - last_cost_update (ISO timestamp - when monthly_cost was last updated)
   - created_at
   - updated_at
   - last_login

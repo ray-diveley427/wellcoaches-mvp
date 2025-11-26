@@ -507,7 +507,7 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
       // Also look up emails separately to ensure we get them even if user's activity is outside date range
       const formattedStats = await Promise.all(Object.values(userStats).map(async (stats) => {
         let email = stats.email; // Use email from date-filtered items if available
-        
+
         // If email not found in date range, look it up separately from most recent item
         if (!email) {
           try {
@@ -521,7 +521,7 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
               ScanIndexForward: false, // Get most recent first
               Limit: 50 // Get up to 50 items to find one with email
             }));
-            
+
             // Find the first item that has an email (most recent first)
             if (emailResult.Items && emailResult.Items.length > 0) {
               const itemWithEmail = emailResult.Items.find(item => item.user_email);
@@ -539,13 +539,40 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
         } else {
           console.log(`✅ Email found from date-filtered items for user ${stats.userId}: ${email}`);
         }
-        
+
         const monthlyCost = await getUserMonthlyCost(stats.userId);
         const monthlyLimit = await getUserMonthlyLimit(stats.userId);
-        
+
+        // Get Keap subscription tier info
+        let subscriptionTier = 'free'; // Default to free
+        let keapTags = [];
+        if (email && email !== 'N/A') {
+          try {
+            const { getUserSubscriptionTier, findContactByEmail } = await import('./utils/keapIntegration.js');
+            const tier = await getUserSubscriptionTier(email);
+            if (tier) {
+              subscriptionTier = tier;
+              console.log(`✅ Keap tier for ${email}: ${tier}`);
+            } else {
+              console.log(`ℹ️ No Keap tier found for ${email}, using free`);
+            }
+
+            // Also get the contact's tags for detailed info
+            const contact = await findContactByEmail(email);
+            if (contact && contact.tag_ids) {
+              keapTags = contact.tag_ids;
+              console.log(`✅ Keap tags for ${email}: ${keapTags.join(', ')}`);
+            }
+          } catch (err) {
+            console.warn(`⚠️ Failed to get Keap info for ${email}:`, err.message);
+          }
+        }
+
         return {
           userId: stats.userId,
           email: email || 'N/A',
+          subscriptionTier: subscriptionTier,
+          keapTags: keapTags,
           totalCost: stats.totalCost.toFixed(4),
           monthlyCost: monthlyCost.toFixed(4),
           monthlyLimit: monthlyLimit.toFixed(2),

@@ -1,11 +1,14 @@
 // =====================================================================
 // Subscription Configuration
 // =====================================================================
-// Defines subscription tiers, pricing, and feature access
+// Defines subscription tiers, pricing, and feature access based on Keap tags
 
 export const SUBSCRIPTION_TIERS = {
-  FREE: 'free',
-  PREMIUM: 'premium'
+  STAFF_COMPLIMENTARY: 'staff_complimentary',
+  STUDENT: 'student',
+  NON_MEMBER: 'non_member',
+  MEMBER: 'member',
+  FREE: 'free' // Fallback for users without tags
 };
 
 export const SUBSCRIPTION_STATUS = {
@@ -15,41 +18,94 @@ export const SUBSCRIPTION_STATUS = {
   TRIAL: 'trial'
 };
 
-// Subscription tier details
+// Subscription tier details based on Erika's requirements
 export const TIER_CONFIG = {
-  free: {
-    name: 'Free',
+  staff_complimentary: {
+    name: 'Wellcoaches Staff/Complimentary',
     price: 0,
+    billingPeriod: null,
+    expirationDays: null, // No expiration
+    limits: {
+      dailyCost: null,      // Unlimited
+      monthlyCost: null,    // Unlimited
+      maxMessages: null
+    },
+    features: {
+      methods: 'all',
+      fileUpload: true,
+      historyLimit: null,
+      support: 'priority'
+    },
+    description: 'Full complimentary access for Wellcoaches staff'
+  },
+  student: {
+    name: 'Wellcoaches Student',
+    price: 0,
+    billingPeriod: null,
+    expirationDays: null, // Ends at Certification (handled by tag removal)
+    limits: {
+      dailyCost: null,      // Unlimited during access period
+      monthlyCost: null,
+      maxMessages: null
+    },
+    features: {
+      methods: 'all',
+      fileUpload: true,
+      historyLimit: null,
+      support: 'email'
+    },
+    description: 'Free access for students from Module 3 until Certification'
+  },
+  non_member: {
+    name: 'Non-Member',
+    price: 20.00,
     billingPeriod: 'month',
     limits: {
-      dailyCost: 0.50,      // $0.50 per day
-      monthlyCost: 5.00,    // $5.00 per month
-      maxMessages: null      // No hard message limit, just cost
+      dailyCost: 10.00,
+      monthlyCost: 100.00,
+      maxMessages: null
+    },
+    features: {
+      methods: 'all',
+      fileUpload: true,
+      historyLimit: null,
+      support: 'email'
+    },
+    description: 'Full access at $20/month for non-members'
+  },
+  member: {
+    name: 'Wellcoaches Member',
+    price: 10.00,
+    billingPeriod: 'month',
+    limits: {
+      dailyCost: 5.00,
+      monthlyCost: 50.00,
+      maxMessages: null
+    },
+    features: {
+      methods: 'all',
+      fileUpload: true,
+      historyLimit: null,
+      support: 'priority'
+    },
+    description: 'Member pricing at $10/month'
+  },
+  free: {
+    name: 'Free Trial',
+    price: 0,
+    billingPeriod: null,
+    limits: {
+      dailyCost: 0.50,
+      monthlyCost: 5.00,
+      maxMessages: null
     },
     features: {
       methods: ['QUICK', 'CONFLICT_RESOLUTION', 'STAKEHOLDER_ANALYSIS'],
       fileUpload: false,
-      historyLimit: 30,      // Days of history
+      historyLimit: 30,
       support: 'email'
     },
-    description: 'Get started with basic multi-perspective analysis'
-  },
-  premium: {
-    name: 'Premium',
-    price: 10.00,
-    billingPeriod: 'month',
-    limits: {
-      dailyCost: 5.00,      // $5.00 per day
-      monthlyCost: 50.00,   // $50.00 per month
-      maxMessages: null
-    },
-    features: {
-      methods: 'all',        // All methods available
-      fileUpload: true,
-      historyLimit: null,    // Unlimited history
-      support: 'priority'
-    },
-    description: 'Full access to all methods and features'
+    description: 'Limited free access for users without tags'
   }
 };
 
@@ -114,38 +170,37 @@ export function canUploadFiles(subscriptionTier) {
 }
 
 /**
- * Keap Product IDs (to be filled in after creating products in Keap)
- *
- * SETUP INSTRUCTIONS:
- * 1. Go to my982.infusionsoft.com
- * 2. Create product: "Multi-Perspective AI Premium" - $10/month subscription
- * 3. Get the Product ID and replace 'PLACEHOLDER' below
+ * Keap Order Form URLs
+ * Retrieved from Erika on 2025-11-26
  */
-export const KEAP_PRODUCT_IDS = {
-  premium: 'PLACEHOLDER'  // TODO: Replace with actual Keap product ID
+export const KEAP_ORDER_FORM_URLS = {
+  member: 'https://my982.infusionsoft.com/app/orderForms/AI-Wellcoaches-Member-Subscription',
+  non_member: 'https://my982.infusionsoft.com/app/orderForms/AI-Non-member-Subscription'
 };
 
 /**
- * Keap Order Form URL
- *
- * SETUP INSTRUCTIONS:
- * 1. In Keap, create an Order Form for the Premium product
- * 2. Get the form URL and replace below
- */
-export const KEAP_ORDER_FORM_URL = 'https://my982.infusionsoft.com/app/orderForms/PLACEHOLDER';
-
-/**
- * Keap Tag IDs (to be filled in after creating tags in Keap)
- *
- * SETUP INSTRUCTIONS:
- * 1. Go to Keap → CRM → Settings → Tags
- * 2. Create these tags and get their IDs:
+ * Keap Tag IDs - Maps tags to subscription tiers
+ * Retrieved from Keap on 2025-11-25
  */
 export const KEAP_TAG_IDS = {
-  free: 'PLACEHOLDER',       // TODO: Create "MPAI - Free User" tag
-  premium: 'PLACEHOLDER',    // TODO: Create "MPAI - Premium User" tag
-  canceled: 'PLACEHOLDER',   // TODO: Create "MPAI - Canceled" tag
-  new_signup: 'PLACEHOLDER'  // TODO: Create "MPAI - New Signup" tag
+  staff_complimentary: 24291,  // AI Wellcoaches Staff (includes complimentary)
+  student: 24289,              // AI Wellcoaches Student
+  non_member: 24315,           // AI Wellcoaches Non-Member Record Created
+  member: 24285,               // AI Wellcoaches Member
+  canceled: 24319,             // AI Wellcoaches Subscription Cancelled
+  member_record_created: 24313,// AI Wellcoaches Member Record Created
+  third_party_paid: 24317      // 3rd Party Paid AI Wellcoaches
+};
+
+/**
+ * Map Keap tag IDs to subscription tiers
+ * Priority order matters - if user has multiple tags, use the first match
+ */
+export const TAG_TO_TIER_MAP = {
+  [KEAP_TAG_IDS.staff_complimentary]: SUBSCRIPTION_TIERS.STAFF_COMPLIMENTARY,
+  [KEAP_TAG_IDS.student]: SUBSCRIPTION_TIERS.STUDENT,
+  [KEAP_TAG_IDS.member]: SUBSCRIPTION_TIERS.MEMBER,
+  [KEAP_TAG_IDS.non_member]: SUBSCRIPTION_TIERS.NON_MEMBER
 };
 
 /**

@@ -1,14 +1,18 @@
 // =====================================================================
 // Keap (Infusionsoft) Integration Module
 // =====================================================================
-// Handles OAuth authentication, contact management, and subscription sync
+// Handles contact management and tag-based access control using Personal Access Token
 
 import fetch from 'node-fetch';
+import { TAG_TO_TIER_MAP, SUBSCRIPTION_TIERS } from './subscriptionConfig.js';
 
 const KEAP_API_BASE = 'https://api.infusionsoft.com/crm/rest/v1';
 const KEAP_OAUTH_BASE = 'https://accounts.infusionsoft.com/app/oauth';
 
-// In-memory token storage (replace with database for production)
+// Personal Access Token from environment
+const PERSONAL_ACCESS_TOKEN = process.env.KEAP_PERSONAL_ACCESS_TOKEN;
+
+// OAuth token storage (for future OAuth implementation if needed)
 let accessToken = null;
 let refreshToken = null;
 let tokenExpiry = null;
@@ -107,11 +111,17 @@ async function refreshAccessToken() {
 }
 
 /**
- * Get valid access token (refresh if expired)
+ * Get valid access token (refresh if expired, or use Personal Access Token)
  */
 async function getValidToken() {
+  // If Personal Access Token is available, use it
+  if (PERSONAL_ACCESS_TOKEN) {
+    return PERSONAL_ACCESS_TOKEN;
+  }
+
+  // Otherwise fall back to OAuth tokens
   if (!accessToken) {
-    throw new Error('Not authenticated with Keap. Please authorize first.');
+    throw new Error('Not authenticated with Keap. Please authorize first or set KEAP_PERSONAL_ACCESS_TOKEN.');
   }
 
   // Refresh if token expires in less than 5 minutes
@@ -294,10 +304,63 @@ export async function syncSubscriptionToKeap(userData, subscriptionData) {
 }
 
 /**
+ * Get tags for a contact
+ */
+export async function getContactTags(contactId) {
+  try {
+    const response = await keapRequest(`/contacts/${contactId}`);
+    return response.tag_ids || [];
+  } catch (error) {
+    console.error('❌ Error getting contact tags:', error);
+    return [];
+  }
+}
+
+/**
+ * Get user's subscription tier based on their Keap tags
+ * This is the main function to call on login
+ */
+export async function getUserSubscriptionTier(email) {
+  try {
+    // Find contact by email
+    const contact = await findContactByEmail(email);
+
+    if (!contact) {
+      console.log(`⚠️ Contact not found in Keap for ${email}, using free tier`);
+      return SUBSCRIPTION_TIERS.FREE;
+    }
+
+    // Get contact's tags
+    const tagIds = contact.tag_ids || [];
+
+    if (tagIds.length === 0) {
+      console.log(`⚠️ No tags found for ${email}, using free tier`);
+      return SUBSCRIPTION_TIERS.FREE;
+    }
+
+    // Check tags in priority order
+    for (const [tagId, tier] of Object.entries(TAG_TO_TIER_MAP)) {
+      if (tagIds.includes(parseInt(tagId))) {
+        console.log(`✅ User ${email} has tier: ${tier} (tag ${tagId})`);
+        return tier;
+      }
+    }
+
+    // No matching tags found
+    console.log(`⚠️ No matching subscription tags for ${email}, using free tier`);
+    return SUBSCRIPTION_TIERS.FREE;
+  } catch (error) {
+    console.error('❌ Error getting user subscription tier:', error);
+    // Fail open - allow access with free tier
+    return SUBSCRIPTION_TIERS.FREE;
+  }
+}
+
+/**
  * Get current authentication status
  */
 export function isAuthenticated() {
-  return !!accessToken;
+  return !!accessToken || !!PERSONAL_ACCESS_TOKEN;
 }
 
 /**

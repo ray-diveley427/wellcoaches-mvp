@@ -11,6 +11,8 @@ import {
   QueryCommand
 } from '@aws-sdk/lib-dynamodb';
 import { SUBSCRIPTION_TIERS, SUBSCRIPTION_STATUS } from './subscriptionConfig.js';
+import { getUserSubscriptionTier } from './keapIntegration.js';
+import { initializeBillingCycle, getCurrentBillingPeriod } from './billingCycleManager.js';
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || 'us-east-1',
@@ -48,6 +50,10 @@ export async function createUser(userData) {
   try {
     const { user_id, email, given_name, family_name } = userData;
 
+    // Initialize billing cycle starting today
+    const billingCycleStartDate = initializeBillingCycle();
+    const { periodStart, periodEnd } = getCurrentBillingPeriod(billingCycleStartDate);
+
     const user = {
       user_id,
       email,
@@ -60,11 +66,17 @@ export async function createUser(userData) {
       subscription_id: null,
       keap_contact_id: null,
 
+      // Billing cycle fields
+      billing_cycle_start_date: billingCycleStartDate,
+      current_period_start: periodStart.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+
       // Usage tracking
       monthly_cost: 0,
       daily_cost: 0,
       last_reset_date: new Date().toISOString(),
       last_daily_reset: new Date().toISOString().split('T')[0],
+      last_cost_update: new Date().toISOString(),
 
       // Metadata
       created_at: new Date().toISOString(),
@@ -96,7 +108,7 @@ export async function createUser(userData) {
  */
 export async function updateSubscription(userId, subscriptionData) {
   try {
-    const { tier, status, subscriptionId, keapContactId } = subscriptionData;
+    const { tier, status, subscriptionId, keapContactId, initializeBillingCycleOnUpgrade } = subscriptionData;
 
     const updateExpression = [];
     const expressionAttributeNames = {};
@@ -106,6 +118,21 @@ export async function updateSubscription(userId, subscriptionData) {
       updateExpression.push('#tier = :tier');
       expressionAttributeNames['#tier'] = 'subscription_tier';
       expressionAttributeValues[':tier'] = tier;
+
+      // If upgrading from free to paid tier, initialize billing cycle
+      if (initializeBillingCycleOnUpgrade && tier !== SUBSCRIPTION_TIERS.FREE) {
+        const billingCycleStartDate = initializeBillingCycle();
+        const { periodStart, periodEnd } = getCurrentBillingPeriod(billingCycleStartDate);
+
+        updateExpression.push('billing_cycle_start_date = :billing_start');
+        updateExpression.push('current_period_start = :period_start');
+        updateExpression.push('current_period_end = :period_end');
+        expressionAttributeValues[':billing_start'] = billingCycleStartDate;
+        expressionAttributeValues[':period_start'] = periodStart.toISOString();
+        expressionAttributeValues[':period_end'] = periodEnd.toISOString();
+
+        console.log(`🔄 Initializing billing cycle for user ${userId} starting ${billingCycleStartDate}`);
+      }
     }
 
     if (status) {
@@ -247,6 +274,7 @@ export async function updateLastLogin(userId) {
 
 /**
  * Get or create user (convenience method)
+ * Now includes Keap tag checking to set subscription tier
  */
 export async function getOrCreateUser(userData) {
   try {
@@ -257,6 +285,26 @@ export async function getOrCreateUser(userData) {
     } else {
       // Update last login
       await updateLastLogin(userData.user_id);
+    }
+
+    // Check Keap for subscription tier based on tags
+    if (userData.email && userData.email !== `${userData.user_id}@temp.local`) {
+      try {
+        const keapTier = await getUserSubscriptionTier(userData.email);
+
+        // Update user's tier if it changed
+        if (keapTier && keapTier !== user.subscription_tier) {
+          console.log(`🔄 Updating user ${userData.email} tier from ${user.subscription_tier} to ${keapTier}`);
+          await updateSubscription(userData.user_id, {
+            tier: keapTier,
+            status: SUBSCRIPTION_STATUS.ACTIVE
+          });
+          user.subscription_tier = keapTier;
+        }
+      } catch (error) {
+        console.error('⚠️ Error checking Keap subscription, using cached tier:', error);
+        // Continue with cached tier from database
+      }
     }
 
     return user;
