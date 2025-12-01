@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import historyRoutes from './routes/history.js';
 import analyzeRoutes from './routes/analyze.js';
 import subscriptionRoutes from './routes/subscription.js';
+import userPreferencesRoutes from './routes/userPreferences.js';
 import { TABLE_NAME } from './db/dynamoClient.js';
 
 
@@ -119,6 +120,7 @@ app.use((req, res, next) => {
 app.use('/api/history', historyRoutes);
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/user/preferences', userPreferencesRoutes);
 
 // =====================================================================
 // ROUTES

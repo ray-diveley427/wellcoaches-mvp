@@ -78,6 +78,9 @@ export async function createUser(userData) {
       last_daily_reset: new Date().toISOString().split('T')[0],
       last_cost_update: new Date().toISOString(),
 
+      // Privacy preferences
+      conversation_retention_days: 90, // Default: 3 months (can be 30 or 90)
+
       // Metadata
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -310,6 +313,38 @@ export async function getOrCreateUser(userData) {
     return user;
   } catch (error) {
     console.error('❌ Error in getOrCreateUser:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update conversation retention preference
+ * @param {string} userId - User ID
+ * @param {number} retentionDays - Number of days (30 or 90)
+ */
+export async function updateConversationRetention(userId, retentionDays) {
+  try {
+    // Validate input
+    if (retentionDays !== 30 && retentionDays !== 90) {
+      throw new Error('Retention days must be 30 or 90');
+    }
+
+    const command = new UpdateCommand({
+      TableName: USERS_TABLE,
+      Key: { user_id: userId },
+      UpdateExpression: 'SET conversation_retention_days = :retention, updated_at = :updated',
+      ExpressionAttributeValues: {
+        ':retention': retentionDays,
+        ':updated': new Date().toISOString()
+      },
+      ReturnValues: 'ALL_NEW'
+    });
+
+    const response = await docClient.send(command);
+    console.log(`✅ Updated conversation retention for ${userId}: ${retentionDays} days`);
+    return response.Attributes;
+  } catch (error) {
+    console.error('❌ Error updating conversation retention:', error);
     throw error;
   }
 }

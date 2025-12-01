@@ -217,6 +217,28 @@
         100+ analyses per month without hitting limits.
       </p>
     </div>
+
+    <div style="margin-top: 2rem; padding: 2rem; background: white; border: 2px solid #e5e7eb; border-radius: 12px;">
+      <h3 style="margin-bottom: 1rem;">🔒 Privacy Settings</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        Control how long your conversations are stored. You can delete individual conversations at any time.
+      </p>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Conversation Archive Duration</label>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button id="retention30" class="retention-btn" data-days="30" style="flex: 1; min-width: 150px; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s;">
+            <div style="font-weight: 600;">1 Month</div>
+            <div style="font-size: 0.875rem; color: #64748b;">Auto-delete after 30 days</div>
+          </button>
+          <button id="retention90" class="retention-btn" data-days="90" style="flex: 1; min-width: 150px; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s;">
+            <div style="font-weight: 600;">3 Months</div>
+            <div style="font-size: 0.875rem; color: #64748b;">Auto-delete after 90 days</div>
+          </button>
+        </div>
+        <p id="retentionStatus" style="margin-top: 0.75rem; color: var(--primary); font-size: 0.875rem;"></p>
+      </div>
+    </div>
   </div>
 
   <script src="/js/auth.js"></script>
@@ -319,8 +341,86 @@
       }
     });
 
+    // Retention preference handling
+    let currentRetentionDays = 90; // Default
+
+    async function loadRetentionPreference() {
+      try {
+        const userId = JSON.parse(atob(localStorage.getItem('id_token').split('.')[1])).sub;
+        const res = await fetch(`/api/user/preferences?userId=${userId}`);
+        const data = await res.json();
+
+        if (data.success && data.preferences) {
+          currentRetentionDays = data.preferences.conversation_retention_days || 90;
+          updateRetentionUI(currentRetentionDays);
+        }
+      } catch (error) {
+        console.error('Error loading retention preference:', error);
+        updateRetentionUI(90); // Default to 90 days
+      }
+    }
+
+    function updateRetentionUI(days) {
+      const retention30Btn = document.getElementById('retention30');
+      const retention90Btn = document.getElementById('retention90');
+
+      // Reset all buttons
+      document.querySelectorAll('.retention-btn').forEach(btn => {
+        btn.style.borderColor = '#e5e7eb';
+        btn.style.background = 'white';
+      });
+
+      // Highlight selected button
+      const selectedBtn = days === 30 ? retention30Btn : retention90Btn;
+      selectedBtn.style.borderColor = 'var(--primary)';
+      selectedBtn.style.background = '#f0fdf4';
+
+      document.getElementById('retentionStatus').textContent =
+        `✓ Conversations will be automatically deleted after ${days} days`;
+    }
+
+    async function updateRetentionPreference(days) {
+      try {
+        const userId = JSON.parse(atob(localStorage.getItem('id_token').split('.')[1])).sub;
+
+        const res = await fetch('/api/user/preferences/retention', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userId, retentionDays: days })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          currentRetentionDays = days;
+          updateRetentionUI(days);
+        } else {
+          alert('Failed to update preference. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error updating retention preference:', error);
+        alert('Failed to update preference. Please try again.');
+      }
+    }
+
+    // Attach click handlers
+    document.getElementById('retention30').addEventListener('click', () => {
+      if (currentRetentionDays !== 30) {
+        updateRetentionPreference(30);
+      }
+    });
+
+    document.getElementById('retention90').addEventListener('click', () => {
+      if (currentRetentionDays !== 90) {
+        updateRetentionPreference(90);
+      }
+    });
+
     // Load on page load
     loadSubscriptionStatus();
+    loadRetentionPreference();
   </script>
 </body>
 </html>

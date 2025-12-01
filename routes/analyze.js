@@ -551,6 +551,10 @@ router.post('/', upload.array('files', 5), async (req, res) => {
     };
 
     // Save new exchange to DynamoDB (include snake_case and camelCase for compatibility)
+    // Use user's retention preference (default 90 days if not set)
+    const retentionDays = user.conversation_retention_days || 90;
+    const ttlSeconds = Math.floor(Date.now() / 1000) + (60 * 60 * 24 * retentionDays);
+
     const item = {
       PK: `USER#${userId}`,
       SK: `SESSION#${sessionId}#ANALYSIS#${analysisId}`,
@@ -577,7 +581,7 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       // user email for admin display
       ...(userEmail && { user_email: userEmail }),
       timestamp: new Date().toISOString(),
-      ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+      ttl: ttlSeconds,
     };
     await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
     
