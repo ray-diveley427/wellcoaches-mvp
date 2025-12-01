@@ -8,7 +8,7 @@ import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 
 const sesClient = new SESClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const FROM_EMAIL = process.env.ERROR_NOTIFICATION_FROM_EMAIL || 'mpai@wellcoaches.com';
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(e => e);
+const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'mpai@wellcoaches.com';
 
 /**
  * Check if user has exceeded their monthly limit
@@ -234,8 +234,8 @@ Multi-Perspective AI by Wellcoaches
  * Send notification to admins about user hitting limit
  */
 export async function notifyAdminsOfUserLimit(user, limitInfo) {
-  if (ADMIN_EMAILS.length === 0) {
-    console.log('⚠️ No admin emails configured');
+  if (!ADMIN_NOTIFICATION_EMAIL) {
+    console.log('⚠️ No admin notification email configured');
     return;
   }
 
@@ -321,7 +321,7 @@ View admin dashboard: https://multi-perspective.ai/admin.html
     const params = {
       Source: FROM_EMAIL,
       Destination: {
-        ToAddresses: ADMIN_EMAILS,
+        ToAddresses: [ADMIN_NOTIFICATION_EMAIL],
       },
       Message: {
         Subject: {
