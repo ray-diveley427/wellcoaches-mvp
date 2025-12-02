@@ -10,6 +10,7 @@ import analyzeRoutes from './routes/analyze.js';
 import subscriptionRoutes from './routes/subscription.js';
 import userPreferencesRoutes from './routes/userPreferences.js';
 import checkSubscriptionRoutes from './routes/checkSubscription.js';
+import checkKeapEmailRoutes from './routes/checkKeapEmail.js';
 import { TABLE_NAME } from './db/dynamoClient.js';
 
 
@@ -126,6 +127,7 @@ app.use('/api/analyze', analyzeRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/user/preferences', userPreferencesRoutes);
 app.use('/api/check-subscription', checkSubscriptionRoutes);
+app.use('/api/check-keap-email', checkKeapEmailRoutes);
 
 // =====================================================================
 // ROUTES

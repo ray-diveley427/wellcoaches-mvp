@@ -249,13 +249,21 @@
           </div>
           
           <div class="splash-cta">
-            <button class="splash-login-btn" id="splashLoginBtn">
-              <span>Get Started</span>
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
-              </svg>
-            </button>
-            <p class="splash-login-hint">Sign in to save your conversations and access your history</p>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+              <button class="splash-login-btn" id="splashLoginBtn">
+                <span>Sign In</span>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                </svg>
+              </button>
+              <button class="splash-login-btn" id="splashSignupBtn" style="background: white; color: var(--teal); border: 2px solid var(--teal);">
+                <span>Sign Up</span>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+              </button>
+            </div>
+            <p class="splash-login-hint">Sign in to access your conversations or sign up to get started</p>
           </div>
         </div>
         
@@ -639,6 +647,14 @@
           if (splashLoginBtn) {
             splashLoginBtn.addEventListener("click", async () => {
               await signIn();
+            });
+          }
+
+          // Setup splash signup button - redirect to pricing
+          const splashSignupBtn = document.getElementById("splashSignupBtn");
+          if (splashSignupBtn) {
+            splashSignupBtn.addEventListener("click", () => {
+              window.location.href = "/pricing.html";
             });
           }
           

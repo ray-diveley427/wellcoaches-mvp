@@ -292,30 +292,53 @@
           document.getElementById('processingState').classList.add('hidden');
           document.getElementById('successState').classList.add('visible');
 
-          // Check subscription status before redirecting
+          // Check if email exists in Keap (required for all users)
           const payload = JSON.parse(atob(tokens.id_token.split('.')[1]));
           const userId = payload.sub;
+          const userEmail = payload.email;
 
-          // Check if user needs a subscription
-          fetch(`${baseUrl}/api/check-subscription?userId=${userId}`)
+          console.log('Checking Keap for email:', userEmail);
+
+          // First check if email exists in Keap
+          fetch(`${baseUrl}/api/check-keap-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail })
+          })
             .then(r => r.json())
-            .then(data => {
-              if (data.success && data.needsSubscription) {
-                // User has no subscription and no grace period - redirect to pricing
-                console.log('⚠️ User needs subscription, redirecting to pricing page');
+            .then(keapData => {
+              console.log('Keap check result:', keapData);
+
+              if (!keapData.success) {
+                throw new Error(keapData.error || 'Failed to check Keap');
+              }
+
+              // EVERYONE must be in Keap to use the system
+              if (!keapData.existsInKeap) {
+                console.log('⚠️ Email not found in Keap - must create Keap account first');
+                alert('Please create an account through our subscription page first.');
                 setTimeout(() => {
                   window.location.href = `${baseUrl}/pricing.html`;
-                }, 1500);
-              } else {
-                // User has subscription or grace period - redirect to main app
-                setTimeout(() => {
-                  window.location.href = `${baseUrl}/`;
-                }, 1500);
+                }, 500);
+                return;
               }
+
+              // Email found in Keap - now check MPAI subscription status
+              console.log('✅ Email found in Keap, checking MPAI subscription...');
+              return fetch(`${baseUrl}/api/check-subscription?userId=${userId}`)
+                .then(r => r.json())
+                .then(data => {
+                  // Users with grace period or paid subscription get access
+                  // Free users in Keap also get access (for now until Jan 15)
+                  console.log('✅ Allowing access');
+                  setTimeout(() => {
+                    window.location.href = `${baseUrl}/`;
+                  }, 1500);
+                });
             })
             .catch(err => {
               // If check fails, allow them through (fail open)
-              console.error('Failed to check subscription:', err);
+              console.error('Failed to check Keap/subscription:', err);
               setTimeout(() => {
                 window.location.href = `${baseUrl}/`;
               }, 1500);
