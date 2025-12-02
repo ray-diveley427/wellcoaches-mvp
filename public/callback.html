@@ -292,10 +292,34 @@
           document.getElementById('processingState').classList.add('hidden');
           document.getElementById('successState').classList.add('visible');
 
-          // Redirect after showing success message
-          setTimeout(() => {
-            window.location.href = `${baseUrl}/`;
-          }, 1500);
+          // Check subscription status before redirecting
+          const payload = JSON.parse(atob(tokens.id_token.split('.')[1]));
+          const userId = payload.sub;
+
+          // Check if user needs a subscription
+          fetch(`${baseUrl}/api/check-subscription?userId=${userId}`)
+            .then(r => r.json())
+            .then(data => {
+              if (data.success && data.needsSubscription) {
+                // User has no subscription and no grace period - redirect to pricing
+                console.log('⚠️ User needs subscription, redirecting to pricing page');
+                setTimeout(() => {
+                  window.location.href = `${baseUrl}/pricing.html`;
+                }, 1500);
+              } else {
+                // User has subscription or grace period - redirect to main app
+                setTimeout(() => {
+                  window.location.href = `${baseUrl}/`;
+                }, 1500);
+              }
+            })
+            .catch(err => {
+              // If check fails, allow them through (fail open)
+              console.error('Failed to check subscription:', err);
+              setTimeout(() => {
+                window.location.href = `${baseUrl}/`;
+              }, 1500);
+            });
         })
         .catch(e => {
           clearTimeout(timeoutId); // Clear timeout on error

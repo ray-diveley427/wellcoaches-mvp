@@ -714,6 +714,59 @@ async function deleteAnalysis(userId, sessionId, analysisId, event) {
   }
 }
 
+// Helper function to parse markdown and convert to formatted text
+function parseMarkdownToTextRuns(text) {
+  // First, strip out markdown headers (hashtags)
+  text = text.replace(/^#{1,6}\s+/gm, '');
+
+  const runs = [];
+  // Split by markdown patterns: **bold**, *italic*, `code`
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
+
+  parts.forEach(part => {
+    if (!part) return;
+
+    if (part.startsWith('**') && part.endsWith('**')) {
+      // Bold text
+      runs.push(new docx.TextRun({
+        text: part.slice(2, -2),
+        bold: true
+      }));
+    } else if (part.startsWith('*') && part.endsWith('*')) {
+      // Italic text
+      runs.push(new docx.TextRun({
+        text: part.slice(1, -1),
+        italics: true
+      }));
+    } else if (part.startsWith('`') && part.endsWith('`')) {
+      // Code text (monospace)
+      runs.push(new docx.TextRun({
+        text: part.slice(1, -1),
+        font: 'Courier New'
+      }));
+    } else {
+      // Regular text - also strip any remaining markdown
+      const cleanText = part
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1'); // Links [text](url) -> text
+      runs.push(new docx.TextRun({
+        text: cleanText
+      }));
+    }
+  });
+
+  return runs;
+}
+
+// Helper function to strip markdown for plain text
+function stripMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1') // Bold
+    .replace(/\*(.*?)\*/g, '$1')     // Italic
+    .replace(/#{1,6}\s/g, '')        // Headers
+    .replace(/`(.*?)`/g, '$1')       // Code
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1'); // Links
+}
+
 async function downloadSessionAsWord(sessionId, event) {
   if (event && event.stopPropagation) event.stopPropagation();
 
@@ -723,14 +776,24 @@ async function downloadSessionAsWord(sessionId, event) {
     return;
   }
 
-  // Sort by timestamp
-  const sortedData = sessionData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-  const firstExchange = sortedData[0];
-  const sessionTitle = firstExchange.user_query?.split(/[?.!]/)[0].slice(0, 60) || 'Multi-Perspective AI Conversation';
-  const dateStr = new Date(firstExchange.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+  // Check if docx library is loaded
+  if (typeof docx === 'undefined' && typeof window.docx === 'undefined') {
+    showToast('Word generation library not loaded. Please refresh the page.', 'error');
+    console.error('docx library not loaded');
+    console.log('Available global objects:', Object.keys(window).filter(k => k.toLowerCase().includes('doc')));
+    return;
+  }
 
-  // Create Word document using docx library
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
+  try {
+    // Sort by timestamp
+    const sortedData = sessionData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const firstExchange = sortedData[0];
+    const sessionTitle = firstExchange.user_query?.split(/[?.!]/)[0].slice(0, 60) || 'Multi-Perspective AI Conversation';
+    const dateStr = new Date(firstExchange.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+
+    // Create Word document using docx library
+    const docxLib = typeof docx !== 'undefined' ? docx : window.docx;
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docxLib;
 
   // Build document sections
   const children = [];
@@ -796,13 +859,14 @@ async function downloadSessionAsWord(sessionId, event) {
       })
     );
 
-    // Split user query into paragraphs
+    // Split user query into paragraphs and parse markdown
     const userQueryParagraphs = item.user_query.split('\n\n');
     userQueryParagraphs.forEach(para => {
       if (para.trim()) {
+        const textRuns = parseMarkdownToTextRuns(para.trim());
         children.push(
           new Paragraph({
-            text: para.trim(),
+            children: textRuns,
             spacing: { after: 150 }
           })
         );
@@ -823,13 +887,14 @@ async function downloadSessionAsWord(sessionId, event) {
       })
     );
 
-    // Split assistant response into paragraphs (preserving line breaks)
+    // Split assistant response into paragraphs and parse markdown
     const responseParagraphs = item.response.split('\n\n');
     responseParagraphs.forEach(para => {
       if (para.trim()) {
+        const textRuns = parseMarkdownToTextRuns(para.trim());
         children.push(
           new Paragraph({
-            text: para.trim(),
+            children: textRuns,
             spacing: { after: 150 }
           })
         );
@@ -860,20 +925,24 @@ async function downloadSessionAsWord(sessionId, event) {
     }]
   });
 
-  // Generate and download
-  Packer.toBlob(doc).then(blob => {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const filename = `MPAI_${dateStr}_${sessionTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}.docx`;
-    link.download = filename;
-    link.click();
-    window.URL.revokeObjectURL(url);
-    showToast('Conversation downloaded as Word document', 'success');
-  }).catch(err => {
-    console.error('Error generating Word document:', err);
-    showToast('Failed to generate Word document', 'error');
-  });
+    // Generate and download
+    Packer.toBlob(doc).then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const filename = `MPAI_${dateStr}_${sessionTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}.docx`;
+      link.download = filename;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      showToast('Conversation downloaded as Word document', 'success');
+    }).catch(err => {
+      console.error('Error generating Word document:', err);
+      showToast('Failed to generate Word document', 'error');
+    });
+  } catch (error) {
+    console.error('Error in downloadSessionAsWord:', error);
+    showToast('Failed to generate Word document: ' + error.message, 'error');
+  }
 }
 
 async function downloadSession(sessionId, event) {
@@ -896,33 +965,66 @@ async function downloadSession(sessionId, event) {
 }
 
 function showDownloadFormatModal(sessionId, sessionTitle, dateStr) {
+  // Escape the strings to prevent HTML injection issues
+  const escapedSessionId = sessionId.replace(/'/g, "\\'");
+  const escapedTitle = sessionTitle.replace(/'/g, "\\'");
+  const escapedDate = dateStr.replace(/'/g, "\\'");
+
   const modal = document.createElement('div');
   modal.className = 'modal';
-  modal.innerHTML = `
-    <div class="modal-container" style="max-width: 500px; height: auto;">
-      <div class="modal-header">
-        <h2 class="modal-title">Download Conversation</h2>
-        <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
-      </div>
-      <div class="modal-body" style="padding: 2rem;">
-        <p style="margin-bottom: 1.5rem; color: #64748b;">Choose your preferred download format:</p>
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-          <button class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem;" onclick="downloadSessionAsPDF('${sessionId}', '${sessionTitle}', '${dateStr}'); this.closest('.modal').remove();">
-            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
-              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-            </svg>
-            Download as PDF
-          </button>
-          <button class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem; background: #0ea5e9;" onclick="downloadSessionAsWord('${sessionId}', event); this.closest('.modal').remove();">
-            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
-              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-            </svg>
-            Download as Word Document
-          </button>
-        </div>
-      </div>
+
+  // Create modal structure
+  const modalContainer = document.createElement('div');
+  modalContainer.className = 'modal-container';
+  modalContainer.style.cssText = 'max-width: 500px; height: auto;';
+
+  const modalHeader = document.createElement('div');
+  modalHeader.className = 'modal-header';
+  modalHeader.innerHTML = `
+    <h2 class="modal-title">Download Conversation</h2>
+    <button class="modal-close">&times;</button>
+  `;
+
+  const modalBody = document.createElement('div');
+  modalBody.className = 'modal-body';
+  modalBody.style.cssText = 'padding: 2rem;';
+  modalBody.innerHTML = `
+    <p style="margin-bottom: 1.5rem; color: #64748b;">Choose your preferred download format:</p>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <button class="btn-download-pdf" style="width: 100%; padding: 1rem; font-size: 1rem; background: #14b8a6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+        </svg>
+        Download as PDF
+      </button>
+      <button class="btn-download-word" style="width: 100%; padding: 1rem; font-size: 1rem; background: #0ea5e9; color: white; border: none; border-radius: 8px; cursor: pointer;">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+        </svg>
+        Download as Word Document
+      </button>
     </div>
   `;
+
+  modalContainer.appendChild(modalHeader);
+  modalContainer.appendChild(modalBody);
+  modal.appendChild(modalContainer);
+
+  // Add event listeners
+  modalHeader.querySelector('.modal-close').addEventListener('click', () => {
+    modal.remove();
+  });
+
+  modalBody.querySelector('.btn-download-pdf').addEventListener('click', () => {
+    downloadSessionAsPDF(sessionId, sessionTitle, dateStr);
+    modal.remove();
+  });
+
+  modalBody.querySelector('.btn-download-word').addEventListener('click', () => {
+    downloadSessionAsWord(sessionId, { stopPropagation: () => {} });
+    modal.remove();
+  });
+
   document.body.appendChild(modal);
 }
 
@@ -986,13 +1088,13 @@ async function downloadSessionAsPDF(sessionId, sessionTitle, dateStr) {
     // User query
     addText('You:', 11, true);
     yPos += 2;
-    addText(item.user_query, 10, false);
+    addText(stripMarkdown(item.user_query), 10, false);
     yPos += 5;
 
     // Assistant response
     addText('Assistant:', 11, true);
     yPos += 2;
-    addText(item.response, 10, false);
+    addText(stripMarkdown(item.response), 10, false);
     yPos += 10;
 
     // Divider between exchanges

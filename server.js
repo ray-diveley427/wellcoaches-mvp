@@ -9,6 +9,7 @@ import historyRoutes from './routes/history.js';
 import analyzeRoutes from './routes/analyze.js';
 import subscriptionRoutes from './routes/subscription.js';
 import userPreferencesRoutes from './routes/userPreferences.js';
+import checkSubscriptionRoutes from './routes/checkSubscription.js';
 import { TABLE_NAME } from './db/dynamoClient.js';
 
 
@@ -47,6 +48,9 @@ global.costTracking = costTracking;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve docx library from node_modules
+app.use('/lib/docx', express.static(path.join(__dirname, 'node_modules/docx/dist')));
 
 // CORS configuration based on environment
 app.use((req, res, next) => {
@@ -121,6 +125,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/user/preferences', userPreferencesRoutes);
+app.use('/api/check-subscription', checkSubscriptionRoutes);
 
 // =====================================================================
 // ROUTES

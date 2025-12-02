@@ -81,6 +81,9 @@ export async function createUser(userData) {
       // Privacy preferences
       conversation_retention_days: 90, // Default: 3 months (can be 30 or 90)
 
+      // Grace period for existing free users
+      grace_period_end: null, // ISO date string - free access until this date
+
       // Metadata
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

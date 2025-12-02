@@ -32,6 +32,25 @@ export function checkUserLimit(user) {
     };
   }
 
+  // Check for grace period - if user has grace period, treat as unlimited
+  if (user.grace_period_end) {
+    const gracePeriodEnd = new Date(user.grace_period_end);
+    const now = new Date();
+
+    if (gracePeriodEnd > now) {
+      console.log(`✅ User ${user.email} within grace period until ${user.grace_period_end}`);
+      return {
+        blocked: false,
+        percentUsed: 0,
+        reason: null,
+        shouldNotify: false,
+        gracePeriod: true
+      };
+    } else {
+      console.log(`⚠️ User ${user.email} grace period expired on ${user.grace_period_end}`);
+    }
+  }
+
   // Staff and students have unlimited access
   if (tierConfig.limits.monthlyCost === null) {
     return {
