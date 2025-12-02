@@ -11,6 +11,7 @@ import subscriptionRoutes from './routes/subscription.js';
 import userPreferencesRoutes from './routes/userPreferences.js';
 import checkSubscriptionRoutes from './routes/checkSubscription.js';
 import checkKeapEmailRoutes from './routes/checkKeapEmail.js';
+import createFreeAccountRoutes from './routes/createFreeAccount.js';
 import { TABLE_NAME } from './db/dynamoClient.js';
 
 
@@ -128,6 +129,7 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/user/preferences', userPreferencesRoutes);
 app.use('/api/check-subscription', checkSubscriptionRoutes);
 app.use('/api/check-keap-email', checkKeapEmailRoutes);
+app.use('/api/create-free-account', createFreeAccountRoutes);
 
 // =====================================================================
 // ROUTES
