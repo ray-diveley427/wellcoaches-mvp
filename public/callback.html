@@ -318,14 +318,18 @@
                   .then(r => r.json())
                   .then(keapData => {
                     if (keapData.success && !keapData.existsInKeap) {
-                      // Not in Keap but has grace period - remind them to create account
-                      console.log('⚠️ Not in Keap but has grace period');
-                      alert('Please create a Wellcoaches account through our subscription page to continue access after January 15th.');
+                      // Not in Keap but has grace period - redirect to free signup
+                      console.log('⚠️ Not in Keap but has grace period - redirecting to free signup');
+                      alert('Please create a Wellcoaches account to continue access after January 15th. You will be redirected to the free signup form.');
+                      setTimeout(() => {
+                        window.location.href = `${baseUrl}/signup-free.html`;
+                      }, 1000);
+                    } else {
+                      // In Keap or check failed - allow access
+                      setTimeout(() => {
+                        window.location.href = `${baseUrl}/`;
+                      }, 1500);
                     }
-                    // Allow access regardless
-                    setTimeout(() => {
-                      window.location.href = `${baseUrl}/`;
-                    }, 1500);
                   })
                   .catch(() => {
                     // If Keap check fails, still allow access (they have grace period)
