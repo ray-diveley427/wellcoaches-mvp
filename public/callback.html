@@ -292,53 +292,81 @@
           document.getElementById('processingState').classList.add('hidden');
           document.getElementById('successState').classList.add('visible');
 
-          // Check if email exists in Keap (required for all users)
+          // Check subscription and Keap status
           const payload = JSON.parse(atob(tokens.id_token.split('.')[1]));
           const userId = payload.sub;
           const userEmail = payload.email;
 
-          console.log('Checking Keap for email:', userEmail);
+          console.log('Checking subscription for:', userEmail);
 
-          // First check if email exists in Keap
-          fetch(`${baseUrl}/api/check-keap-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail })
-          })
+          // First check MPAI subscription status (to see if they have grace period)
+          fetch(`${baseUrl}/api/check-subscription?userId=${userId}`)
             .then(r => r.json())
-            .then(keapData => {
-              console.log('Keap check result:', keapData);
+            .then(data => {
+              console.log('Subscription check result:', data);
 
-              if (!keapData.success) {
-                throw new Error(keapData.error || 'Failed to check Keap');
+              // If user has grace period or paid subscription, check Keap but allow access regardless
+              if (data.success && (data.hasGracePeriod || data.hasPaidSubscription)) {
+                console.log('✅ User has grace period or subscription');
+
+                // Still check if they're in Keap to remind them if not
+                return fetch(`${baseUrl}/api/check-keap-email`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: userEmail })
+                })
+                  .then(r => r.json())
+                  .then(keapData => {
+                    if (keapData.success && !keapData.existsInKeap) {
+                      // Not in Keap but has grace period - remind them to create account
+                      console.log('⚠️ Not in Keap but has grace period');
+                      alert('Please create a Keap account through our subscription page to continue access after January 15th.');
+                    }
+                    // Allow access regardless
+                    setTimeout(() => {
+                      window.location.href = `${baseUrl}/`;
+                    }, 1500);
+                  })
+                  .catch(() => {
+                    // If Keap check fails, still allow access (they have grace period)
+                    setTimeout(() => {
+                      window.location.href = `${baseUrl}/`;
+                    }, 1500);
+                  });
               }
 
-              // EVERYONE must be in Keap to use the system
-              if (!keapData.existsInKeap) {
-                console.log('⚠️ Email not found in Keap - must create Keap account first');
-                alert('Please create an account through our subscription page first.');
-                setTimeout(() => {
-                  window.location.href = `${baseUrl}/pricing.html`;
-                }, 500);
-                return;
-              }
-
-              // Email found in Keap - now check MPAI subscription status
-              console.log('✅ Email found in Keap, checking MPAI subscription...');
-              return fetch(`${baseUrl}/api/check-subscription?userId=${userId}`)
+              // User needs subscription - they must be in Keap
+              console.log('⚠️ User needs subscription, checking Keap...');
+              return fetch(`${baseUrl}/api/check-keap-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail })
+              })
                 .then(r => r.json())
-                .then(data => {
-                  // Users with grace period or paid subscription get access
-                  // Free users in Keap also get access (for now until Jan 15)
-                  console.log('✅ Allowing access');
-                  setTimeout(() => {
-                    window.location.href = `${baseUrl}/`;
-                  }, 1500);
+                .then(keapData => {
+                  if (!keapData.success) {
+                    throw new Error(keapData.error || 'Failed to check Keap');
+                  }
+
+                  if (!keapData.existsInKeap) {
+                    // Not in Keap and no grace period - must subscribe
+                    console.log('⚠️ Email not in Keap, must subscribe');
+                    alert('Please create an account through our subscription page to get started.');
+                    setTimeout(() => {
+                      window.location.href = `${baseUrl}/pricing.html`;
+                    }, 500);
+                  } else {
+                    // In Keap - allow access
+                    console.log('✅ Email found in Keap, allowing access');
+                    setTimeout(() => {
+                      window.location.href = `${baseUrl}/`;
+                    }, 1500);
+                  }
                 });
             })
             .catch(err => {
               // If check fails, allow them through (fail open)
-              console.error('Failed to check Keap/subscription:', err);
+              console.error('Failed to check subscription/Keap:', err);
               setTimeout(() => {
                 window.location.href = `${baseUrl}/`;
               }, 1500);
