@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrUpdateContact } from '../utils/keapIntegration.js';
+import { createOrUpdateContact, findContactByEmail } from '../utils/keapIntegration.js';
 
 const router = express.Router();
 
@@ -22,7 +22,19 @@ router.post('/', async (req, res) => {
 
     console.log(`📝 Creating free Keap account for ${email} (${firstName} ${lastName})...`);
 
-    // Create or update contact in Keap without any subscription tags
+    // First check if contact already exists in Keap
+    const existingContact = await findContactByEmail(email);
+
+    if (existingContact) {
+      console.log(`⚠️ Contact ${email} already exists in Keap (ID: ${existingContact.id})`);
+      return res.status(400).json({
+        success: false,
+        error: 'An account with this email already exists. Please sign in instead.',
+        alreadyExists: true
+      });
+    }
+
+    // Create contact in Keap without any subscription tags
     // This gives them free tier access with grace period until Jan 15, 2026
     const contact = await createOrUpdateContact({
       email,
