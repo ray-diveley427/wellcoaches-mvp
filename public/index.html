@@ -14,8 +14,8 @@
     <!-- jsPDF - PDF generation library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- docx - Word document generation library (browser build) -->
-    <script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
+    <!-- docx - Word document generation library (served locally) -->
+    <script src="/lib/docx/index.iife.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
@@ -249,13 +249,21 @@
           </div>
           
           <div class="splash-cta">
-            <button class="splash-login-btn" id="splashLoginBtn">
-              <span>Get Started</span>
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
-              </svg>
-            </button>
-            <p class="splash-login-hint">Sign in to save your conversations and access your history</p>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+              <button class="splash-login-btn" id="splashLoginBtn">
+                <span>Sign In</span>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                </svg>
+              </button>
+              <button class="splash-login-btn" id="splashSignupBtn" style="background: white; color: var(--teal); border: 2px solid var(--teal);">
+                <span>Sign Up</span>
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+              </button>
+            </div>
+            <p class="splash-login-hint">Sign in to access your conversations or sign up to get started</p>
           </div>
         </div>
         
@@ -353,27 +361,11 @@
                             </button>
                             <input type="file" id="fileInput" hidden multiple aria-label="Attach files">
                         </div>
-                        <div class="download-dropdown" id="downloadDropdown" style="display: none;">
-                            <button class="download-button" id="downloadButton" title="Download conversation">
-                                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                                </svg>
-                            </button>
-                            <div class="download-menu" id="downloadMenu">
-                                <button class="download-option" onclick="downloadCurrentConversation('pdf')">
-                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Download as PDF
-                                </button>
-                                <button class="download-option" onclick="downloadCurrentConversation('word')">
-                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Download as Word
-                                </button>
-                            </div>
-                        </div>
+                        <button class="download-button" id="downloadButton" title="Download conversation as PDF" style="display: none;">
+                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
                         <button class="send-button" id="sendButton">
                             <span>Send</span>
                             <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
@@ -613,17 +605,6 @@
     <!-- 3. Main application last -->
     <script src="js/app.js"></script>
 
-    <!-- Debug: Check if docx library loaded -->
-    <script>
-      window.addEventListener('load', function() {
-        if (typeof docx !== 'undefined') {
-          console.log('✅ docx library loaded successfully', Object.keys(docx));
-        } else {
-          console.error('❌ docx library failed to load');
-        }
-      });
-    </script>
-
     <!-- ✅ Auth handling - Load auth.js as module -->
     <script type="module">
         import { signIn, signOut, isAuthenticated, getUser } from "./js/auth.js";
@@ -668,6 +649,14 @@
               await signIn();
             });
           }
+
+          // Setup splash signup button - redirect to pricing
+          const splashSignupBtn = document.getElementById("splashSignupBtn");
+          if (splashSignupBtn) {
+            splashSignupBtn.addEventListener("click", () => {
+              window.location.href = "/pricing.html";
+            });
+          }
           
           // Setup logout button
           if (logoutBtn) {
@@ -680,13 +669,21 @@
         
         // Update UI on page load
         updateAuthUI();
+
+        // Initialize session timeout (HIPAA compliance)
+        if (typeof initSessionTimeout === 'function') {
+          initSessionTimeout();
+        }
       </script>
+
+    <!-- Session Timeout Script (HIPAA Compliance) -->
+    <script src="/js/sessionTimeout.js"></script>
 
     <!-- Footer -->
     <footer style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 1.5rem 2rem; text-align: center; color: #6b7280; font-size: 0.875rem; margin-top: auto;">
         <div style="max-width: 1200px; margin: 0 auto;">
             <div>Questions or feedback? Contact us at <a href="mailto:mpai@wellcoaches.com" style="color: #2563eb; text-decoration: none; font-weight: 500;">mpai@wellcoaches.com</a></div>
-            <div style="margin-top: 0.5rem; font-size: 0.8125rem;">Claude trained by Wellcoaches</div>
+            <div style="margin-top: 0.5rem; font-size: 0.8125rem;">Powered by Claude, trained by Wellcoaches</div>
         </div>
     </footer>
 

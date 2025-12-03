@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing - Multi-Perspective AI</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .pricing-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .pricing-header h1 {
+      font-size: 2.5rem;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .pricing-header p {
+      color: var(--text-secondary);
+      font-size: 1.125rem;
+    }
+
+    .pricing-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .pricing-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .pricing-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      transform: translateY(-4px);
+    }
+
+    .pricing-card.featured {
+      border-color: var(--primary);
+      background: linear-gradient(to bottom, #f0fdf4, white);
+    }
+
+    .pricing-card .badge {
+      position: absolute;
+      top: -12px;
+      right: 2rem;
+      background: var(--primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .tier-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .tier-price {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .tier-price span {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .tier-description {
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+      min-height: 3rem;
+    }
+
+    .features-list {
+      list-style: none;
+      padding: 0;
+      margin: 1.5rem 0;
+    }
+
+    .features-list li {
+      padding: 0.75rem 0;
+      color: var(--text-primary);
+      display: flex;
+      align-items: start;
+      gap: 0.75rem;
+    }
+
+    .features-list li:before {
+      content: "✓";
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .btn-subscribe {
+      width: 100%;
+      padding: 1rem;
+      background: #14b8a6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .btn-subscribe:hover {
+      background: #0d9488;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #14b8a6;
+      border: 2px solid #14b8a6;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #14b8a6;
+      color: white;
+    }
+
+    .btn-subscribe:disabled,
+    .btn-secondary:disabled {
+      background: #e5e7eb;
+      color: #9ca3af;
+      border-color: #e5e7eb;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-subscribe:disabled:hover,
+    .btn-secondary:disabled:hover {
+      background: #e5e7eb;
+      color: #9ca3af;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .info-section {
+      margin-top: 3rem;
+      padding: 2rem;
+      background: #f9fafb;
+      border-radius: 12px;
+    }
+
+    .info-section h3 {
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .info-section p {
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="pricing-container">
+    <div class="pricing-header">
+      <h1>Multi-Perspective AI Pricing</h1>
+      <p>Choose the plan that fits your needs</p>
+    </div>
+
+    <div class="pricing-cards">
+      <!-- Wellcoaches Member -->
+      <div class="pricing-card featured">
+        <div class="badge">Best Value</div>
+        <div class="tier-name">Wellcoaches Member</div>
+        <div class="tier-price">$10<span>/month</span></div>
+        <div class="tier-description">Exclusive pricing for Wellcoaches members</div>
+
+        <ul class="features-list">
+          <li>All analysis methods unlocked</li>
+          <li>File upload support</li>
+          <li>Unlimited conversation history</li>
+          <li>Priority support</li>
+          <li>$50 monthly AI usage budget</li>
+        </ul>
+
+        <a href="https://my982.infusionsoft.com/app/orderForms/AI-Wellcoaches-Member-Subscription"
+           class="btn-subscribe" target="_blank">Subscribe as Member</a>
+      </div>
+
+      <!-- Non-Member -->
+      <div class="pricing-card">
+        <div class="tier-name">Non-Member</div>
+        <div class="tier-price">$20<span>/month</span></div>
+        <div class="tier-description">Full access for non-Wellcoaches members</div>
+
+        <ul class="features-list">
+          <li>All analysis methods unlocked</li>
+          <li>File upload support</li>
+          <li>Unlimited conversation history</li>
+          <li>Email support</li>
+          <li>$100 monthly AI usage budget</li>
+        </ul>
+
+        <a href="https://my982.infusionsoft.com/app/orderForms/AI-Non-member-Subscription"
+           class="btn-subscribe" target="_blank">Subscribe as Non-Member</a>
+      </div>
+
+      <!-- Student -->
+      <div class="pricing-card">
+        <div class="tier-name">Wellcoaches Student</div>
+        <div class="tier-price">FREE</div>
+        <div class="tier-description">Available from Module 3 through Certification</div>
+
+        <ul class="features-list">
+          <li>All analysis methods</li>
+          <li>File upload support</li>
+          <li>Unlimited history</li>
+          <li>Email support</li>
+          <li>Valid through certification</li>
+        </ul>
+
+        <button class="btn-subscribe btn-secondary" disabled>Students Auto-Enrolled</button>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h3>💡 How It Works</h3>
+      <p>
+        <strong>Wellcoaches Members & Students:</strong> Your access is managed automatically through your Wellcoaches account.
+        Simply sign in with your Wellcoaches email address.
+      </p>
+      <p style="margin-top: 1rem;">
+        <strong>Non-Members:</strong> Subscribe above to get instant access. You'll be prompted to create an account
+        after completing checkout.
+      </p>
+      <p style="margin-top: 1rem;">
+        <strong>Becoming a Wellcoaches Member?</strong> Your subscription will automatically switch to the $10/month
+        member rate when you join Wellcoaches. If you cancel your membership, you can choose to continue at $20/month or cancel.
+      </p>
+      <p style="margin-top: 1rem;">
+        <strong>Existing User?</strong> If you already have access but haven't created an account yet,
+        <a href="/signup-free.html" style="color: var(--primary); font-weight: 600;">create a free account here</a>
+        to continue your access until January 15, 2026.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin-top: 3rem;">
+      <a href="/" style="color: var(--primary); text-decoration: none; font-weight: 600;">
+        ← Back to Multi-Perspective AI
+      </a>
+    </div>
+  </div>
+</body>
+</html>

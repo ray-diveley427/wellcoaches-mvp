@@ -714,6 +714,237 @@ async function deleteAnalysis(userId, sessionId, analysisId, event) {
   }
 }
 
+// Helper function to parse markdown and convert to formatted text
+function parseMarkdownToTextRuns(text) {
+  // First, strip out markdown headers (hashtags)
+  text = text.replace(/^#{1,6}\s+/gm, '');
+
+  const runs = [];
+  // Split by markdown patterns: **bold**, *italic*, `code`
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
+
+  parts.forEach(part => {
+    if (!part) return;
+
+    if (part.startsWith('**') && part.endsWith('**')) {
+      // Bold text
+      runs.push(new docx.TextRun({
+        text: part.slice(2, -2),
+        bold: true
+      }));
+    } else if (part.startsWith('*') && part.endsWith('*')) {
+      // Italic text
+      runs.push(new docx.TextRun({
+        text: part.slice(1, -1),
+        italics: true
+      }));
+    } else if (part.startsWith('`') && part.endsWith('`')) {
+      // Code text (monospace)
+      runs.push(new docx.TextRun({
+        text: part.slice(1, -1),
+        font: 'Courier New'
+      }));
+    } else {
+      // Regular text - also strip any remaining markdown
+      const cleanText = part
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1'); // Links [text](url) -> text
+      runs.push(new docx.TextRun({
+        text: cleanText
+      }));
+    }
+  });
+
+  return runs;
+}
+
+// Helper function to strip markdown for plain text
+function stripMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1') // Bold
+    .replace(/\*(.*?)\*/g, '$1')     // Italic
+    .replace(/#{1,6}\s/g, '')        // Headers
+    .replace(/`(.*?)`/g, '$1')       // Code
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1'); // Links
+}
+
+async function downloadSessionAsWord(sessionId, event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+
+  const sessionData = fullHistoryCache.filter(item => item.session_id === sessionId);
+  if (sessionData.length === 0) {
+    showToast('Session not found', 'error');
+    return;
+  }
+
+  // Check if docx library is loaded
+  if (typeof docx === 'undefined' && typeof window.docx === 'undefined') {
+    showToast('Word generation library not loaded. Please refresh the page.', 'error');
+    console.error('docx library not loaded');
+    console.log('Available global objects:', Object.keys(window).filter(k => k.toLowerCase().includes('doc')));
+    return;
+  }
+
+  try {
+    // Sort by timestamp
+    const sortedData = sessionData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const firstExchange = sortedData[0];
+    const sessionTitle = firstExchange.user_query?.split(/[?.!]/)[0].slice(0, 60) || 'Multi-Perspective AI Conversation';
+    const dateStr = new Date(firstExchange.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+
+    // Create Word document using docx library
+    const docxLib = typeof docx !== 'undefined' ? docx : window.docx;
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docxLib;
+
+  // Build document sections
+  const children = [];
+
+  // Title
+  children.push(
+    new Paragraph({
+      text: sessionTitle,
+      heading: HeadingLevel.HEADING_1,
+      spacing: { after: 200 }
+    })
+  );
+
+  // Metadata
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `Date: ${new Date(firstExchange.timestamp).toLocaleDateString()}`,
+          color: "666666",
+          size: 20
+        })
+      ],
+      spacing: { after: 100 }
+    })
+  );
+
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `Conversation ID: ${sessionId}`,
+          color: "666666",
+          size: 20
+        })
+      ],
+      spacing: { after: 400 }
+    })
+  );
+
+  // Add each exchange
+  sortedData.forEach((item, index) => {
+    // Exchange header
+    children.push(
+      new Paragraph({
+        text: `Exchange ${index + 1}`,
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 300, after: 200 }
+      })
+    );
+
+    // User query
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'You:',
+            bold: true,
+            size: 22
+          })
+        ],
+        spacing: { after: 100 }
+      })
+    );
+
+    // Split user query into paragraphs and parse markdown
+    const userQueryParagraphs = item.user_query.split('\n\n');
+    userQueryParagraphs.forEach(para => {
+      if (para.trim()) {
+        const textRuns = parseMarkdownToTextRuns(para.trim());
+        children.push(
+          new Paragraph({
+            children: textRuns,
+            spacing: { after: 150 }
+          })
+        );
+      }
+    });
+
+    // Assistant response
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Assistant:',
+            bold: true,
+            size: 22
+          })
+        ],
+        spacing: { before: 200, after: 100 }
+      })
+    );
+
+    // Split assistant response into paragraphs and parse markdown
+    const responseParagraphs = item.response.split('\n\n');
+    responseParagraphs.forEach(para => {
+      if (para.trim()) {
+        const textRuns = parseMarkdownToTextRuns(para.trim());
+        children.push(
+          new Paragraph({
+            children: textRuns,
+            spacing: { after: 150 }
+          })
+        );
+      }
+    });
+  });
+
+  // Footer
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: 'Generated by Multi-Perspective AI',
+          color: "999999",
+          size: 18
+        })
+      ],
+      spacing: { before: 400 },
+      alignment: AlignmentType.CENTER
+    })
+  );
+
+  // Create document
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: children
+    }]
+  });
+
+    // Generate and download
+    Packer.toBlob(doc).then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const filename = `MPAI_${dateStr}_${sessionTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}.docx`;
+      link.download = filename;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      showToast('Conversation downloaded as Word document', 'success');
+    }).catch(err => {
+      console.error('Error generating Word document:', err);
+      showToast('Failed to generate Word document', 'error');
+    });
+  } catch (error) {
+    console.error('Error in downloadSessionAsWord:', error);
+    showToast('Failed to generate Word document: ' + error.message, 'error');
+  }
+}
+
 async function downloadSession(sessionId, event) {
   event.stopPropagation();
 
@@ -728,6 +959,79 @@ async function downloadSession(sessionId, event) {
   const firstExchange = sortedData[0];
   const sessionTitle = firstExchange.user_query?.split(/[?.!]/)[0].slice(0, 60) || 'Multi-Perspective AI Conversation';
   const dateStr = new Date(firstExchange.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+
+  // Show download format choice modal
+  showDownloadFormatModal(sessionId, sessionTitle, dateStr);
+}
+
+function showDownloadFormatModal(sessionId, sessionTitle, dateStr) {
+  // Escape the strings to prevent HTML injection issues
+  const escapedSessionId = sessionId.replace(/'/g, "\\'");
+  const escapedTitle = sessionTitle.replace(/'/g, "\\'");
+  const escapedDate = dateStr.replace(/'/g, "\\'");
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+
+  // Create modal structure
+  const modalContainer = document.createElement('div');
+  modalContainer.className = 'modal-container';
+  modalContainer.style.cssText = 'max-width: 500px; height: auto;';
+
+  const modalHeader = document.createElement('div');
+  modalHeader.className = 'modal-header';
+  modalHeader.innerHTML = `
+    <h2 class="modal-title">Download Conversation</h2>
+    <button class="modal-close">&times;</button>
+  `;
+
+  const modalBody = document.createElement('div');
+  modalBody.className = 'modal-body';
+  modalBody.style.cssText = 'padding: 2rem;';
+  modalBody.innerHTML = `
+    <p style="margin-bottom: 1.5rem; color: #64748b;">Choose your preferred download format:</p>
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <button class="btn-download-pdf" style="width: 100%; padding: 1rem; font-size: 1rem; background: #14b8a6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+        </svg>
+        Download as PDF
+      </button>
+      <button class="btn-download-word" style="width: 100%; padding: 1rem; font-size: 1rem; background: #0ea5e9; color: white; border: none; border-radius: 8px; cursor: pointer;">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+        </svg>
+        Download as Word Document
+      </button>
+    </div>
+  `;
+
+  modalContainer.appendChild(modalHeader);
+  modalContainer.appendChild(modalBody);
+  modal.appendChild(modalContainer);
+
+  // Add event listeners
+  modalHeader.querySelector('.modal-close').addEventListener('click', () => {
+    modal.remove();
+  });
+
+  modalBody.querySelector('.btn-download-pdf').addEventListener('click', () => {
+    downloadSessionAsPDF(sessionId, sessionTitle, dateStr);
+    modal.remove();
+  });
+
+  modalBody.querySelector('.btn-download-word').addEventListener('click', () => {
+    downloadSessionAsWord(sessionId, { stopPropagation: () => {} });
+    modal.remove();
+  });
+
+  document.body.appendChild(modal);
+}
+
+async function downloadSessionAsPDF(sessionId, sessionTitle, dateStr) {
+  const sessionData = fullHistoryCache.filter(item => item.session_id === sessionId);
+  const sortedData = sessionData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const firstExchange = sortedData[0];
 
   // Create PDF using jsPDF
   const { jsPDF } = window.jspdf;
@@ -784,13 +1088,13 @@ async function downloadSession(sessionId, event) {
     // User query
     addText('You:', 11, true);
     yPos += 2;
-    addText(item.user_query, 10, false);
+    addText(stripMarkdown(item.user_query), 10, false);
     yPos += 5;
 
     // Assistant response
     addText('Assistant:', 11, true);
     yPos += 2;
-    addText(item.response, 10, false);
+    addText(stripMarkdown(item.response), 10, false);
     yPos += 10;
 
     // Divider between exchanges
@@ -823,207 +1127,30 @@ async function downloadSession(sessionId, event) {
   showToast('Conversation downloaded as PDF', 'success');
 }
 
-async function downloadSessionAsWord(sessionId, event) {
-  event.stopPropagation();
-
-  const sessionData = fullHistoryCache.filter(item => item.session_id === sessionId);
-  if (sessionData.length === 0) {
-    showToast('Session not found', 'error');
-    return;
-  }
-
-  // Check if docx library is loaded
-  if (typeof docx === 'undefined' || !window.docx) {
-    console.error('docx library not loaded');
-    showToast('Word document library not loaded. Please refresh the page.', 'error');
-    return;
-  }
-
-  // Sort by timestamp
-  const sortedData = sessionData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-  const firstExchange = sortedData[0];
-  const sessionTitle = firstExchange.user_query?.split(/[?.!]/)[0].slice(0, 60) || 'Multi-Perspective AI Conversation';
-  const dateStr = new Date(firstExchange.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
-
-  try {
-    // Import docx library
-    const { Document, Paragraph, TextRun, AlignmentType, HeadingLevel, Packer } = docx;
-
-  // Create document sections
-  const docSections = [];
-
-  // Title
-  docSections.push(
-    new Paragraph({
-      text: sessionTitle,
-      heading: HeadingLevel.HEADING_1,
-      alignment: AlignmentType.LEFT,
-      spacing: { after: 200 }
-    })
-  );
-
-  // Metadata
-  docSections.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: `Date: ${new Date(firstExchange.timestamp).toLocaleDateString()}`,
-          size: 20,
-          color: "666666"
-        })
-      ],
-      spacing: { after: 100 }
-    })
-  );
-
-  docSections.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: `Conversation ID: ${sessionId}`,
-          size: 20,
-          color: "666666"
-        })
-      ],
-      spacing: { after: 400 }
-    })
-  );
-
-  // Exchanges
-  sortedData.forEach((item, index) => {
-    // Exchange header
-    docSections.push(
-      new Paragraph({
-        text: `Exchange ${index + 1}`,
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 300, after: 200 }
-      })
-    );
-
-    // User query
-    docSections.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: 'You: ',
-            bold: true,
-            size: 22
-          }),
-          new TextRun({
-            text: item.user_query,
-            size: 22
-          })
-        ],
-        spacing: { after: 200 }
-      })
-    );
-
-    // Assistant response
-    docSections.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: 'Assistant: ',
-            bold: true,
-            size: 22
-          }),
-          new TextRun({
-            text: item.response,
-            size: 22
-          })
-        ],
-        spacing: { after: 300 }
-      })
-    );
-  });
-
-  // Footer
-  docSections.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: 'Generated by Multi-Perspective AI',
-          size: 18,
-          color: "999999",
-          italics: true
-        })
-      ],
-      spacing: { before: 400 }
-    })
-  );
-
-  // Create document
-  const doc = new Document({
-    sections: [{
-      properties: {},
-      children: docSections
-    }]
-  });
-
-    // Generate and download
-    const filename = `MPAI_${dateStr}_${sessionTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}.docx`;
-
-    const blob = await Packer.toBlob(doc);
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-    window.URL.revokeObjectURL(url);
-    showToast('Conversation downloaded as Word document', 'success');
-  } catch (err) {
-    console.error('Error creating Word document:', err);
-    showToast('Error creating Word document: ' + err.message, 'error');
-  }
-}
-
-function downloadCurrentConversation(format = 'pdf') {
+function downloadCurrentConversation() {
   if (!currentSessionId) {
     showToast('No active conversation to download', 'warning');
     return;
   }
 
-  // Use the appropriate download function based on format
-  if (format === 'word') {
-    downloadSessionAsWord(currentSessionId, { stopPropagation: () => {} });
-  } else {
-    downloadSession(currentSessionId, { stopPropagation: () => {} });
-  }
+  // Use the existing downloadSession function
+  downloadSession(currentSessionId, { stopPropagation: () => {} });
 }
 
 function updateDownloadButtonVisibility() {
-  const downloadDropdown = document.getElementById('downloadDropdown');
-  if (!downloadDropdown) return;
+  const downloadBtn = document.getElementById('downloadButton');
+  if (!downloadBtn) return;
 
-  // Show download dropdown if there's a current session with messages
+  // Show download button if there's a current session with messages
   const hasMessages = elements.chatMessages?.children?.length > 0;
   const hasSession = !!currentSessionId;
 
   if (hasSession && hasMessages) {
-    downloadDropdown.style.display = '';
+    downloadBtn.style.display = '';
   } else {
-    downloadDropdown.style.display = 'none';
+    downloadBtn.style.display = 'none';
   }
 }
-
-// Toggle download menu
-function toggleDownloadMenu() {
-  const menu = document.getElementById('downloadMenu');
-  if (!menu) return;
-
-  const isVisible = menu.style.display === 'block';
-  menu.style.display = isVisible ? 'none' : 'block';
-}
-
-// Close download menu when clicking outside
-document.addEventListener('click', (e) => {
-  const downloadDropdown = document.getElementById('downloadDropdown');
-  const downloadMenu = document.getElementById('downloadMenu');
-
-  if (downloadDropdown && downloadMenu && !downloadDropdown.contains(e.target)) {
-    downloadMenu.style.display = 'none';
-  }
-});
 
 async function shareSession(sessionId, event) {
   event.stopPropagation();
@@ -1276,8 +1403,8 @@ function setupEventListeners() {
     }
   });
   
-  // Download button - toggle menu
-  document.getElementById('downloadButton')?.addEventListener('click', toggleDownloadMenu);
+  // Download current conversation button
+  document.getElementById('downloadButton')?.addEventListener('click', downloadCurrentConversation);
 
   // Make upload button open the hidden file picker
   document.getElementById('uploadButton')?.addEventListener('click', () => document.getElementById('fileInput').click());
@@ -1850,4 +1977,6 @@ window.togglePerspectiveVisibility = togglePerspectiveVisibility;
 window.deleteSession = deleteSession;
 window.deleteAnalysis = deleteAnalysis;
 window.downloadSession = downloadSession;
+window.downloadSessionAsPDF = downloadSessionAsPDF;
+window.downloadSessionAsWord = downloadSessionAsWord;
 window.shareSession = shareSession;

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription - Multi-Perspective AI</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .subscription-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    .pricing-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .pricing-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .pricing-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      transform: translateY(-4px);
+    }
+
+    .pricing-card.current {
+      border-color: var(--primary);
+      background: linear-gradient(to bottom, #f0fdf4, white);
+    }
+
+    .pricing-card .badge {
+      position: absolute;
+      top: -12px;
+      right: 2rem;
+      background: var(--primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .tier-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .tier-price {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .tier-price span {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .tier-description {
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+
+    .features-list {
+      list-style: none;
+      padding: 0;
+      margin: 1.5rem 0;
+    }
+
+    .features-list li {
+      padding: 0.75rem 0;
+      color: var(--text-primary);
+      display: flex;
+      align-items: start;
+      gap: 0.75rem;
+    }
+
+    .features-list li:before {
+      content: "✓";
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .usage-stats {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .usage-bar {
+      background: #e5e7eb;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+
+    .usage-fill {
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+
+    .btn-upgrade {
+      width: 100%;
+      padding: 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-upgrade:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+    }
+
+    .btn-upgrade:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-manage {
+      width: 100%;
+      padding: 1rem;
+      background: white;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-manage:hover {
+      background: var(--primary);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="subscription-container">
+    <h1>Subscription & Pricing</h1>
+    <p style="color: var(--text-secondary); font-size: 1.125rem;">Choose the plan that's right for you</p>
+
+    <div id="currentPlanInfo" class="usage-stats" style="max-width: 600px; margin: 2rem 0;">
+      <div style="font-weight: 600; margin-bottom: 0.5rem;">Loading subscription status...</div>
+    </div>
+
+    <div class="pricing-cards">
+      <!-- Free Tier -->
+      <div class="pricing-card" id="freeTierCard">
+        <div class="tier-name">Free</div>
+        <div class="tier-price">$0<span>/month</span></div>
+        <div class="tier-description">Perfect for trying out Multi-Perspective AI</div>
+
+        <ul class="features-list">
+          <li>$5 monthly AI usage budget</li>
+          <li>~10-15 analyses per month</li>
+          <li>QUICK, CONFLICT, STAKEHOLDER methods</li>
+          <li>30 days of history</li>
+          <li>Email support</li>
+        </ul>
+
+        <button class="btn-manage" id="freeTierBtn" disabled>Current Plan</button>
+      </div>
+
+      <!-- Premium Tier -->
+      <div class="pricing-card" id="premiumTierCard">
+        <div class="tier-name">Premium</div>
+        <div class="tier-price">$10<span>/month</span></div>
+        <div class="tier-description">Full access to all features and methods</div>
+
+        <ul class="features-list">
+          <li>$50 monthly AI usage budget</li>
+          <li>~100-150 analyses per month</li>
+          <li><strong>All methods unlocked</strong></li>
+          <li>File upload support (PDFs, docs)</li>
+          <li>Unlimited history</li>
+          <li>Priority support</li>
+        </ul>
+
+        <button class="btn-upgrade" id="premiumUpgradeBtn">Upgrade to Premium</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 3rem; padding: 2rem; background: #f9fafb; border-radius: 12px;">
+      <h3>💡 How Usage Works</h3>
+      <p style="color: var(--text-secondary); line-height: 1.8;">
+        Your subscription includes a monthly AI usage budget. Simple analyses cost about $0.30-0.50 each,
+        while complex multi-perspective analyses cost $0.50-1.00. Most users on Premium complete
+        100+ analyses per month without hitting limits.
+      </p>
+    </div>
+
+    <div style="margin-top: 2rem; padding: 2rem; background: white; border: 2px solid #e5e7eb; border-radius: 12px;">
+      <h3 style="margin-bottom: 1rem;">🔒 Privacy Settings</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        Control how long your conversations are stored. You can delete individual conversations at any time.
+      </p>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Conversation Archive Duration</label>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button id="retention30" class="retention-btn" data-days="30" style="flex: 1; min-width: 150px; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s;">
+            <div style="font-weight: 600;">1 Month</div>
+            <div style="font-size: 0.875rem; color: #64748b;">Auto-delete after 30 days</div>
+          </button>
+          <button id="retention90" class="retention-btn" data-days="90" style="flex: 1; min-width: 150px; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s;">
+            <div style="font-weight: 600;">3 Months</div>
+            <div style="font-size: 0.875rem; color: #64748b;">Auto-delete after 90 days</div>
+          </button>
+        </div>
+        <p id="retentionStatus" style="margin-top: 0.75rem; color: var(--primary); font-size: 0.875rem;"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script type="module">
+    import { mpaiAPI } from '/js/api.js';
+
+    let currentSubscription = null;
+
+    async function loadSubscriptionStatus() {
+      try {
+        const idToken = localStorage.getItem('id_token');
+        if (!idToken) {
+          window.location.href = '/';
+          return;
+        }
+
+        const res = await fetch('/api/subscription/status', {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+
+        const data = await res.json();
+        if (data.success && data.subscription) {
+          currentSubscription = data.subscription;
+          renderSubscriptionStatus(data.subscription);
+        }
+      } catch (error) {
+        console.error('Error loading subscription:', error);
+        document.getElementById('currentPlanInfo').innerHTML = `
+          <div style="color: #ef4444;">Error loading subscription status</div>
+        `;
+      }
+    }
+
+    function renderSubscriptionStatus(sub) {
+      const { tier, usage, limits, percentUsed } = sub;
+
+      // Update current plan indicator
+      if (tier === 'free') {
+        document.getElementById('freeTierCard').classList.add('current');
+        document.getElementById('freeTierCard').innerHTML += '<div class="badge">Current Plan</div>';
+        document.getElementById('freeTierBtn').textContent = 'Current Plan';
+        document.getElementById('premiumUpgradeBtn').textContent = 'Upgrade to Premium';
+        document.getElementById('premiumUpgradeBtn').disabled = false;
+      } else {
+        document.getElementById('premiumTierCard').classList.add('current');
+        document.getElementById('premiumTierCard').innerHTML += '<div class="badge">Current Plan</div>';
+        document.getElementById('premiumUpgradeBtn').textContent = 'Current Plan';
+        document.getElementById('premiumUpgradeBtn').disabled = true;
+        document.getElementById('freeTierBtn').textContent = 'Downgrade';
+        document.getElementById('freeTierBtn').disabled = true;
+      }
+
+      // Show usage stats
+      const infoHtml = `
+        <div style="font-weight: 600; margin-bottom: 0.5rem;">Current Usage (${tier.toUpperCase()} Plan)</div>
+        <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.25rem;">
+          <span>Monthly: $${usage.monthly.toFixed(2)} / $${limits.monthlyCost.toFixed(2)}</span>
+          <span>${percentUsed.monthly}%</span>
+        </div>
+        <div class="usage-bar">
+          <div class="usage-fill" style="width: ${Math.min(percentUsed.monthly, 100)}%"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.875rem; margin-top: 1rem; margin-bottom: 0.25rem;">
+          <span>Daily: $${usage.daily.toFixed(2)} / $${limits.dailyCost.toFixed(2)}</span>
+          <span>${percentUsed.daily}%</span>
+        </div>
+        <div class="usage-bar">
+          <div class="usage-fill" style="width: ${Math.min(percentUsed.daily, 100)}%"></div>
+        </div>
+      `;
+      document.getElementById('currentPlanInfo').innerHTML = infoHtml;
+    }
+
+    // Handle upgrade button
+    document.getElementById('premiumUpgradeBtn').addEventListener('click', async () => {
+      try {
+        const idToken = localStorage.getItem('id_token');
+        const res = await fetch('/api/subscription/upgrade', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          if (data.isPlaceholder) {
+            alert('Keap payment integration is not yet configured. Please contact support to upgrade.');
+          } else {
+            // Redirect to Keap payment form
+            window.location.href = data.redirectUrl;
+          }
+        }
+      } catch (error) {
+        console.error('Upgrade error:', error);
+        alert('Failed to start upgrade process. Please try again.');
+      }
+    });
+
+    // Retention preference handling
+    let currentRetentionDays = 90; // Default
+
+    async function loadRetentionPreference() {
+      try {
+        const userId = JSON.parse(atob(localStorage.getItem('id_token').split('.')[1])).sub;
+        const res = await fetch(`/api/user/preferences?userId=${userId}`);
+        const data = await res.json();
+
+        if (data.success && data.preferences) {
+          currentRetentionDays = data.preferences.conversation_retention_days || 90;
+          updateRetentionUI(currentRetentionDays);
+        }
+      } catch (error) {
+        console.error('Error loading retention preference:', error);
+        updateRetentionUI(90); // Default to 90 days
+      }
+    }
+
+    function updateRetentionUI(days) {
+      const retention30Btn = document.getElementById('retention30');
+      const retention90Btn = document.getElementById('retention90');
+
+      // Reset all buttons
+      document.querySelectorAll('.retention-btn').forEach(btn => {
+        btn.style.borderColor = '#e5e7eb';
+        btn.style.background = 'white';
+      });
+
+      // Highlight selected button
+      const selectedBtn = days === 30 ? retention30Btn : retention90Btn;
+      selectedBtn.style.borderColor = 'var(--primary)';
+      selectedBtn.style.background = '#f0fdf4';
+
+      document.getElementById('retentionStatus').textContent =
+        `✓ Conversations will be automatically deleted after ${days} days`;
+    }
+
+    async function updateRetentionPreference(days) {
+      try {
+        const userId = JSON.parse(atob(localStorage.getItem('id_token').split('.')[1])).sub;
+
+        const res = await fetch('/api/user/preferences/retention', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userId, retentionDays: days })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          currentRetentionDays = days;
+          updateRetentionUI(days);
+        } else {
+          alert('Failed to update preference. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error updating retention preference:', error);
+        alert('Failed to update preference. Please try again.');
+      }
+    }
+
+    // Attach click handlers
+    document.getElementById('retention30').addEventListener('click', () => {
+      if (currentRetentionDays !== 30) {
+        updateRetentionPreference(30);
+      }
+    });
+
+    document.getElementById('retention90').addEventListener('click', () => {
+      if (currentRetentionDays !== 90) {
+        updateRetentionPreference(90);
+      }
+    });
+
+    // Load on page load
+    loadSubscriptionStatus();
+    loadRetentionPreference();
+  </script>
+</body>
+</html>

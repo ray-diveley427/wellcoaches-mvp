@@ -7,6 +7,11 @@ import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import historyRoutes from './routes/history.js';
 import analyzeRoutes from './routes/analyze.js';
+import subscriptionRoutes from './routes/subscription.js';
+import userPreferencesRoutes from './routes/userPreferences.js';
+import checkSubscriptionRoutes from './routes/checkSubscription.js';
+import checkKeapEmailRoutes from './routes/checkKeapEmail.js';
+import createFreeAccountRoutes from './routes/createFreeAccount.js';
 import { TABLE_NAME } from './db/dynamoClient.js';
 
 
@@ -46,6 +51,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve docx library from node_modules
+app.use('/lib/docx', express.static(path.join(__dirname, 'node_modules/docx/dist')));
+
 // CORS configuration based on environment
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -79,9 +87,49 @@ app.use((req, res, next) => {
   next();
 });
 
+// ==================================================================
+// HIPAA Security Headers Middleware
+// ==================================================================
+app.use((req, res, next) => {
+  // Strict-Transport-Security: Force HTTPS
+  res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+
+  // Content-Security-Policy: Prevent XSS attacks
+  res.header('Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cognito-idp.us-east-1.amazonaws.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self' https://cognito-idp.us-east-1.amazonaws.com https://*.auth.us-east-1.amazoncognito.com;"
+  );
+
+  // X-Content-Type-Options: Prevent MIME sniffing
+  res.header('X-Content-Type-Options', 'nosniff');
+
+  // X-Frame-Options: Prevent clickjacking
+  res.header('X-Frame-Options', 'DENY');
+
+  // X-XSS-Protection: Enable browser XSS protection
+  res.header('X-XSS-Protection', '1; mode=block');
+
+  // Referrer-Policy: Control referrer information
+  res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Permissions-Policy: Restrict browser features
+  res.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+
+  next();
+});
+
 // Mount refactored history routes
 app.use('/api/history', historyRoutes);
 app.use('/api/analyze', analyzeRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/user/preferences', userPreferencesRoutes);
+app.use('/api/check-subscription', checkSubscriptionRoutes);
+app.use('/api/check-keap-email', checkKeapEmailRoutes);
+app.use('/api/create-free-account', createFreeAccountRoutes);
 
 // =====================================================================
 // ROUTES
@@ -470,7 +518,7 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
       // Also look up emails separately to ensure we get them even if user's activity is outside date range
       const formattedStats = await Promise.all(Object.values(userStats).map(async (stats) => {
         let email = stats.email; // Use email from date-filtered items if available
-        
+
         // If email not found in date range, look it up separately from most recent item
         if (!email) {
           try {
@@ -484,7 +532,7 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
               ScanIndexForward: false, // Get most recent first
               Limit: 50 // Get up to 50 items to find one with email
             }));
-            
+
             // Find the first item that has an email (most recent first)
             if (emailResult.Items && emailResult.Items.length > 0) {
               const itemWithEmail = emailResult.Items.find(item => item.user_email);
@@ -502,13 +550,40 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
         } else {
           console.log(`✅ Email found from date-filtered items for user ${stats.userId}: ${email}`);
         }
-        
+
         const monthlyCost = await getUserMonthlyCost(stats.userId);
         const monthlyLimit = await getUserMonthlyLimit(stats.userId);
-        
+
+        // Get Keap subscription tier info
+        let subscriptionTier = 'free'; // Default to free
+        let keapTags = [];
+        if (email && email !== 'N/A') {
+          try {
+            const { getUserSubscriptionTier, findContactByEmail } = await import('./utils/keapIntegration.js');
+            const tier = await getUserSubscriptionTier(email);
+            if (tier) {
+              subscriptionTier = tier;
+              console.log(`✅ Keap tier for ${email}: ${tier}`);
+            } else {
+              console.log(`ℹ️ No Keap tier found for ${email}, using free`);
+            }
+
+            // Also get the contact's tags for detailed info
+            const contact = await findContactByEmail(email);
+            if (contact && contact.tag_ids) {
+              keapTags = contact.tag_ids;
+              console.log(`✅ Keap tags for ${email}: ${keapTags.join(', ')}`);
+            }
+          } catch (err) {
+            console.warn(`⚠️ Failed to get Keap info for ${email}:`, err.message);
+          }
+        }
+
         return {
           userId: stats.userId,
           email: email || 'N/A',
+          subscriptionTier: subscriptionTier,
+          keapTags: keapTags,
           totalCost: stats.totalCost.toFixed(4),
           monthlyCost: monthlyCost.toFixed(4),
           monthlyLimit: monthlyLimit.toFixed(2),

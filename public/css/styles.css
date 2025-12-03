@@ -1340,11 +1340,6 @@ body.showing-splash .history-sidebar {
     background: var(--bg-secondary);
 }
 
-.download-dropdown {
-    position: relative;
-    display: inline-block;
-}
-
 .download-button {
     padding: 0.875rem;
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
@@ -1366,50 +1361,6 @@ body.showing-splash .history-sidebar {
 
 .download-button:active {
     transform: translateY(0);
-}
-
-.download-menu {
-    display: none;
-    position: absolute;
-    bottom: 100%;
-    right: 0;
-    margin-bottom: 0.5rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    min-width: 200px;
-    z-index: 1000;
-    overflow: hidden;
-}
-
-.download-option {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background: transparent;
-    color: var(--text-primary);
-    border: none;
-    text-align: left;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-}
-
-.download-option:hover {
-    background: var(--bg-secondary);
-    color: var(--teal);
-}
-
-.download-option:not(:last-child) {
-    border-bottom: 1px solid var(--border);
-}
-
-.download-option svg {
-    flex-shrink: 0;
-    opacity: 0.7;
 }
 
 .send-button {

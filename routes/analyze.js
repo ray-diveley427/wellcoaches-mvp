@@ -11,6 +11,9 @@ import {
   suggestMethod
 } from '../utils/claudeHandler.js';
 import { notifyAdminOfError } from '../utils/errorNotifier.js';
+import { getOrCreateUser, updateUsageCosts } from '../utils/userManager.js';
+import { getCostLimits, canUseMethod, canUploadFiles } from '../utils/subscriptionConfig.js';
+import { getCurrentBillingPeriod, shouldResetMonthlyCosts } from '../utils/billingCycleManager.js';
 
 // Import cost tracking from server (for this MVP, we'll use a shared module)
 // In production, use Redis or DynamoDB for distributed tracking
@@ -83,13 +86,38 @@ function resetDailyCostsIfNeeded() {
 }
 
 /**
- * Get current month string (YYYY-MM)
+ * Get current month string (YYYY-MM) - DEPRECATED
+ * Use getUserBillingPeriodKey() instead for per-user billing cycles
  */
 function getCurrentMonth() {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
+}
+
+/**
+ * Get user's billing period key based on their billing cycle start date
+ * Falls back to calendar month if no billing cycle is set
+ */
+async function getUserBillingPeriodKey(userId) {
+  try {
+    // Get user's billing cycle start date
+    const userResult = await docClient.send(new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: `USER#${userId}`,
+        SK: 'PROFILE'
+      }
+    }));
+
+    const billingCycleStartDate = userResult.Item?.billing_cycle_start_date;
+    const { periodKey } = getCurrentBillingPeriod(billingCycleStartDate);
+    return periodKey;
+  } catch (err) {
+    console.warn(`⚠️ Could not get billing period for ${userId}, using calendar month:`, err.message);
+    return getCurrentMonth();
+  }
 }
 
 /**
@@ -106,7 +134,7 @@ async function getUserMonthlyLimit(userId) {
         SK: `MONTHLY_LIMIT`
       }
     }));
-    
+
     if (result.Item && result.Item.monthly_limit !== undefined) {
       return parseFloat(result.Item.monthly_limit);
     }
@@ -114,54 +142,55 @@ async function getUserMonthlyLimit(userId) {
     // If user limit doesn't exist, that's fine - use default
     console.warn(`⚠️ Could not fetch monthly limit for ${userId}, using default:`, err.message);
   }
-  
+
   return DEFAULT_MONTHLY_LIMIT_PER_USER;
 }
 
 /**
- * Get user's current monthly cost from DynamoDB
+ * Get user's current monthly cost from DynamoDB based on their billing cycle
  */
 async function getUserMonthlyCost(userId) {
-  const currentMonth = getCurrentMonth();
-  
+  const billingPeriodKey = await getUserBillingPeriodKey(userId);
+
   try {
     const result = await docClient.send(new GetCommand({
       TableName: TABLE_NAME,
       Key: {
         PK: `USER#${userId}`,
-        SK: `MONTHLY_COST#${currentMonth}`
+        SK: `MONTHLY_COST#${billingPeriodKey}`
       }
     }));
-    
+
     if (result.Item && result.Item.cost !== undefined) {
       return parseFloat(result.Item.cost);
     }
   } catch (err) {
-    // If no monthly cost record exists, user hasn't spent anything this month
+    // If no monthly cost record exists, user hasn't spent anything this billing period
     console.warn(`⚠️ Could not fetch monthly cost for ${userId}:`, err.message);
   }
-  
+
   return 0;
 }
 
 /**
  * Increment user's monthly cost in DynamoDB (atomic operation)
+ * Uses user's billing cycle period, not calendar month
  */
 async function incrementUserMonthlyCost(userId, cost) {
-  const currentMonth = getCurrentMonth();
-  
+  const billingPeriodKey = await getUserBillingPeriodKey(userId);
+
   try {
     // Use atomic update to increment monthly cost
     await docClient.send(new UpdateCommand({
       TableName: TABLE_NAME,
       Key: {
         PK: `USER#${userId}`,
-        SK: `MONTHLY_COST#${currentMonth}`
+        SK: `MONTHLY_COST#${billingPeriodKey}`
       },
-      UpdateExpression: 'ADD cost :cost SET month = :month, updated_at = :updated_at',
+      UpdateExpression: 'ADD cost :cost SET period = :period, updated_at = :updated_at',
       ExpressionAttributeValues: {
         ':cost': cost,
-        ':month': currentMonth,
+        ':period': billingPeriodKey,
         ':updated_at': new Date().toISOString()
       }
     }));
@@ -326,10 +355,28 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       return res.status(400).json({ success: false, error: 'User query is required' });
     }
 
+    // ✅ Get or create user with subscription info
+    const user = await getOrCreateUser({
+      user_id: userId,
+      email: userEmail || `${userId}@temp.local`,
+      given_name: '',
+      family_name: ''
+    });
+
+    // ✅ Check file upload permission
+    if (uploadedFiles.length > 0 && !canUploadFiles(user.subscription_tier)) {
+      return res.json({
+        success: false,
+        error: 'File upload requires a Premium subscription',
+        upgradeRequired: true,
+        feature: 'file_upload'
+      });
+    }
+
     const sessionId = providedSessionId || uuidv4();
     const analysisId = uuidv4();
-    
-    console.log(`\n🔵 New request | Session: ${sessionId.substring(0, 8)}... | Query: "${userQuery.substring(0, 50)}..."`);
+
+    console.log(`\n🔵 New request | Session: ${sessionId.substring(0, 8)}... | User: ${userId} (${user.subscription_tier}) | Query: "${userQuery.substring(0, 50)}..."`);
 
     // Load recent messages for context
     // Limit: Last 10 exchanges (20 messages) to control costs and stay within token limits
@@ -375,11 +422,22 @@ router.post('/', upload.array('files', 5), async (req, res) => {
     }
 
     let method = providedMethod || suggestMethod(userQuery);
-    
+
+    // ✅ Check if user's subscription allows this method
+    if (!canUseMethod(user.subscription_tier, method)) {
+      return res.json({
+        success: false,
+        error: `The ${method} method requires a Premium subscription`,
+        upgradeRequired: true,
+        feature: 'method',
+        method: method
+      });
+    }
+
     // Some methods require specific output styles - override auto-detection
     const methodsRequiringStructured = [
-      'COACHING_PLAN', 
-      'SKILLS', 
+      'ACTION_PLAN',  // Updated from COACHING_PLAN
+      'SKILLS',
       'SYNTHESIS',
       'SIMPLE_SYNTHESIS',
       'SYNTHESIS_ALL',
@@ -387,11 +445,11 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       'HUMAN_HARM_CHECK'
     ];
     const shouldForceStructured = methodsRequiringStructured.includes(method);
-    
+
     const outputStyle = providedOutputStyle || (shouldForceStructured ? 'structured' : detectOutputStyle(userQuery));
     const roleContext = providedRoleContext || detectRoleContext(userQuery);
     const bandwidth = detectBandwidth(userQuery);
-    
+
     if (!providedMethod) {
       console.log(`💡 Auto-selected method: ${method} (bandwidth: ${bandwidth})`);
     }
@@ -404,27 +462,42 @@ router.post('/', upload.array('files', 5), async (req, res) => {
     const estimatedOutputCost = (estimatedOutputTokens / 1_000_000) * 15;
     const estimatedCost = estimatedInputCost + estimatedOutputCost;
     
-    // Check cost limits before proceeding (only if enabled)
+    // ✅ Check subscription-based cost limits
+    const limits = getCostLimits(user.subscription_tier);
+    const currentDailyCost = user.daily_cost || 0;
+    const currentMonthlyCost = user.monthly_cost || 0;
+
+    // Check daily limit
+    if (currentDailyCost + estimatedCost > limits.dailyCost) {
+      return res.json({
+        success: false,
+        error: `Daily usage limit reached. You've used $${currentDailyCost.toFixed(2)} of your $${limits.dailyCost.toFixed(2)} daily limit.`,
+        costLimitExceeded: true,
+        dailyLimitExceeded: true,
+        dailyCost: currentDailyCost,
+        dailyLimit: limits.dailyCost,
+        upgradeRequired: user.subscription_tier === 'free'
+      });
+    }
+
+    // Check monthly limit
+    if (currentMonthlyCost + estimatedCost > limits.monthlyCost) {
+      return res.json({
+        success: false,
+        error: `Monthly usage limit reached. You've used $${currentMonthlyCost.toFixed(2)} of your $${limits.monthlyCost.toFixed(2)} monthly limit.`,
+        costLimitExceeded: true,
+        monthlyLimitExceeded: true,
+        monthlyCost: currentMonthlyCost,
+        monthlyLimit: limits.monthlyCost,
+        upgradeRequired: user.subscription_tier === 'free'
+      });
+    }
+
+    // Also run the legacy cost check if enabled
     if (COST_LIMITS_ENABLED) {
       const costCheck = await checkCostLimits(userId, estimatedCost);
       if (!costCheck.allowed) {
-        console.error(`🚫 Request blocked due to cost limits:`, costCheck.errors);
-        
-        // Check if it's specifically the monthly limit
-        const isMonthlyLimitExceeded = costCheck.errors.some(e => e.includes('monthly limit'));
-        const errorMessage = isMonthlyLimitExceeded
-          ? `Monthly spending limit exceeded. You've used $${costCheck.monthlyCost.toFixed(2)} of your $${costCheck.monthlyLimit.toFixed(2)} monthly limit. Please contact support to increase your limit.`
-          : 'Request exceeds cost limits. Please try again later or contact support.';
-        
-        return res.status(429).json({ 
-          success: false, 
-          error: errorMessage,
-          costLimitExceeded: true,
-          monthlyLimitExceeded: isMonthlyLimitExceeded,
-          monthlyCost: costCheck.monthlyCost,
-          monthlyLimit: costCheck.monthlyLimit,
-          monthlyRemaining: costCheck.monthlyRemaining
-        });
+        console.error(`🚫 Request blocked due to legacy cost limits:`, costCheck.errors);
       }
     }
 
@@ -460,7 +533,15 @@ router.post('/', upload.array('files', 5), async (req, res) => {
     
     // Record actual cost (both daily in-memory and monthly in DynamoDB)
     await recordCost(userId, totalCost);
-    
+
+    // ✅ Update user's cost tracking in mpai-users table
+    const newMonthlyCost = currentMonthlyCost + totalCost;
+    const newDailyCost = currentDailyCost + totalCost;
+    await updateUsageCosts(userId, {
+      monthlyCost: newMonthlyCost,
+      dailyCost: newDailyCost
+    });
+
     contextInfo.cost = {
       input: inputCost,
       output: outputCost,
@@ -470,6 +551,10 @@ router.post('/', upload.array('files', 5), async (req, res) => {
     };
 
     // Save new exchange to DynamoDB (include snake_case and camelCase for compatibility)
+    // Use user's retention preference (default 90 days if not set)
+    const retentionDays = user.conversation_retention_days || 90;
+    const ttlSeconds = Math.floor(Date.now() / 1000) + (60 * 60 * 24 * retentionDays);
+
     const item = {
       PK: `USER#${userId}`,
       SK: `SESSION#${sessionId}#ANALYSIS#${analysisId}`,
@@ -496,7 +581,7 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       // user email for admin display
       ...(userEmail && { user_email: userEmail }),
       timestamp: new Date().toISOString(),
-      ttl: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+      ttl: ttlSeconds,
     };
     await docClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
     

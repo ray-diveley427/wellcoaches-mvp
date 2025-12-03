@@ -292,10 +292,89 @@
           document.getElementById('processingState').classList.add('hidden');
           document.getElementById('successState').classList.add('visible');
 
-          // Redirect after showing success message
-          setTimeout(() => {
-            window.location.href = `${baseUrl}/`;
-          }, 1500);
+          // Check subscription and Keap status
+          const payload = JSON.parse(atob(tokens.id_token.split('.')[1]));
+          const userId = payload.sub;
+          const userEmail = payload.email;
+
+          console.log('Checking subscription for:', userEmail);
+
+          // First check MPAI subscription status (to see if they have grace period)
+          fetch(`${baseUrl}/api/check-subscription?userId=${userId}`)
+            .then(r => r.json())
+            .then(data => {
+              console.log('Subscription check result:', data);
+
+              // If user has grace period or paid subscription, check Keap but allow access regardless
+              if (data.success && (data.hasGracePeriod || data.hasPaidSubscription)) {
+                console.log('✅ User has grace period or subscription');
+
+                // Still check if they're in Keap to remind them if not
+                return fetch(`${baseUrl}/api/check-keap-email`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: userEmail })
+                })
+                  .then(r => r.json())
+                  .then(keapData => {
+                    if (keapData.success && !keapData.existsInKeap) {
+                      // Not in Keap but has grace period - redirect to free signup
+                      console.log('⚠️ Not in Keap but has grace period - redirecting to free signup');
+                      alert('Please create a Wellcoaches account to continue access after January 15th. You will be redirected to the free signup form.');
+                      setTimeout(() => {
+                        window.location.href = `${baseUrl}/signup-free.html`;
+                      }, 1000);
+                    } else {
+                      // In Keap or check failed - allow access
+                      setTimeout(() => {
+                        window.location.href = `${baseUrl}/`;
+                      }, 1500);
+                    }
+                  })
+                  .catch(() => {
+                    // If Keap check fails, still allow access (they have grace period)
+                    setTimeout(() => {
+                      window.location.href = `${baseUrl}/`;
+                    }, 1500);
+                  });
+              }
+
+              // User needs subscription - they must be in Keap
+              console.log('⚠️ User needs subscription, checking Keap...');
+              return fetch(`${baseUrl}/api/check-keap-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail })
+              })
+                .then(r => r.json())
+                .then(keapData => {
+                  if (!keapData.success) {
+                    throw new Error(keapData.error || 'Failed to check Keap');
+                  }
+
+                  if (!keapData.existsInKeap) {
+                    // Not in Keap and no grace period - must subscribe
+                    console.log('⚠️ Email not in Keap, must subscribe');
+                    alert('Please create a Wellcoaches account through our subscription page to get started.');
+                    setTimeout(() => {
+                      window.location.href = `${baseUrl}/pricing.html`;
+                    }, 500);
+                  } else {
+                    // In Keap - allow access
+                    console.log('✅ Email found in Keap, allowing access');
+                    setTimeout(() => {
+                      window.location.href = `${baseUrl}/`;
+                    }, 1500);
+                  }
+                });
+            })
+            .catch(err => {
+              // If check fails, allow them through (fail open)
+              console.error('Failed to check subscription/Keap:', err);
+              setTimeout(() => {
+                window.location.href = `${baseUrl}/`;
+              }, 1500);
+            });
         })
         .catch(e => {
           clearTimeout(timeoutId); // Clear timeout on error
