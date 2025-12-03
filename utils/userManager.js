@@ -285,6 +285,7 @@ export async function updateLastLogin(userId) {
 export async function getOrCreateUser(userData) {
   try {
     let user = await getUser(userData.user_id);
+    const isNewUser = !user;
 
     if (!user) {
       user = await createUser(userData);
@@ -306,6 +307,21 @@ export async function getOrCreateUser(userData) {
             status: SUBSCRIPTION_STATUS.ACTIVE
           });
           user.subscription_tier = keapTier;
+        }
+
+        // For new users with free tier (no subscription tags), grant grace period until Jan 15, 2026
+        if (isNewUser && keapTier === SUBSCRIPTION_TIERS.FREE && !user.grace_period_end) {
+          console.log(`🎁 Granting grace period to new free user ${userData.email} until Jan 15, 2026`);
+          const command = new UpdateCommand({
+            TableName: USERS_TABLE,
+            Key: { user_id: userData.user_id },
+            UpdateExpression: 'SET grace_period_end = :grace_end',
+            ExpressionAttributeValues: {
+              ':grace_end': '2026-01-15T23:59:59.999Z'
+            }
+          });
+          await docClient.send(command);
+          user.grace_period_end = '2026-01-15T23:59:59.999Z';
         }
       } catch (error) {
         console.error('⚠️ Error checking Keap subscription, using cached tier:', error);
