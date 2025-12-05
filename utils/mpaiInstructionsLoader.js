@@ -26,8 +26,10 @@ const extendedMethods = fs.readFileSync(extendedMethodsPath, 'utf8');
 export function buildMPAIPrompt(method, userQuery, outputStyle = 'BALANCED', roleContext = null, hasUploads = false) {
   let prompt = coreInstructions;
 
-  // Add extended methods if Science of Leadership book method is requested
+  // Add extended methods if Science of Leadership book is needed
+  // SKILLS method uses Science of Leadership book
   if (method === 'APPLY_SCIENCE_OF_LEADERSHIP_BOOK' ||
+      method === 'SKILLS' ||
       userQuery?.toLowerCase().includes('science of leadership')) {
     prompt += '\n\n' + extendedMethods;
   }
