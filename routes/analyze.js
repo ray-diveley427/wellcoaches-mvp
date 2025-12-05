@@ -477,16 +477,16 @@ router.post('/', upload.array('files', 5), async (req, res) => {
 
       // Check daily limit
       if (currentDailyCost + estimatedCost > limits.dailyCost) {
-      return res.json({
-        success: false,
-        error: `Daily usage limit reached. You've used $${currentDailyCost.toFixed(2)} of your $${limits.dailyCost.toFixed(2)} daily limit.`,
-        costLimitExceeded: true,
-        dailyLimitExceeded: true,
-        dailyCost: currentDailyCost,
-        dailyLimit: limits.dailyCost,
-        upgradeRequired: user.subscription_tier === 'free'
-      });
-    }
+        return res.json({
+          success: false,
+          error: `Daily usage limit reached. You've used $${currentDailyCost.toFixed(2)} of your $${limits.dailyCost.toFixed(2)} daily limit.`,
+          costLimitExceeded: true,
+          dailyLimitExceeded: true,
+          dailyCost: currentDailyCost,
+          dailyLimit: limits.dailyCost,
+          upgradeRequired: user.subscription_tier === 'free'
+        });
+      }
 
       // Check monthly limit
       if (currentMonthlyCost + estimatedCost > limits.monthlyCost) {
