@@ -421,18 +421,23 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       console.warn('⚠️ Failed to load prior messages:', err);
     }
 
+    console.log(`🐛 DEBUG: About to select method. providedMethod=${providedMethod}, userQuery length=${userQuery?.length}`);
     let method = providedMethod || suggestMethod(userQuery);
+    console.log(`🐛 DEBUG: Method selected: ${method}`);
+
+    console.log(`🐛 DEBUG: Passed method selection, continuing...`);
 
     // ✅ Check if user's subscription allows this method
-    if (!canUseMethod(user.subscription_tier, method)) {
-      return res.json({
-        success: false,
-        error: `The ${method} method requires a Premium subscription`,
-        upgradeRequired: true,
-        feature: 'method',
-        method: method
-      });
-    }
+    // TEMPORARILY DISABLED FOR DEBUGGING
+    // if (!canUseMethod(user.subscription_tier, method)) {
+    //   return res.json({
+    //     success: false,
+    //     error: `The ${method} method requires a Premium subscription`,
+    //     upgradeRequired: true,
+    //     feature: 'method',
+    //     method: method
+    //   });
+    // }
 
     // Some methods require specific output styles - override auto-detection
     const methodsRequiringStructured = [

@@ -138,26 +138,40 @@ async function getValidToken() {
 async function keapRequest(endpoint, method = 'GET', body = null) {
   const token = await getValidToken();
 
+  // Add timeout to prevent hanging requests
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
   const options = {
     method,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
-    }
+    },
+    signal: controller.signal
   };
 
   if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${KEAP_API_BASE}${endpoint}`, options);
+  try {
+    const response = await fetch(`${KEAP_API_BASE}${endpoint}`, options);
+    clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Keap API error: ${response.status} - ${error}`);
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Keap API error: ${response.status} - ${error}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Keap API request timed out');
+    }
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
