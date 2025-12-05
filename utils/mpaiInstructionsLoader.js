@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { buildMPAIPrompt as buildOldPrompt } from './mpaiInstructions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +10,7 @@ const __dirname = path.dirname(__filename);
 // Load core instructions (always loaded)
 let coreInstructions;
 let extendedMethods;
+let useOldInstructions = false;
 
 try {
   const coreInstructionsPath = path.join(__dirname, 'mpai_instructions_core.md');
@@ -16,17 +18,21 @@ try {
   console.log('✅ Core instructions loaded successfully');
 } catch (error) {
   console.error('❌ Error loading core instructions:', error.message);
-  throw new Error(`Failed to load MPAI core instructions: ${error.message}`);
+  console.log('⚠️ Falling back to old instructions');
+  useOldInstructions = true;
 }
 
 // Load extended methods (for on-demand loading)
-try {
-  const extendedMethodsPath = path.join(__dirname, 'mpai_extended_methods.md');
-  extendedMethods = fs.readFileSync(extendedMethodsPath, 'utf8');
-  console.log('✅ Extended methods loaded successfully');
-} catch (error) {
-  console.error('❌ Error loading extended methods:', error.message);
-  throw new Error(`Failed to load MPAI extended methods: ${error.message}`);
+if (!useOldInstructions) {
+  try {
+    const extendedMethodsPath = path.join(__dirname, 'mpai_extended_methods.md');
+    extendedMethods = fs.readFileSync(extendedMethodsPath, 'utf8');
+    console.log('✅ Extended methods loaded successfully');
+  } catch (error) {
+    console.error('❌ Error loading extended methods:', error.message);
+    console.log('⚠️ Falling back to old instructions');
+    useOldInstructions = true;
+  }
 }
 
 /**
@@ -39,6 +45,12 @@ try {
  * @returns {string} - Complete system prompt
  */
 export function buildMPAIPrompt(method, userQuery, outputStyle = 'BALANCED', roleContext = null, hasUploads = false) {
+  // If loading new instructions failed, use old system
+  if (useOldInstructions) {
+    console.log('⚠️ Using old instruction system');
+    return buildOldPrompt(method, userQuery, outputStyle, roleContext, hasUploads);
+  }
+
   let prompt = coreInstructions;
 
   // Add extended methods if Science of Leadership book is needed
