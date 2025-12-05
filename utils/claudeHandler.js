@@ -1,6 +1,6 @@
 // utils/claudeHandler.js
 import Anthropic from '@anthropic-ai/sdk';
-import { buildMPAIPrompt } from './mpaiInstructions.js';
+import { buildMPAIPrompt } from './mpaiInstructionsLoader.js';
 import { getMoralMindfulnessPrefix } from './moralMindfulnessPrefix.js';
 
 const anthropic = new Anthropic({

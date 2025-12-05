@@ -465,6 +465,10 @@ router.post('/', upload.array('files', 5), async (req, res) => {
     // ✅ Check for grace period - users with grace period have unlimited access
     const hasGracePeriod = user.grace_period_end && new Date(user.grace_period_end) > new Date();
 
+    // Get current costs (needed for tracking even if grace period)
+    const currentDailyCost = user.daily_cost || 0;
+    const currentMonthlyCost = user.monthly_cost || 0;
+
     if (hasGracePeriod) {
       console.log(`✅ User ${user.email} has grace period until ${user.grace_period_end} - bypassing cost limits`);
     }
@@ -472,8 +476,6 @@ router.post('/', upload.array('files', 5), async (req, res) => {
     // ✅ Check subscription-based cost limits (skip if grace period)
     if (!hasGracePeriod) {
       const limits = getCostLimits(user.subscription_tier);
-      const currentDailyCost = user.daily_cost || 0;
-      const currentMonthlyCost = user.monthly_cost || 0;
 
       // Check daily limit
       if (currentDailyCost + estimatedCost > limits.dailyCost) {
