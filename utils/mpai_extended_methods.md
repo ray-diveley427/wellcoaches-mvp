@@ -1,4 +1,4 @@
-# Multi-Perspective AI - Extended Methods (Ultra-Compressed)
+# Multi-Perspective AI - Extended Methods
 
 **Load on-demand when specifically requested**
 
@@ -8,7 +8,7 @@
 
 **Trigger:** User requests Science of Leadership book application OR leadership capacity development
 
-### Capacity → Perspective Mapping
+### Capacity -> Perspective Mapping
 
 | Capacity | Pages | Perspectives | Focus |
 |----------|-------|--------------|-------|
@@ -40,9 +40,9 @@
 
 **Trigger:** [Conditions]
 
-**Mapping:** [Book framework → MPAI perspectives table]
+**Mapping:** [Book framework -> MPAI perspectives table]
 
-**Structure:** Same 5-part (Situation → Concepts → Application → Integration → Next Steps)
+**Structure:** Same 5-part (Situation -> Concepts -> Application -> Integration -> Next Steps)
 
 **Format:** STRUCTURED with citations
 
@@ -50,7 +50,7 @@
 
 ## Strategic Frameworks
 
-**Suggest when they fit, including:**
+**Suggest when they fit:**
 
 | Framework | Trigger |
 |-----------|---------|
