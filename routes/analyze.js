@@ -462,13 +462,21 @@ router.post('/', upload.array('files', 5), async (req, res) => {
     const estimatedOutputCost = (estimatedOutputTokens / 1_000_000) * 15;
     const estimatedCost = estimatedInputCost + estimatedOutputCost;
     
-    // ✅ Check subscription-based cost limits
-    const limits = getCostLimits(user.subscription_tier);
-    const currentDailyCost = user.daily_cost || 0;
-    const currentMonthlyCost = user.monthly_cost || 0;
+    // ✅ Check for grace period - users with grace period have unlimited access
+    const hasGracePeriod = user.grace_period_end && new Date(user.grace_period_end) > new Date();
 
-    // Check daily limit
-    if (currentDailyCost + estimatedCost > limits.dailyCost) {
+    if (hasGracePeriod) {
+      console.log(`✅ User ${user.email} has grace period until ${user.grace_period_end} - bypassing cost limits`);
+    }
+
+    // ✅ Check subscription-based cost limits (skip if grace period)
+    if (!hasGracePeriod) {
+      const limits = getCostLimits(user.subscription_tier);
+      const currentDailyCost = user.daily_cost || 0;
+      const currentMonthlyCost = user.monthly_cost || 0;
+
+      // Check daily limit
+      if (currentDailyCost + estimatedCost > limits.dailyCost) {
       return res.json({
         success: false,
         error: `Daily usage limit reached. You've used $${currentDailyCost.toFixed(2)} of your $${limits.dailyCost.toFixed(2)} daily limit.`,
@@ -480,17 +488,18 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       });
     }
 
-    // Check monthly limit
-    if (currentMonthlyCost + estimatedCost > limits.monthlyCost) {
-      return res.json({
-        success: false,
-        error: `Monthly usage limit reached. You've used $${currentMonthlyCost.toFixed(2)} of your $${limits.monthlyCost.toFixed(2)} monthly limit.`,
-        costLimitExceeded: true,
-        monthlyLimitExceeded: true,
-        monthlyCost: currentMonthlyCost,
-        monthlyLimit: limits.monthlyCost,
-        upgradeRequired: user.subscription_tier === 'free'
-      });
+      // Check monthly limit
+      if (currentMonthlyCost + estimatedCost > limits.monthlyCost) {
+        return res.json({
+          success: false,
+          error: `Monthly usage limit reached. You've used $${currentMonthlyCost.toFixed(2)} of your $${limits.monthlyCost.toFixed(2)} monthly limit.`,
+          costLimitExceeded: true,
+          monthlyLimitExceeded: true,
+          monthlyCost: currentMonthlyCost,
+          monthlyLimit: limits.monthlyCost,
+          upgradeRequired: user.subscription_tier === 'free'
+        });
+      }
     }
 
     // Also run the legacy cost check if enabled
