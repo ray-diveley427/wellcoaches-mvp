@@ -7,12 +7,27 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load core instructions (always loaded)
-const coreInstructionsPath = path.join(__dirname, 'mpai_instructions_core.md');
-const coreInstructions = fs.readFileSync(coreInstructionsPath, 'utf8');
+let coreInstructions;
+let extendedMethods;
+
+try {
+  const coreInstructionsPath = path.join(__dirname, 'mpai_instructions_core.md');
+  coreInstructions = fs.readFileSync(coreInstructionsPath, 'utf8');
+  console.log('✅ Core instructions loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading core instructions:', error.message);
+  throw new Error(`Failed to load MPAI core instructions: ${error.message}`);
+}
 
 // Load extended methods (for on-demand loading)
-const extendedMethodsPath = path.join(__dirname, 'mpai_extended_methods.md');
-const extendedMethods = fs.readFileSync(extendedMethodsPath, 'utf8');
+try {
+  const extendedMethodsPath = path.join(__dirname, 'mpai_extended_methods.md');
+  extendedMethods = fs.readFileSync(extendedMethodsPath, 'utf8');
+  console.log('✅ Extended methods loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading extended methods:', error.message);
+  throw new Error(`Failed to load MPAI extended methods: ${error.message}`);
+}
 
 /**
  * Build MPAI system prompt
