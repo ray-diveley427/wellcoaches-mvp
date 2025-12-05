@@ -14,10 +14,12 @@ let useOldInstructions = false;
 
 try {
   const coreInstructionsPath = path.join(__dirname, 'mpai_instructions_core.md');
+  console.log(`📁 Looking for core instructions at: ${coreInstructionsPath}`);
   coreInstructions = fs.readFileSync(coreInstructionsPath, 'utf8');
-  console.log('✅ Core instructions loaded successfully');
+  console.log(`✅ Core instructions loaded successfully (${coreInstructions.length} chars)`);
 } catch (error) {
   console.error('❌ Error loading core instructions:', error.message);
+  console.error('   File path attempted:', path.join(__dirname, 'mpai_instructions_core.md'));
   console.log('⚠️ Falling back to old instructions');
   useOldInstructions = true;
 }
@@ -26,10 +28,12 @@ try {
 if (!useOldInstructions) {
   try {
     const extendedMethodsPath = path.join(__dirname, 'mpai_extended_methods.md');
+    console.log(`📁 Looking for extended methods at: ${extendedMethodsPath}`);
     extendedMethods = fs.readFileSync(extendedMethodsPath, 'utf8');
-    console.log('✅ Extended methods loaded successfully');
+    console.log(`✅ Extended methods loaded successfully (${extendedMethods.length} chars)`);
   } catch (error) {
     console.error('❌ Error loading extended methods:', error.message);
+    console.error('   File path attempted:', path.join(__dirname, 'mpai_extended_methods.md'));
     console.log('⚠️ Falling back to old instructions');
     useOldInstructions = true;
   }
